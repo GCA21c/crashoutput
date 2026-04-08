@@ -474,6 +474,12 @@ class InjuryPage(tk.Frame):
         base = self.multi_dummy_panel.display_label_for_slot(slot) if hasattr(self, 'multi_dummy_panel') else slot
         return base or slot
 
+    def _head_graph_title(self, slot, graph_key='head_xyz'):
+        subject = self._graph_subject_label(slot)
+        if str(graph_key or '').strip().lower() == 'head_resultant':
+            return f"INJURY - HEAD RESULTANT ({subject})"
+        return f"INJURY - HEAD ({subject})"
+
     def _history_message_label(self):
         return {
             'hic': 'Head injury calculated',
@@ -2614,7 +2620,7 @@ class InjuryPage(tk.Frame):
 
     def _plot_head_xyz(self, bundle, slot):
         self._plot_head_curves(bundle, include_resultant=False)
-        self.ax.set_title(f"INJURY - HEAD ({self._graph_subject_label(slot)})")
+        self.ax.set_title(self._head_graph_title(slot, 'head_xyz'))
         self.ax.set_xlabel(self._x_axis_label())
         self.ax.set_ylabel(f"Acceleration ({bundle.get('plot_unit', 'g')})")
         self.ax.grid(True)
@@ -2626,8 +2632,8 @@ class InjuryPage(tk.Frame):
     def _plot_head_resultant(self, bundle, slot):
         self._plot_head_curves(bundle, include_resultant=True)
         for hic_key, color, label in (
-            ('hic15', '#2563eb', 'HIC15 구간'),
-            ('hic36', '#dc2626', 'HIC36 구간'),
+            ('hic15', '#fca5a5', 'HIC15 구간'),
+            ('hic36', '#87ceeb', 'HIC36 구간'),
         ):
             info = bundle.get(hic_key)
             if not info:
@@ -2648,7 +2654,7 @@ class InjuryPage(tk.Frame):
                 color='#7c3aed',
                 label=f'One Peak 3ms_Clip = {fmt_value(clip_value, bundle.get("plot_unit", "g"), decimals=4)}',
             )
-        self.ax.set_title(f"INJURY - HEAD ({self._graph_subject_label(slot)})")
+        self.ax.set_title(self._head_graph_title(slot, 'head_resultant'))
         self.ax.set_xlabel(self._x_axis_label())
         self.ax.set_ylabel(f"Acceleration ({bundle.get('plot_unit', 'g')})")
         self.ax.grid(True)
