@@ -2546,8 +2546,8 @@ class InjuryPage(tk.Frame):
             meta['dummy_profile'] = st['dummy_profile']
             meta['channels'] = dict(st['channels'])
             st['head_metadata'] = meta
-            st['graph_key'] = 'hic15'
-            st['graph_uid'] = self._injury_graph_uid(slot, 'hic15')
+            st['graph_key'] = 'head_resultant'
+            st['graph_uid'] = self._injury_graph_uid(slot, 'head_resultant')
             self._apply_summary_text(result['summary_text'])
             injury_df = viewer.df.copy(deep=True)
             injury_df[resultant_channel] = np.asarray(result['bundle']['resultant_g'], dtype=float)
@@ -2567,7 +2567,7 @@ class InjuryPage(tk.Frame):
                 'graph_uid': st.get('graph_uid'),
                 'message': 'Head injury calculated',
             }, dataframe=injury_df, metadata_extra=metadata_override)
-            self.show_hic_bundle_graph('hic15', slot=slot)
+            self.show_hic_bundle_graph('head_resultant', slot=slot)
         except Exception as exc:
             messagebox.showwarning('경고', str(exc))
 
@@ -2578,68 +2578,73 @@ class InjuryPage(tk.Frame):
             if not silent:
                 messagebox.showwarning('경고', '먼저 HEAD 계산을 실행하세요.')
             return
-        if metric_key == 'hic15':
-            info = bundle.get('hic15')
-            if info is None:
-                return
-            self._plot_hic(info, 15, bundle, slot)
-        elif metric_key == 'hic36':
-            info = bundle.get('hic36')
-            if info is None:
-                return
-            self._plot_hic(info, 36, bundle, slot)
+        metric_key = self._normalize_head_graph_key(metric_key)
+        if metric_key == 'head_xyz':
+            self._plot_head_xyz(bundle, slot)
         else:
-            clip_value = bundle.get('clip3')
-            if clip_value is None:
-                return
-            self._plot_clip(bundle['time'], bundle['resultant_g'], clip_value, bundle, slot)
+            self._plot_head_resultant(bundle, slot)
         self.slot_states[slot]['graph_key'] = metric_key
         self.slot_states[slot]['graph_uid'] = self._injury_graph_uid(slot, metric_key)
         self._select_graph_tab(metric_key)
         if not silent:
             self._record_graph_selection(slot, metric_key)
 
-    def _plot_hic(self, info, window_ms, bundle, slot):
+    def _normalize_head_graph_key(self, graph_key):
+        key = str(graph_key or '').strip().lower()
+        if key in {'head_xyz', 'xyz'}:
+            return 'head_xyz'
+        if key in {'head_resultant', 'resultant', 'hic15', 'hic36', 'clip3'}:
+            return 'head_resultant'
+        return 'head_resultant'
+
+    def _plot_head_curves(self, bundle, include_resultant=False):
         self.ax.clear()
-        t = np.asarray(bundle.get('time', info['time']), dtype=float)
-        for label, values, width in (
+        t = np.asarray(bundle.get('time', []), dtype=float)
+        curves = [
             ('HEAD X', np.asarray(bundle.get('x_plot', []), dtype=float), 1.0),
             ('HEAD Y', np.asarray(bundle.get('y_plot', []), dtype=float), 1.0),
             ('HEAD Z', np.asarray(bundle.get('z_plot', []), dtype=float), 1.0),
-            ('HEAD Resultant', np.asarray(bundle.get('resultant_g', info['signal']), dtype=float), 1.6),
-        ):
+        ]
+        if include_resultant:
+            curves.append(('HEAD Resultant', np.asarray(bundle.get('resultant_g', []), dtype=float), 1.6))
+        for label, values, width in curves:
             valid, t_plot, v_plot = self._time_value_valid_mask_ms(t, values)
             if np.any(valid):
                 self.ax.plot(t_plot[valid], v_plot[valid], linewidth=width, label=label)
-        self.ax.axvspan(info['start_time'] * 1000.0, info['end_time'] * 1000.0, alpha=0.2, label=f'HIC{window_ms} 구간')
+
+    def _plot_head_xyz(self, bundle, slot):
+        self._plot_head_curves(bundle, include_resultant=False)
         self.ax.set_title(f"INJURY - HEAD ({self._graph_subject_label(slot)})")
         self.ax.set_xlabel(self._x_axis_label())
         self.ax.set_ylabel(f"Acceleration ({bundle.get('plot_unit', 'g')})")
         self.ax.grid(True)
         self.ax.legend(loc='best', fontsize=9)
-        self.last_plot_title = f'{slot}_HIC{window_ms}_graph'
+        self.last_plot_title = f'{slot}_Head_XYZ_graph'
         self.figure.tight_layout()
         self.canvas.draw_idle()
 
-    def _plot_clip(self, time, resultant, clip_value, bundle, slot):
-        self.ax.clear()
-        t = np.asarray(time, dtype=float)
-        for label, values, width in (
-            ('HEAD X', np.asarray(bundle.get('x_plot', []), dtype=float), 1.0),
-            ('HEAD Y', np.asarray(bundle.get('y_plot', []), dtype=float), 1.0),
-            ('HEAD Z', np.asarray(bundle.get('z_plot', []), dtype=float), 1.0),
-            ('HEAD Resultant', np.asarray(resultant, dtype=float), 1.6),
+    def _plot_head_resultant(self, bundle, slot):
+        self._plot_head_curves(bundle, include_resultant=True)
+        for hic_key, color, label in (
+            ('hic15', '#f59e0b', 'HIC15 구간'),
+            ('hic36', '#ef4444', 'HIC36 구간'),
         ):
-            valid, t_plot, v_plot = self._time_value_valid_mask_ms(t, values)
-            if np.any(valid):
-                self.ax.plot(t_plot[valid], v_plot[valid], linewidth=width, label=label)
-        self.ax.axhline(clip_value, linestyle='--', linewidth=1.0, label=f'3ms Clip = {fmt_value(clip_value, bundle.get("plot_unit", "g"), decimals=4)}')
+            info = bundle.get(hic_key)
+            if not info:
+                continue
+            self.ax.axvspan(
+                info['start_time'] * 1000.0,
+                info['end_time'] * 1000.0,
+                alpha=0.2,
+                color=color,
+                label=label,
+            )
         self.ax.set_title(f"INJURY - HEAD ({self._graph_subject_label(slot)})")
         self.ax.set_xlabel(self._x_axis_label())
         self.ax.set_ylabel(f"Acceleration ({bundle.get('plot_unit', 'g')})")
         self.ax.grid(True)
         self.ax.legend(loc='best', fontsize=9)
-        self.last_plot_title = f'{slot}_Head_3ms_clip_graph'
+        self.last_plot_title = f'{slot}_Head_Resultant_graph'
         self.figure.tight_layout()
         self.canvas.draw_idle()
 
@@ -3383,7 +3388,7 @@ class InjuryPage(tk.Frame):
 
     def _graph_tab_specs(self):
         if self.initial_mode == 'hic':
-            return [('hic15', 'HIC15'), ('hic36', 'HIC36'), ('clip3', '3ms Clip')]
+            return [('head_xyz', 'HEAD X/Y/Z'), ('head_resultant', 'HEAD RESULTANT')]
         if self.initial_mode == 'nij':
             return [('fz', 'Fz'), ('my', 'My'), ('nij_components', 'Nij Components')]
         if self.initial_mode == 'chest':
