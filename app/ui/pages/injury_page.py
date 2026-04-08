@@ -2626,8 +2626,8 @@ class InjuryPage(tk.Frame):
     def _plot_head_resultant(self, bundle, slot):
         self._plot_head_curves(bundle, include_resultant=True)
         for hic_key, color, label in (
-            ('hic15', '#f59e0b', 'HIC15 구간'),
-            ('hic36', '#ef4444', 'HIC36 구간'),
+            ('hic15', '#2563eb', 'HIC15 구간'),
+            ('hic36', '#dc2626', 'HIC36 구간'),
         ):
             info = bundle.get(hic_key)
             if not info:
@@ -2635,9 +2635,18 @@ class InjuryPage(tk.Frame):
             self.ax.axvspan(
                 info['start_time'] * 1000.0,
                 info['end_time'] * 1000.0,
-                alpha=0.2,
+                alpha=0.14,
                 color=color,
                 label=label,
+            )
+        clip_value = bundle.get('clip3')
+        if clip_value is not None:
+            self.ax.axhline(
+                clip_value,
+                linestyle='--',
+                linewidth=1.0,
+                color='#7c3aed',
+                label=f'One Peak 3ms_Clip = {fmt_value(clip_value, bundle.get("plot_unit", "g"), decimals=4)}',
             )
         self.ax.set_title(f"INJURY - HEAD ({self._graph_subject_label(slot)})")
         self.ax.set_xlabel(self._x_axis_label())
