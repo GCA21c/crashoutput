@@ -1,0 +1,17 @@
+project_root/
+├─ main.py                         # existing code entry point
+├─ app/                            # existing production package
+│  ├─ core/
+│  ├─ services/
+│  └─ ui/
+├─ AGENTS.md                       # add from this package
+└─ _codex/                         # add from this package
+   ├─ 00_project/
+   ├─ 01_architecture/
+   ├─ 02_rules/
+   ├─ 03_workflows/
+   ├─ 04_modules/
+   ├─ 05_reference/
+   ├─ 06_templates/
+   ├─ 07_handoffs/
+   └─ 08_change_logs/
