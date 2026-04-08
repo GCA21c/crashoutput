@@ -1,4 +1,6 @@
 # ssh개발환경 시작 20260408 by gca21c
+# v091 git with github 환경 테스트 20260408,12:51 이게맞나
+
 
 from pathlib import Path
 
