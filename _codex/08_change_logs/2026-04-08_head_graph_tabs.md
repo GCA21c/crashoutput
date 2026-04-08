@@ -6,6 +6,7 @@
 - Moved HIC15 and HIC36 interval highlighting onto the single `HEAD RESULTANT` graph.
 - Adjusted HIC15 / HIC36 highlight colors for clearer contrast and restored the one Peak 3ms_Clip dashed line on `HEAD RESULTANT`.
 - Updated the HEAD RESULTANT title rule to use `INJURY - HEAD RESULTANT (...)` while keeping HEAD X/Y/Z on the existing HEAD title form.
+- Increased HEAD RESULTANT HIC highlight opacity slightly for readability and documented where the display tuning lives in the UI code.
 
 ## Why
 - The requested UI now separates component-axis review from resultant review while keeping the existing HEAD calculation path intact.

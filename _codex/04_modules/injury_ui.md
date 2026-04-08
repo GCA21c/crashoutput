@@ -16,3 +16,8 @@
 - Does dummy context propagate correctly from Dummy Set to injury tabs?
 - Do result summaries survive page switches?
 - Are viewer labels aligned with the intended generated/result channels?
+
+## HEAD graph notes
+- `HEAD X/Y/Z` should display only filtered HEAD X, Y, Z curves.
+- `HEAD RESULTANT` should display filtered HEAD X, Y, Z, HEAD Resultant, both HIC interval highlights, and the one Peak 3ms_Clip reference line.
+- HEAD graph changes should stay in display logic only unless the task explicitly changes the injury calculation path.

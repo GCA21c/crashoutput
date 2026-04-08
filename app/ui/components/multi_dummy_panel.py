@@ -18,6 +18,7 @@ class MultiDummyPanel(tk.LabelFrame):
         show_count_row=True,
         show_rows=True,
         show_tabs=True,
+        compact_layout=False,
         title="멀티 더미 설정",
     ):
         super().__init__(parent, text=title, bg="#ffffff")
@@ -30,6 +31,7 @@ class MultiDummyPanel(tk.LabelFrame):
         self.show_count_row = show_count_row
         self.show_rows = show_rows
         self.show_tabs = show_tabs
+        self.compact_layout = bool(compact_layout)
 
         self._name_vars = {slot: tk.StringVar() for slot in DUMMY_POSITION_OPTIONS}
         self._profile_vars = {slot: tk.StringVar() for slot in DUMMY_POSITION_OPTIONS}
@@ -51,12 +53,18 @@ class MultiDummyPanel(tk.LabelFrame):
     def _build_ui(self):
         self._configure_tab_style()
         self.row1 = tk.Frame(self, bg="#ffffff")
-        tk.Label(self.row1, text="더미 대수", bg="#ffffff", width=12, anchor="w").pack(side=tk.LEFT)
+        tk.Label(
+            self.row1,
+            text="더미 대수",
+            bg="#ffffff",
+            width=9 if self.compact_layout else 12,
+            anchor="w",
+        ).pack(side=tk.LEFT)
         self.dummy_count_combo = ttk.Combobox(
             self.row1,
             textvariable=self.dummy_count_var,
             state="readonly",
-            width=8,
+            width=5 if self.compact_layout else 8,
             values=tuple(str(i) for i in range(1, 7)),
         )
         self.dummy_count_combo.pack(side=tk.LEFT)
@@ -68,13 +76,13 @@ class MultiDummyPanel(tk.LabelFrame):
             fg="#555555",
             anchor="w",
             justify="left",
-        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(12, 0))
+        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=((8 if self.compact_layout else 12), 0))
         if self.show_count_row:
-            self.row1.pack(fill=tk.X, padx=10, pady=(10, 4))
+            self.row1.pack(fill=tk.X, padx=(8 if self.compact_layout else 10), pady=(8 if self.compact_layout else 10, 4))
 
         self.rows_host = tk.Frame(self, bg="#ffffff")
         if self.show_rows:
-            self.rows_host.pack(fill=tk.X, padx=10, pady=(2, 6))
+            self.rows_host.pack(fill=tk.X, padx=(8 if self.compact_layout else 10), pady=(2, 6))
 
         self.tabs_box = tk.LabelFrame(self, text="더미 위치 탭", bg="#ffffff")
         self.notebook = ttk.Notebook(self.tabs_box, style=self._style_name)
@@ -306,13 +314,13 @@ class MultiDummyPanel(tk.LabelFrame):
             for idx in range(count):
                 slot = self._selected_positions[idx]
                 row = tk.Frame(self.rows_host, bg="#f8fafc", bd=1, relief=tk.FLAT, highlightthickness=1, highlightbackground="#dbe3f1")
-                row.pack(fill=tk.X, pady=3, ipady=3)
+                row.pack(fill=tk.X, pady=2 if self.compact_layout else 3, ipady=2 if self.compact_layout else 3)
 
                 pos_combo = ttk.Combobox(
                     row,
                     textvariable=self._position_row_vars[idx],
                     state="readonly",
-                    width=8,
+                    width=6 if self.compact_layout else 8,
                     values=self._available_values_for_row(idx),
                 )
                 pos_combo.pack(side=tk.LEFT)
@@ -321,7 +329,7 @@ class MultiDummyPanel(tk.LabelFrame):
                 name_entry = tk.Entry(
                     row,
                     textvariable=self._name_vars[slot],
-                    width=14,
+                    width=10 if self.compact_layout else 14,
                     relief=tk.SOLID,
                     bd=1,
                     highlightthickness=1,
@@ -329,15 +337,16 @@ class MultiDummyPanel(tk.LabelFrame):
                     highlightcolor="#7aa2ff",
                     bg="#ffffff",
                 )
-                name_entry.pack(side=tk.LEFT, padx=(8, 8), ipady=2)
+                name_entry.pack(side=tk.LEFT, padx=(6 if self.compact_layout else 8, 6 if self.compact_layout else 8), ipady=2)
 
                 combo = ttk.Combobox(
                     row,
                     textvariable=self._profile_vars[slot],
                     state="readonly",
+                    width=16 if self.compact_layout else 24,
                     values=options,
                 )
-                combo.pack(side=tk.LEFT, fill=tk.X, expand=True)
+                combo.pack(side=tk.LEFT, fill=tk.X, expand=not self.compact_layout)
                 self._profile_combos[slot] = combo
 
                 remove_button = tk.Button(
@@ -351,7 +360,7 @@ class MultiDummyPanel(tk.LabelFrame):
                     activeforeground="#1e3a8a",
                     relief=tk.GROOVE,
                 )
-                remove_button.pack(side=tk.LEFT, padx=(8, 0))
+                remove_button.pack(side=tk.LEFT, padx=(6 if self.compact_layout else 8, 0))
         finally:
             self._rebuilding_rows = False
 

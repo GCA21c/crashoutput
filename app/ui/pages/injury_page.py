@@ -2641,7 +2641,7 @@ class InjuryPage(tk.Frame):
             self.ax.axvspan(
                 info['start_time'] * 1000.0,
                 info['end_time'] * 1000.0,
-                alpha=0.14,
+                alpha=0.22,
                 color=color,
                 label=label,
             )

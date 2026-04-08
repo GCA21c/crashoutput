@@ -12,6 +12,10 @@
 - expose dummy factors/profile information used by injury calculations
 - drive per-dummy labeling shown elsewhere in the UI
 
+## UI notes
+- Keep the dedicated `DUMMY SET` page visually denser than the injury workbench so it does not consume unnecessary horizontal space.
+- When adjusting this page, preserve the existing field set and save flow while preferring tighter row widths and reduced empty side margins.
+
 ## Review checklist when changing this area
 - Does dummy count update the visible input controls correctly?
 - Does location detection still bind correctly?

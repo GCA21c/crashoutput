@@ -27,24 +27,27 @@ class DummySetPage(tk.Frame):
         body = tk.Frame(outer, bg="#ffffff")
         body.pack(fill=tk.BOTH, expand=True, anchor="nw", padx=16, pady=(16, 8))
 
-        header = tk.Frame(body, bg="#ffffff")
+        content = tk.Frame(body, bg="#ffffff", width=620)
+        content.pack(anchor="nw")
+
+        header = tk.Frame(content, bg="#ffffff")
         header.pack(fill=tk.X, pady=(0, 8))
         tk.Label(header, text="DUMMY SET", font=("Arial", 15, "bold"), bg="#ffffff").pack(side=tk.LEFT)
 
-        mode_row = tk.Frame(body, bg="#ffffff")
+        mode_row = tk.Frame(content, bg="#ffffff")
         mode_row.pack(fill=tk.X, pady=(0, 8))
-        tk.Label(mode_row, text="시험모드", bg="#ffffff", width=12, anchor="w").pack(side=tk.LEFT)
+        tk.Label(mode_row, text="시험모드", bg="#ffffff", width=9, anchor="w").pack(side=tk.LEFT)
         self.mode_combo = ttk.Combobox(
             mode_row,
             textvariable=self.workbench.injury_test_mode_var,
             values=("-", "FRONTAL", "SIDE"),
             state="readonly",
-            width=18,
+            width=14,
         )
         self.mode_combo.pack(side=tk.LEFT)
         self.mode_combo.bind("<<ComboboxSelected>>", self._on_mode_changed)
 
-        info = tk.LabelFrame(body, text="설명", bg="#ffffff")
+        info = tk.LabelFrame(content, text="설명", bg="#ffffff")
         info.pack(fill=tk.X, pady=(0, 8))
         tk.Label(
             info,
@@ -55,11 +58,11 @@ class DummySetPage(tk.Frame):
             bg="#ffffff",
             justify="left",
             anchor="w",
-            wraplength=700,
-        ).pack(fill=tk.X, padx=10, pady=10)
+            wraplength=540,
+        ).pack(fill=tk.X, padx=10, pady=8)
 
         self.panel = MultiDummyPanel(
-            body,
+            content,
             dummy_count_var=self.dummy_count_var,
             active_dummy_var=self.active_dummy_var,
             profile_options_getter=self._profile_options,
@@ -68,11 +71,12 @@ class DummySetPage(tk.Frame):
             show_count_row=True,
             show_rows=True,
             show_tabs=False,
+            compact_layout=True,
             title="더미 공통 설정",
         )
         self.panel.pack(fill=tk.X, pady=(0, 8), anchor="nw")
 
-        footer = tk.Frame(body, bg="#ffffff")
+        footer = tk.Frame(content, bg="#ffffff")
         footer.pack(fill=tk.X, pady=(0, 8))
         tk.Button(footer, text="SET!", command=self.save_settings, width=12).pack(side=tk.LEFT)
         tk.Label(footer, textvariable=self.status_var, bg="#ffffff", fg="#374151", anchor="w", justify="left").pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(12, 0))
