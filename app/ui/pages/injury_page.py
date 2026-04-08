@@ -694,9 +694,8 @@ class InjuryPage(tk.Frame):
     def _legacy_graph_tab_specs(self):
         if self.initial_mode == 'hic':
             return [
-                ('hic15', 'HIC15'),
-                ('hic36', 'HIC36'),
-                ('clip3', '3ms Clip'),
+                ('head_xyz', 'HEAD X/Y/Z'),
+                ('head_resultant', 'HEAD RESULTANT'),
             ]
         if self.initial_mode == 'nij':
             return [
