@@ -327,6 +327,7 @@ class FilteringPage(tk.Frame):
             units=self.pending_units,
             existing_filter_labels=self.pending_filter_labels,
             existing_derived_channels=self.pending_derived_channels,
+            existing_raw_map=(self.workbench.dataset_metadata or {}).get('isocode_raw_map'),
             original_df=original_df,
             original_time_column=original_time_column,
         )
@@ -387,6 +388,28 @@ class FilteringPage(tk.Frame):
             out[rename_map.get(key, key)] = value
         return out
 
+    def _rename_derived_channel_references(self, derived_channels, rename_map):
+        data = dict(derived_channels or {})
+        if not rename_map:
+            return data
+        out = {}
+        for key, value in data.items():
+            info = dict(value or {})
+            source_channel = str(info.get('source_channel') or '').strip()
+            if source_channel:
+                info['source_channel'] = rename_map.get(source_channel, source_channel)
+            history = []
+            for item in list(info.get('filter_history') or []):
+                entry = dict(item or {})
+                from_channel = str(entry.get('from_channel') or '').strip()
+                if from_channel:
+                    entry['from_channel'] = rename_map.get(from_channel, from_channel)
+                history.append(entry)
+            if history:
+                info['filter_history'] = history
+            out[rename_map.get(key, key)] = info
+        return out
+
     def _apply_isocode_filter_suffixes_for_commit(self, dataframe, descriptions, units, filter_labels, channel_filter_colors, derived_channels):
         rename_map = {}
         raw_map = dict((self.workbench.dataset_metadata or {}).get('isocode_raw_map') or {})
@@ -405,7 +428,7 @@ class FilteringPage(tk.Frame):
             units = self._rename_metadata_keys(units, rename_map)
             filter_labels = self._rename_metadata_keys(filter_labels, rename_map)
             channel_filter_colors = self._rename_metadata_keys(channel_filter_colors, rename_map)
-            derived_channels = self._rename_metadata_keys(derived_channels, rename_map)
+            derived_channels = self._rename_derived_channel_references(derived_channels, rename_map)
         return dataframe, descriptions, units, filter_labels, channel_filter_colors, derived_channels, rename_map
 
     def save_filters(self):

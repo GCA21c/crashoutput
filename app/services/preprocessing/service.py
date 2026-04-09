@@ -2,6 +2,8 @@ import re
 from functools import lru_cache
 import numpy as np
 import pandas as pd
+
+from app.core.isocode import rewrite_filter_code_in_text
 from scipy.signal import filtfilt
 
 from app.core.dummy import (
@@ -443,6 +445,7 @@ def apply_filtering_with_derivatives(
     units=None,
     existing_filter_labels=None,
     existing_derived_channels=None,
+    existing_raw_map=None,
     original_df=None,
     original_time_column=None,
 ):
@@ -451,6 +454,7 @@ def apply_filtering_with_derivatives(
     units = dict(units or {})
     filter_labels = dict(existing_filter_labels or {})
     derived_channels = dict(existing_derived_channels or {})
+    existing_raw_map = dict(existing_raw_map or {})
 
     x_all = get_time_numeric(out, time_column)
     fs = _get_sample_rate(x_all)
@@ -473,6 +477,22 @@ def apply_filtering_with_derivatives(
         filter_labels.pop(dch, None)
         derived_channels.pop(dch, None)
 
+    def _raw_source_channel_name(channel_name):
+        root_channel = _resolve_root_source_channel(channel_name, derived_channels=derived_channels) or str(channel_name or '')
+        if original_df is None:
+            return root_channel
+        original_columns = set(getattr(original_df, "columns", []))
+        for candidate in (root_channel, channel_name):
+            candidate = str(candidate or '').strip()
+            if candidate and candidate in original_columns:
+                return candidate
+        raw_code = str(existing_raw_map.get(root_channel) or existing_raw_map.get(channel_name) or '').strip().upper()
+        if raw_code:
+            rewritten = str(rewrite_filter_code_in_text(root_channel or channel_name, 'Raw', raw_code=raw_code) or '').strip()
+            if rewritten and rewritten in original_columns:
+                return rewritten
+        return root_channel
+
     for channel_name in channel_to_filter.keys():
         purpose, role = detect_injury_channel_purpose_and_role(
             channel_name,
@@ -482,7 +502,16 @@ def apply_filtering_with_derivatives(
         if purpose is None or role is None:
             continue
 
-        raw_y = pd.to_numeric(df[channel_name], errors="coerce").to_numpy(dtype=float)
+        raw_source_channel = _raw_source_channel_name(channel_name)
+        raw_series_source = df
+        if original_df is not None and raw_source_channel in getattr(original_df, "columns", []):
+            raw_series_source = original_df
+        source_column_name = raw_source_channel if raw_series_source is original_df else channel_name
+        raw_y = pd.to_numeric(raw_series_source[source_column_name], errors="coerce").to_numpy(dtype=float)
+        if raw_y.shape != x_all.shape and channel_name in df.columns:
+            raw_series_source = df
+            source_column_name = channel_name
+            raw_y = pd.to_numeric(df[channel_name], errors="coerce").to_numpy(dtype=float)
         valid = np.isfinite(x_all) & np.isfinite(raw_y)
         if not np.any(valid):
             continue
@@ -514,15 +543,24 @@ def apply_filtering_with_derivatives(
             filter_labels[derived_name] = f"CFC {int(cfc_value)}"
             derived_meta = {
                 "source_channel": channel_name,
+                "root_source_channel": raw_source_channel or channel_name,
                 "role": role,
                 "filter_label": f"CFC {int(cfc_value)}",
                 "display_filter_label": f"CFC {int(cfc_value)}",
                 "required_cfc": f"CFC {int(cfc_value)}",
                 "cfc_value": int(cfc_value),
                 "purpose": purpose,
+                "filter_history": [{
+                    "from_channel": raw_source_channel or channel_name,
+                    "from_filter_label": "Raw",
+                    "to_filter_label": f"CFC {int(cfc_value)}",
+                    "raw_based": bool(original_df is not None and source_column_name == raw_source_channel),
+                    "purpose": purpose,
+                    "role": role,
+                }],
             }
             if purpose == "chest_injury" and role == "disp":
-                derived_meta["created_from_raw"] = True
+                derived_meta["created_from_raw"] = bool(original_df is not None and source_column_name == raw_source_channel)
                 derived_meta["rebuild_policy"] = "raw_aligned_only"
             derived_channels[derived_name] = derived_meta
 

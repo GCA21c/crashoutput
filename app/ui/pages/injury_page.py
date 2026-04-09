@@ -2,6 +2,7 @@ import os
 import re
 import uuid
 import tkinter as tk
+import tkinter.font as tkfont
 from tkinter import ttk, messagebox, filedialog
 
 import numpy as np
@@ -36,7 +37,7 @@ from app.services.injury import (
 from app.core.utils.formatting import SUMMARY_FORMAT_VERSION, fmt_time_ms, fmt_value
 from app.ui.components.multi_dummy_panel import MultiDummyPanel
 from app.ui.components.scrollable_frame import VerticalScrolledFrame
-from app.core.isocode import normalize_filter_label_to_code
+from app.core.isocode import normalize_filter_label_to_code, rewrite_filter_code_in_text
 
 
 
@@ -563,6 +564,8 @@ class InjuryPage(tk.Frame):
     def _make_result_text(self, parent, height=10):
         frame = tk.Frame(parent, bg="#ffffff")
         frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        result_font = tkfont.nametofont("TkDefaultFont").copy()
+        result_font.configure(size=10)
         scrollbar = tk.Scrollbar(
             frame,
             orient=tk.VERTICAL,
@@ -576,7 +579,7 @@ class InjuryPage(tk.Frame):
             frame,
             wrap=tk.WORD,
             height=height,
-            font=("Arial", 10),
+            font=result_font,
             bg="#f8fafc",
             fg="#111827",
             relief=tk.SOLID,
@@ -1394,7 +1397,7 @@ class InjuryPage(tk.Frame):
                         'y': self._channel_filter_label_for_calc(y_ch, used_y),
                         'z': self._channel_filter_label_for_calc(z_ch, used_z),
                     },
-                    disp_filter_label=(self.workbench.channel_filter_labels or {}).get(disp_ch),
+                    disp_filter_label=self._channel_filter_label_for_calc(disp_ch),
                     disp_prefiltered=disp_prefiltered,
                     vc_sign_pref=1.0,
                 )
@@ -2315,7 +2318,9 @@ class InjuryPage(tk.Frame):
         for ch_name, info in metadata.items():
             if (
                 str(info.get('source_channel')) == str(source_channel)
-                and str(info.get('role')) == str(role)
+                or str(info.get('root_source_channel')) == str(source_channel)
+            ) and (
+                str(info.get('role')) == str(role)
                 and str(info.get('filter_label')) == target_label
                 and str(info.get('purpose')) == str(purpose)
                 and ch_name in viewer_df.columns
@@ -2349,6 +2354,28 @@ class InjuryPage(tk.Frame):
             break
         return current
 
+    def _raw_root_channel_name(self, channel_name):
+        channel_name = self._normalize_channel_reference(channel_name)
+        if not channel_name:
+            return ''
+        original_df = getattr(self.workbench, 'original_df', None)
+        original_columns = set(getattr(original_df, 'columns', [])) if original_df is not None else set()
+        meta = self._channel_metadata(channel_name)
+        for candidate in (
+            meta.get('root_source_channel'),
+            self._derived_source_channel(channel_name),
+            channel_name,
+        ):
+            candidate = str(candidate or '').strip()
+            if candidate and candidate in original_columns:
+                return candidate
+        raw_isocode = str(meta.get('raw_isocode') or '').strip().upper()
+        if raw_isocode:
+            rewritten = str(rewrite_filter_code_in_text(channel_name, 'Raw', raw_code=raw_isocode) or '').strip()
+            if rewritten and rewritten in original_columns:
+                return rewritten
+        return str(meta.get('root_source_channel') or self._derived_source_channel(channel_name) or channel_name or '').strip()
+
     def _collect_chest_disp_prefiltered(self, channel_name):
         viewer = self.workbench.viewer
         result = {}
@@ -2357,7 +2384,7 @@ class InjuryPage(tk.Frame):
             return result
 
         # If the currently selected channel already has a real CFC label, keep it.
-        selected_label = (self.workbench.channel_filter_labels or {}).get(selected)
+        selected_label = self._channel_filter_label_for_calc(selected)
         selected_cfc = parse_cfc_filter_label(selected_label)
         try:
             if selected_cfc in (180, 600):
@@ -2365,7 +2392,7 @@ class InjuryPage(tk.Frame):
         except Exception:
             pass
 
-        root_source = self._derived_source_channel(selected) or selected
+        root_source = self._raw_root_channel_name(selected) or self._derived_source_channel(selected) or selected
         for cfc in (180, 600):
             derived = self._find_derived_channel(root_source, 'chest_injury', 'disp', cfc)
             if not derived:
@@ -2380,7 +2407,7 @@ class InjuryPage(tk.Frame):
         viewer = self.workbench.viewer
         time = self._get_time()
         original_df = getattr(self.workbench, 'original_df', None)
-        channel_name = self._derived_source_channel(channel_name) or self._normalize_channel_reference(channel_name)
+        channel_name = self._raw_root_channel_name(channel_name) or self._normalize_channel_reference(channel_name)
         if time is None or original_df is None or channel_name not in original_df.columns:
             return None
         try:
@@ -2972,7 +2999,7 @@ class InjuryPage(tk.Frame):
                     'y': self._channel_filter_label_for_calc(y_ch, used_y),
                     'z': self._channel_filter_label_for_calc(z_ch, used_z),
                 },
-                disp_filter_label=(self.workbench.channel_filter_labels or {}).get(disp_ch),
+                disp_filter_label=self._channel_filter_label_for_calc(disp_ch),
                 disp_prefiltered=disp_prefiltered,
                 vc_sign_pref=1.0,
             )
@@ -4505,7 +4532,7 @@ class InjuryPage(tk.Frame):
                         'y': self._channel_filter_label_for_calc(y_ch, used_y),
                         'z': self._channel_filter_label_for_calc(z_ch, used_z),
                     },
-                    disp_filter_label=(self.workbench.channel_filter_labels or {}).get(disp_ch),
+                    disp_filter_label=self._channel_filter_label_for_calc(disp_ch),
                     disp_prefiltered=disp_prefiltered,
                     vc_sign_pref=1.0,
                 )

@@ -399,7 +399,11 @@ def build_channel_metadata_map(columns, descriptions=None, units=None, filter_la
             current_filter_label = str(filter_labels.get(channel) or 'CALC').strip() or 'CALC'
 
         parsed = dict(parsed_map.get(channel) or {})
-        root_source = resolve_root_source_channel(channel, derived_channels=derived_channels) or str(channel)
+        root_source = (
+            str(derived_info.get('root_source_channel') or '').strip()
+            or resolve_root_source_channel(channel, derived_channels=derived_channels)
+            or str(channel)
+        )
         source_channel = str(derived_info.get('source_channel') or '').strip()
         raw_isocode = str(raw_map.get(channel) or '').strip().upper()
         managed_isocode = str(managed_map.get(channel) or '').strip().upper()
