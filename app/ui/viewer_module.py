@@ -1481,9 +1481,18 @@ class FastCSVViewerWithGraph:
         return self._normalize_unit_display(unit)
 
     def get_stored_filter_label(self, column_name):
+        info = self.get_channel_metadata(column_name)
+        meta_label = str((info or {}).get("current_filter_label") or "").strip()
+        if meta_label:
+            return meta_label
         metadata = dict(getattr(self, "loaded_metadata", {}) or {})
         labels = dict(metadata.get("channel_filter_labels") or {})
         return str(labels.get(column_name) or "Raw").strip() or "Raw"
+
+    def get_channel_metadata(self, column_name):
+        metadata = dict(getattr(self, "loaded_metadata", {}) or {})
+        channel_map = dict(metadata.get("channel_metadata_map") or {})
+        return dict(channel_map.get(column_name) or {})
 
     def _normalize_filter_display_label(self, label_text, fallback="Raw"):
         label = str(label_text or "").strip()
@@ -1545,6 +1554,18 @@ class FastCSVViewerWithGraph:
         return self.get_stored_filter_display_label(column_name)
 
     def _get_derived_channel_info(self, column_name):
+        info = self.get_channel_metadata(column_name)
+        if info:
+            return {
+                'source_channel': info.get('source_channel'),
+                'role': info.get('role'),
+                'required_cfc': info.get('required_cfc'),
+                'display_filter_label': info.get('display_filter_label'),
+                'filter_label': info.get('current_filter_label'),
+                'purpose': info.get('purpose'),
+                'created_from_raw': info.get('created_from_raw'),
+                'rebuild_policy': info.get('rebuild_policy'),
+            }
         metadata = dict(getattr(self, "loaded_metadata", {}) or {})
         derived = dict(metadata.get("derived_channels") or {})
         return dict(derived.get(column_name) or {})

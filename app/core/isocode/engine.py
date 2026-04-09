@@ -276,6 +276,36 @@ def infer_managed_isocode(channel_name, description='', unit='', filter_label='R
     return rewrite_filter_code(candidate, filter_label) if candidate else ''
 
 
+def resolve_root_source_channel(channel_name, derived_channels=None):
+    derived_channels = dict(derived_channels or {})
+    current = str(channel_name or '').strip()
+    seen = set()
+    while current and current not in seen:
+        seen.add(current)
+        info = dict(derived_channels.get(current) or {})
+        source = str(info.get('source_channel') or '').strip()
+        if not source:
+            break
+        current = source
+    return current
+
+
+def _build_filter_history(channel_name, filter_label, derived_info, derived_channels):
+    history = []
+    source = str((derived_info or {}).get('source_channel') or '').strip()
+    if source:
+        source_info = dict((derived_channels or {}).get(source) or {})
+        history.append({
+            'from_channel': source,
+            'from_filter_label': str(source_info.get('required_cfc') or source_info.get('display_filter_label') or source_info.get('filter_label') or '').strip() or 'Raw',
+            'to_filter_label': str(filter_label or '').strip() or 'Raw',
+            'raw_based': bool((derived_info or {}).get('created_from_raw')),
+            'purpose': str((derived_info or {}).get('purpose') or '').strip(),
+            'role': str((derived_info or {}).get('role') or '').strip(),
+        })
+    return history
+
+
 def build_isocode_metadata(columns, descriptions=None, units=None, filter_labels=None, existing_raw_map=None, derived_channels=None):
     descriptions = dict(descriptions or {})
     units = dict(units or {})
@@ -334,3 +364,85 @@ def build_isocode_metadata(columns, descriptions=None, units=None, filter_labels
         'isocode_parsed_map': parsed_map,
         'isocode_display_tokens': display_tokens,
     }
+
+
+def build_channel_metadata_map(columns, descriptions=None, units=None, filter_labels=None, existing_raw_map=None, derived_channels=None):
+    descriptions = dict(descriptions or {})
+    units = dict(units or {})
+    filter_labels = dict(filter_labels or {})
+    existing_raw_map = dict(existing_raw_map or {})
+    derived_channels = dict(derived_channels or {})
+
+    iso_meta = build_isocode_metadata(
+        columns,
+        descriptions=descriptions,
+        units=units,
+        filter_labels=filter_labels,
+        existing_raw_map=existing_raw_map,
+        derived_channels=derived_channels,
+    )
+    parsed_map = dict(iso_meta.get('isocode_parsed_map') or {})
+    raw_map = dict(iso_meta.get('isocode_raw_map') or {})
+    managed_map = dict(iso_meta.get('isocode_managed_map') or {})
+
+    channel_metadata = {}
+    for channel in columns:
+        derived_info = dict(derived_channels.get(channel) or {})
+        current_filter_label = (
+            str(derived_info.get('required_cfc') or '').strip()
+            or str(derived_info.get('display_filter_label') or '').strip()
+            or str(derived_info.get('filter_label') or '').strip()
+            or str(filter_labels.get(channel) or '').strip()
+            or 'Raw'
+        )
+        if current_filter_label == 'CALC':
+            current_filter_label = str(filter_labels.get(channel) or 'CALC').strip() or 'CALC'
+
+        parsed = dict(parsed_map.get(channel) or {})
+        root_source = resolve_root_source_channel(channel, derived_channels=derived_channels) or str(channel)
+        source_channel = str(derived_info.get('source_channel') or '').strip()
+        raw_isocode = str(raw_map.get(channel) or '').strip().upper()
+        managed_isocode = str(managed_map.get(channel) or '').strip().upper()
+        current_filter_code = str(parsed.get('filter_code_source') or normalize_filter_label_to_code(current_filter_label) or '').strip().upper()
+        filter_history = list(derived_info.get('filter_history') or _build_filter_history(channel, current_filter_label, derived_info, derived_channels))
+        source_info = dict(derived_channels.get(source_channel) or {}) if source_channel else {}
+        source_filter_label = (
+            str(source_info.get('required_cfc') or '').strip()
+            or str(source_info.get('display_filter_label') or '').strip()
+            or str(source_info.get('filter_label') or '').strip()
+            or str(filter_labels.get(source_channel) or '').strip()
+            or ('Raw' if source_channel else '')
+        )
+        sensor_family = str(parsed.get('sensor_location') or '').strip().lower()
+        validation = {
+            'filter_match': bool(current_filter_code == str(normalize_filter_label_to_code(current_filter_label) or '').strip().upper()) if current_filter_label not in ('', 'CALC') else True,
+            'lineage_ok': bool(root_source),
+            'raw_alignment_ok': bool(derived_info.get('created_from_raw')) if str(derived_info.get('rebuild_policy') or '').strip() == 'raw_aligned_only' else True,
+            'sampling_rate_ok': True,
+        }
+        channel_metadata[channel] = {
+            'channel_name': str(channel),
+            'description': str(descriptions.get(channel) or '').strip(),
+            'unit': str(units.get(channel) or '').strip(),
+            'source_channel': source_channel or None,
+            'root_source_channel': root_source or None,
+            'lineage_type': 'derived' if derived_info else 'raw',
+            'purpose': str(derived_info.get('purpose') or '').strip() or None,
+            'role': str(derived_info.get('role') or '').strip() or None,
+            'current_filter_label': current_filter_label,
+            'current_filter_code': current_filter_code,
+            'source_filter_label': source_filter_label or None,
+            'required_cfc': str(derived_info.get('required_cfc') or '').strip() or None,
+            'display_filter_label': str(derived_info.get('display_filter_label') or '').strip() or None,
+            'created_from_raw': bool(derived_info.get('created_from_raw')),
+            'rebuild_policy': str(derived_info.get('rebuild_policy') or '').strip() or None,
+            'double_filter_safe': not bool(derived_info) or bool(derived_info.get('created_from_raw')),
+            'filter_history': filter_history,
+            'raw_isocode': raw_isocode,
+            'managed_isocode': managed_isocode,
+            'isocode_parsed': parsed,
+            'dummy_position': str(parsed.get('dummy_position_normalized') or '').strip().upper() or None,
+            'sensor_family': sensor_family or None,
+            'validation': validation,
+        }
+    return channel_metadata

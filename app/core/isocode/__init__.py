@@ -1,4 +1,5 @@
 from .engine import (
+    build_channel_metadata_map,
     build_isocode_metadata,
     infer_channel_identity,
     infer_managed_isocode,
@@ -11,6 +12,7 @@ from .engine import (
 )
 
 __all__ = [
+    'build_channel_metadata_map',
     'build_isocode_metadata',
     'infer_channel_identity',
     'infer_managed_isocode',

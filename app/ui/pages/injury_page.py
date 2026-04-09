@@ -1371,9 +1371,9 @@ class InjuryPage(tk.Frame):
                 }
                 raw_accel_series = {k: (None if v is None else np.asarray(v, dtype=float)) for k, v in raw_accel_series.items()}
                 disp_prefiltered = {k: np.asarray(v, dtype=float) for k, v in dict(self._collect_chest_disp_prefiltered(disp_ch) or {}).items()}
-                x_calc, _ = self._resolve_standard_series_for_calc(x_ch, 'chest_injury', 'x', 180, 1.0)
-                y_calc, _ = self._resolve_standard_series_for_calc(y_ch, 'chest_injury', 'y', 180, 1.0)
-                z_calc, _ = self._resolve_standard_series_for_calc(z_ch, 'chest_injury', 'z', 180, 1.0)
+                x_calc, used_x = self._resolve_standard_series_for_calc(x_ch, 'chest_injury', 'x', 180, 1.0)
+                y_calc, used_y = self._resolve_standard_series_for_calc(y_ch, 'chest_injury', 'y', 180, 1.0)
+                z_calc, used_z = self._resolve_standard_series_for_calc(z_ch, 'chest_injury', 'z', 180, 1.0)
                 x_calc = np.asarray(x_calc, dtype=float)
                 y_calc = np.asarray(y_calc, dtype=float)
                 z_calc = np.asarray(z_calc, dtype=float)
@@ -1389,7 +1389,11 @@ class InjuryPage(tk.Frame):
                     criterion_key=state.get('dummy_profile') or self.chest_dummy_var.get(),
                     raw_displacement=raw_disp_series,
                     raw_accel=raw_accel_series,
-                    accel_filter_labels={'x': (self.workbench.channel_filter_labels or {}).get(x_ch), 'y': (self.workbench.channel_filter_labels or {}).get(y_ch), 'z': (self.workbench.channel_filter_labels or {}).get(z_ch)},
+                    accel_filter_labels={
+                        'x': self._channel_filter_label_for_calc(x_ch, used_x),
+                        'y': self._channel_filter_label_for_calc(y_ch, used_y),
+                        'z': self._channel_filter_label_for_calc(z_ch, used_z),
+                    },
                     disp_filter_label=(self.workbench.channel_filter_labels or {}).get(disp_ch),
                     disp_prefiltered=disp_prefiltered,
                     vc_sign_pref=1.0,
@@ -1483,10 +1487,25 @@ class InjuryPage(tk.Frame):
         metadata = dict(getattr(self.workbench, 'dataset_metadata', {}) or {})
         return dict(metadata.get('isocode_parsed_map') or {})
 
+    def _channel_metadata_map(self):
+        metadata = dict(getattr(self.workbench, 'dataset_metadata', {}) or {})
+        return dict(metadata.get('channel_metadata_map') or {})
+
+    def _channel_metadata(self, channel_name):
+        return dict(self._channel_metadata_map().get(channel_name) or {})
+
     def _parsed_channel_info(self, channel_name):
+        info = self._channel_metadata(channel_name)
+        parsed = dict(info.get('isocode_parsed') or {})
+        if parsed:
+            return parsed
         return dict(self._isocode_parsed_map().get(channel_name) or {})
 
     def _channel_filter_code(self, channel_name):
+        info = self._channel_metadata(channel_name)
+        code = str(info.get('current_filter_code') or '').strip().upper()
+        if code:
+            return code
         parsed = self._parsed_channel_info(channel_name)
         code = str(parsed.get('filter_code_source') or '').strip().upper()
         if code:
@@ -1511,6 +1530,19 @@ class InjuryPage(tk.Frame):
         if code == '0':
             return 0
         return 2
+
+    def _channel_filter_label_for_calc(self, selected_channel, used_channel=None):
+        for channel in (used_channel, selected_channel):
+            if not channel:
+                continue
+            info = self._channel_metadata(channel)
+            label = str(info.get('current_filter_label') or '').strip()
+            if label:
+                return label
+            label = str((self.workbench.channel_filter_labels or {}).get(channel) or '').strip()
+            if label:
+                return label
+        return 'Raw'
 
     def _preferred_filter_codes(self, mode_key, role_key):
         role_map = dict(FILTER_PREFERENCE_MAP.get(str(mode_key or '').strip(), {}) or {})
@@ -2935,7 +2967,11 @@ class InjuryPage(tk.Frame):
                 criterion_key=self.chest_dummy_var.get(),
                 raw_displacement=raw_disp_series,
                 raw_accel=raw_accel_series,
-                accel_filter_labels={'x': (self.workbench.channel_filter_labels or {}).get(x_ch), 'y': (self.workbench.channel_filter_labels or {}).get(y_ch), 'z': (self.workbench.channel_filter_labels or {}).get(z_ch)},
+                accel_filter_labels={
+                    'x': self._channel_filter_label_for_calc(x_ch, used_x),
+                    'y': self._channel_filter_label_for_calc(y_ch, used_y),
+                    'z': self._channel_filter_label_for_calc(z_ch, used_z),
+                },
                 disp_filter_label=(self.workbench.channel_filter_labels or {}).get(disp_ch),
                 disp_prefiltered=disp_prefiltered,
                 vc_sign_pref=1.0,
@@ -4449,9 +4485,9 @@ class InjuryPage(tk.Frame):
                 raw_accel_series = {'x': self._align_original_series(x_ch), 'y': self._align_original_series(y_ch), 'z': self._align_original_series(z_ch)}
                 raw_accel_series = {k: (None if v is None else np.asarray(v, dtype=float)) for k, v in raw_accel_series.items()}
                 disp_prefiltered = {k: np.asarray(v, dtype=float) for k, v in dict(self._collect_chest_disp_prefiltered(disp_ch) or {}).items()}
-                x_calc, _ = self._resolve_standard_series_for_calc(x_ch, 'chest_injury', 'x', 180, 1.0)
-                y_calc, _ = self._resolve_standard_series_for_calc(y_ch, 'chest_injury', 'y', 180, 1.0)
-                z_calc, _ = self._resolve_standard_series_for_calc(z_ch, 'chest_injury', 'z', 180, 1.0)
+                x_calc, used_x = self._resolve_standard_series_for_calc(x_ch, 'chest_injury', 'x', 180, 1.0)
+                y_calc, used_y = self._resolve_standard_series_for_calc(y_ch, 'chest_injury', 'y', 180, 1.0)
+                z_calc, used_z = self._resolve_standard_series_for_calc(z_ch, 'chest_injury', 'z', 180, 1.0)
                 disp_calc = np.asarray(viewer.get_numeric_column(disp_ch), dtype=float)
                 result = calculate_chest_injury_bundle(
                     time=self._get_time(),
@@ -4464,7 +4500,11 @@ class InjuryPage(tk.Frame):
                     criterion_key=state.get('dummy_profile') or self.chest_dummy_var.get(),
                     raw_displacement=raw_disp_series,
                     raw_accel=raw_accel_series,
-                    accel_filter_labels={'x': (self.workbench.channel_filter_labels or {}).get(x_ch), 'y': (self.workbench.channel_filter_labels or {}).get(y_ch), 'z': (self.workbench.channel_filter_labels or {}).get(z_ch)},
+                    accel_filter_labels={
+                        'x': self._channel_filter_label_for_calc(x_ch, used_x),
+                        'y': self._channel_filter_label_for_calc(y_ch, used_y),
+                        'z': self._channel_filter_label_for_calc(z_ch, used_z),
+                    },
                     disp_filter_label=(self.workbench.channel_filter_labels or {}).get(disp_ch),
                     disp_prefiltered=disp_prefiltered,
                     vc_sign_pref=1.0,

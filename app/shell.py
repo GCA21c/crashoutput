@@ -6,7 +6,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from app.core.io.dataset_store import DATASET_EXT, save_dataset_pickle
-from app.core.isocode import build_isocode_metadata
+from app.core.isocode import build_channel_metadata_map, build_isocode_metadata
 
 from app.ui.pages.viewer_page import ViewerPage
 from app.ui.pages.offset_page import OffsetPage
@@ -98,6 +98,14 @@ class CrashAnalysisWorkbench(tk.Frame):
             derived_channels=base.get("derived_channels"),
         )
         base.update(iso_meta)
+        base["channel_metadata_map"] = build_channel_metadata_map(
+            columns,
+            descriptions=self._current_descriptions(base),
+            units=self._current_units(base),
+            filter_labels=dict(self.channel_filter_labels or base.get("channel_filter_labels", {}) or {}),
+            existing_raw_map=base.get("isocode_raw_map"),
+            derived_channels=base.get("derived_channels"),
+        )
         return base
 
     @property
