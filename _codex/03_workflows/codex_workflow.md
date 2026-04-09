@@ -3,11 +3,14 @@
 ## Recommended operating sequence
 1. Open repository root.
 2. Read root `AGENTS.md`.
-3. Read module docs relevant to the request.
-4. Inspect the exact code files to be changed.
-5. Apply minimal code changes.
-6. Re-check adjacent modules for side effects.
-7. Record a concise change log if the change is material.
+3. Confirm the `crash-reference` MCP server is available when external crash-document lookup is needed.
+4. Read module docs relevant to the request.
+5. Inspect the exact code files to be changed.
+6. Treat user wording like `소스자료` as the same external reference flow through `crash-reference`.
+7. Use `crash-reference` for source lookup before changing crash criteria, filtering, or rating logic.
+8. Apply minimal code changes.
+9. Re-check adjacent modules for side effects.
+10. Record a concise change log if the change is material.
 
 ## For bug fixes
 - reproduce mentally from page -> service -> core boundary

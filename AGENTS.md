@@ -24,6 +24,9 @@ This repository is a Python crash-analysis application.
 - ISO grouping / dummy routing: read `_codex/04_modules/isocode_and_dummy_profiles.md`
 
 ## Working rules
+- Use the global MCP server `crash-reference` for external crash-reference lookup before changing calculation, filtering, regulation, or rating logic.
+- Treat user references to `소스자료` as referring to the same `crash-reference` MCP server and its source documents.
+- Reference priority: calculation -> source 1, filtering -> source 2, regulations/NCAP/IIHS -> source 3, theory fallback -> source 4.
 - Preserve the existing raw -> filter -> compute philosophy.
 - Do not re-filter already filtered channels.
 - Minimize unnecessary derived-channel creation.
