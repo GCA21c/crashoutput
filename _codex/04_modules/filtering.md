@@ -14,6 +14,7 @@
 - do not stack filters unintentionally
 - verify whether helper channels for VC / neck / head use raw-based input paths
 - changes here can affect every injury module
+- confirm target CFC by criterion/rule using `_codex/05_reference/required_cfc_matrix.md`
 
 ## Review checklist
 - Are channel selection rules still correct?

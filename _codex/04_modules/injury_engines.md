@@ -17,6 +17,7 @@
 - filtered-channel selection
 - generated channel naming
 - result persistence and UI handoff
+- rule-specific required CFC should be checked against `_codex/05_reference/required_cfc_matrix.md`
 
 ## Specific hot points
 ### Head
