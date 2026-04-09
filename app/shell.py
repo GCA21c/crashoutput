@@ -63,17 +63,20 @@ class CrashAnalysisWorkbench(tk.Frame):
         self.injury_page_keys = list(INJURY_NAV_ORDER)
         self._injury_mode_combo = None
         self._injury_nav_frame = None
-        self.shared_dummy_config = {
+        self.shared_dummy_config = self._default_shared_dummy_config()
+        self._build_ui()
+        self.show_page("viewer")
+        self.master.bind("<Configure>", self._on_root_configure)
+
+    def _default_shared_dummy_config(self):
+        return {
             "injury_test_mode": "-",
             "setup_complete": False,
             "dummy_count": 1,
             "active_positions": ["B1"],
             "row_positions": ["B1"],
-            "slot_meta": {slot: {"dummy_name": "", "dummy_profile": ""} for slot in ("B1","B2","B3","B4","B5","B6")},
+            "slot_meta": {slot: {"dummy_name": "", "dummy_profile": ""} for slot in ("B1", "B2", "B3", "B4", "B5", "B6")},
         }
-        self._build_ui()
-        self.show_page("viewer")
-        self.master.bind("<Configure>", self._on_root_configure)
 
     def _current_descriptions(self, base_metadata=None):
         metadata = dict(base_metadata or self.dataset_metadata or {})
@@ -369,11 +372,15 @@ class CrashAnalysisWorkbench(tk.Frame):
         merged["injury_test_mode"] = mode
         self.injury_test_mode_var.set(mode)
         self.shared_dummy_config = merged
+        self.dataset_metadata = dict(self.dataset_metadata or {})
+        self.dataset_metadata["shared_dummy_config"] = self.get_shared_dummy_config()
         self._apply_injury_mode_nav()
         for key in self.injury_page_keys:
             page = self.pages.get(key)
             if hasattr(page, "apply_shared_dummy_config"):
                 page.apply_shared_dummy_config(merged)
+        if self.current_file_path and str(self.current_file_path).lower().endswith(DATASET_EXT):
+            self._persist_history_to_current_pickle()
 
     def _update_dataset_info(self):
         label = self.source_file_label or "선택된 파일 없음"
@@ -450,6 +457,7 @@ class CrashAnalysisWorkbench(tk.Frame):
         metadata["source_file_path"] = self.original_source_path or self.source_file_label
         metadata["saved_history"] = list(self.history)
         metadata["saved_history_entries"] = list(self.history_entries)
+        metadata["shared_dummy_config"] = self.get_shared_dummy_config()
         metadata["time_column"] = self.viewer.time_column or metadata.get("time_column")
         metadata["units"] = self._current_units(metadata)
         metadata["descriptions"] = self._current_descriptions(metadata)
@@ -479,6 +487,8 @@ class CrashAnalysisWorkbench(tk.Frame):
         self.original_source_path = None
         self.current_file_path = None
         self.last_saved_file_path = None
+        self.shared_dummy_config = self._default_shared_dummy_config()
+        self.injury_test_mode_var.set("-")
 
         for key, page in self.pages.items():
             target = page
@@ -526,6 +536,7 @@ class CrashAnalysisWorkbench(tk.Frame):
         self.channel_filter_labels = dict(self.dataset_metadata.get('channel_filter_labels') or {})
         self.dataset_metadata = self._enrich_isocode_metadata(self.working_df, self.dataset_metadata)
         self.original_metadata = dict(self.dataset_metadata)
+        self.set_shared_dummy_config(self.dataset_metadata.get("shared_dummy_config") or self._default_shared_dummy_config())
 
         source_format = str(self.dataset_metadata.get("source_format", "")).upper()
         if isinstance(file_label_text, str) and file_label_text.lower().endswith(".dat"):
@@ -579,6 +590,7 @@ class CrashAnalysisWorkbench(tk.Frame):
         metadata["source_file_path"] = self.original_source_path or self.source_file_label
         metadata["saved_history"] = list(self.history)
         metadata["saved_history_entries"] = list(self.history_entries)
+        metadata["shared_dummy_config"] = self.get_shared_dummy_config()
         metadata["time_column"] = self.viewer.time_column or metadata.get("time_column")
         metadata["units"] = self._current_units(metadata)
         metadata["descriptions"] = self._current_descriptions(metadata)

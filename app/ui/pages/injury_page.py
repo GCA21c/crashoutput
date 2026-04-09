@@ -3143,7 +3143,7 @@ class InjuryPage(tk.Frame):
         self.figure.tight_layout()
         self.canvas.draw_idle()
 
-    def _legacy_calculate_femur(self):
+    def calculate_femur(self):
         viewer = self.workbench.viewer
         if viewer.df is None or viewer.time_column is None:
             messagebox.showwarning('寃쎄퀬', '癒쇱? DAT ?곗씠?곕? 濡쒕뱶?섏꽭??')
@@ -3229,6 +3229,9 @@ class InjuryPage(tk.Frame):
             self.show_femur_graph('combined', slot=slot)
         except Exception as exc:
             messagebox.showwarning('寃쎄퀬', str(exc))
+
+    def _legacy_calculate_femur(self):
+        self.calculate_femur()
 
     def _legacy_show_femur_graph(self, mode, slot=None, silent=False):
         slot = slot or self._active_slot()
