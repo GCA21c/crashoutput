@@ -227,21 +227,6 @@ class FilteringPage(tk.Frame):
                     selected.append(channel)
         return selected
 
-    def _is_injury_derived_channel(self, channel):
-        meta = dict((self.pending_derived_channels or {}).get(channel) or {})
-        return str(meta.get("purpose") or "").endswith("_injury")
-
-    def _filterable_channels(self, channels):
-        channels = list(channels or [])
-        allowed = []
-        blocked = []
-        for channel in channels:
-            if self._is_injury_derived_channel(channel):
-                blocked.append(channel)
-            else:
-                allowed.append(channel)
-        return allowed, blocked
-
     def refresh_channels(self, keep_selection=False):
         self._sync_pending_if_needed(force=False)
         viewer = self.workbench.viewer
@@ -261,8 +246,6 @@ class FilteringPage(tk.Frame):
         channels = get_numeric_channels(active_df, viewer.time_column)
         pattern = self.search_var.get().strip().lower()
         for channel in channels:
-            if self._is_injury_derived_channel(channel):
-                continue
             if pattern and pattern not in make_channel_search_text(viewer, channel):
                 continue
             display = self._display_name(viewer, channel)
@@ -325,10 +308,7 @@ class FilteringPage(tk.Frame):
             messagebox.showwarning("경고", "먼저 DAT 데이터를 로드하세요.")
             return
 
-        selected_channels, blocked_channels = self._filterable_channels(self._selected_channels())
-        if not selected_channels and blocked_channels:
-            messagebox.showwarning("경고", "상해 계산용 파생 채널은 DATA FILTERING에서 다시 적용할 수 없습니다.")
-            return
+        selected_channels = self._selected_channels()
         if not selected_channels:
             messagebox.showwarning("경고", "왼쪽 목록에서 필터링할 채널을 선택하세요.")
             return
@@ -362,10 +342,7 @@ class FilteringPage(tk.Frame):
 
         self.refresh_channels(keep_selection=True)
         self.refresh_plot()
-        blocked_note = ""
-        if blocked_channels:
-            blocked_note = f" 상해 계산용 파생 채널 {len(blocked_channels)}개는 제외되었습니다."
-        self.info_var.set(f"{len(selected_channels)}개 채널에 {filter_label} 적용 완료.{blocked_note} [FILTERING!]을 누르면 작업 데이터에 반영됩니다.")
+        self.info_var.set(f"{len(selected_channels)}개 채널에 {filter_label} 적용 완료. [FILTERING!]을 누르면 작업 데이터에 반영됩니다.")
 
     def cancel_selected_filters(self):
         self._sync_pending_if_needed(force=False)
