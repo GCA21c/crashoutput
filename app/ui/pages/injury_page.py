@@ -1159,6 +1159,27 @@ class InjuryPage(tk.Frame):
         seed = f"{self._dataset_identity_text()}|{self._section_key()}|{slot}|{graph_key}"
         return str(uuid.uuid5(uuid.NAMESPACE_URL, seed))
 
+    def _slot_saved_payload_key(self):
+        return {
+            'hic': 'head_metadata',
+            'nij': 'neck_saved_payload',
+            'chest': 'chest_saved_payload',
+            'pelvis': 'pelvis_saved_payload',
+            'femur': 'femur_saved_payload',
+            'knee': 'knee_saved_payload',
+            'iliac': 'iliac_saved_payload',
+            'tibia': 'tibia_saved_payload',
+        }.get(self.initial_mode)
+
+    def _preferred_graph_key(self, slot, default_key):
+        key = (self.slot_states.get(slot) or {}).get('graph_key') or default_key
+        if self.initial_mode == 'hic':
+            key = self._normalize_head_graph_key(key)
+        elif self.initial_mode == 'nij':
+            key = self._normalize_neck_graph_key(key)
+        valid_keys = {spec_key for spec_key, _label in self._graph_tab_specs()}
+        return key if key in valid_keys else default_key
+
     def _record_graph_selection(self, slot, graph_key):
         if slot not in self.slot_states:
             return
@@ -1166,11 +1187,12 @@ class InjuryPage(tk.Frame):
         graph_uid = self._injury_graph_uid(slot, graph_key)
         state['graph_key'] = graph_key
         state['graph_uid'] = graph_uid
-        if self.initial_mode == 'nij':
-            payload = dict(state.get('neck_saved_payload') or {})
+        payload_key = self._slot_saved_payload_key()
+        if payload_key:
+            payload = dict(state.get(payload_key) or {})
             payload['graph_key'] = graph_key
             payload['graph_uid'] = graph_uid
-            state['neck_saved_payload'] = payload
+            state[payload_key] = payload
 
         metadata = dict(getattr(self.workbench, 'dataset_metadata', {}) or {})
         injury_saved = dict(metadata.get('injury_saved_results') or {})
@@ -2680,8 +2702,11 @@ class InjuryPage(tk.Frame):
             meta['channels'] = dict(st['channels'])
             meta['use_high_res_cumulative_3ms'] = self._current_use_high_res_cumulative_3ms()
             st['head_metadata'] = meta
-            st['graph_key'] = 'head_resultant'
-            st['graph_uid'] = self._injury_graph_uid(slot, 'head_resultant')
+            preferred_graph_key = self._preferred_graph_key(slot, 'head_resultant')
+            st['graph_key'] = preferred_graph_key
+            st['graph_uid'] = self._injury_graph_uid(slot, preferred_graph_key)
+            st['head_metadata']['graph_key'] = st['graph_key']
+            st['head_metadata']['graph_uid'] = st['graph_uid']
             st['use_high_res_cumulative_3ms'] = self._current_use_high_res_cumulative_3ms()
             self._apply_summary_text(result['summary_text'])
             injury_df = viewer.df.copy(deep=True)
@@ -2702,7 +2727,7 @@ class InjuryPage(tk.Frame):
                 'graph_uid': st.get('graph_uid'),
                 'message': 'Head injury calculated',
             }, dataframe=injury_df, metadata_extra=metadata_override)
-            self.show_hic_bundle_graph('head_resultant', slot=slot)
+            self.show_hic_bundle_graph(preferred_graph_key, slot=slot)
         except Exception as exc:
             messagebox.showwarning('경고', str(exc))
 
@@ -3160,8 +3185,11 @@ class InjuryPage(tk.Frame):
                 'resultant_peak_g': float(rp['value']) if rp.get('value') is not None else None,
                 'summary_format_version': result.get('summary_format_version') or SUMMARY_FORMAT_VERSION,
             }
-            st['graph_key'] = 'accel'
-            st['graph_uid'] = self._injury_graph_uid(slot, 'accel')
+            preferred_graph_key = self._preferred_graph_key(slot, 'accel')
+            st['graph_key'] = preferred_graph_key
+            st['graph_uid'] = self._injury_graph_uid(slot, preferred_graph_key)
+            st['chest_saved_payload']['graph_key'] = st['graph_key']
+            st['chest_saved_payload']['graph_uid'] = st['graph_uid']
             self._apply_summary_text(result['summary_text'])
             vc_sae_channel = self._chest_vc_channel_name(slot, 'SAE_J1727')
             vc_ece_channel = self._chest_vc_channel_name(slot, 'ECE94')
@@ -3191,7 +3219,7 @@ class InjuryPage(tk.Frame):
                 dataframe=injury_df,
                 metadata_extra=metadata_override,
             )
-            self.show_chest_graph('accel', slot=slot)
+            self.show_chest_graph(preferred_graph_key, slot=slot)
         except Exception as exc:
             messagebox.showwarning('경고', str(exc))
 
@@ -3210,6 +3238,7 @@ class InjuryPage(tk.Frame):
             self._plot_chest_vc(metrics, slot)
         self.slot_states[slot]['graph_key'] = mode
         self.slot_states[slot]['graph_uid'] = self._injury_graph_uid(slot, mode)
+        self._select_graph_tab(mode)
         if not silent:
             self._record_graph_selection(slot, mode)
 
@@ -3331,8 +3360,11 @@ class InjuryPage(tk.Frame):
                 'overall_peak_n': float((metrics.get('overall_peak') or {}).get('value')) if (metrics.get('overall_peak') or {}).get('value') is not None else None,
                 'summary_format_version': result.get('summary_format_version') or SUMMARY_FORMAT_VERSION,
             }
-            st['graph_key'] = 'combined'
-            st['graph_uid'] = self._injury_graph_uid(slot, 'combined')
+            preferred_graph_key = self._preferred_graph_key(slot, 'combined')
+            st['graph_key'] = preferred_graph_key
+            st['graph_uid'] = self._injury_graph_uid(slot, preferred_graph_key)
+            st['femur_saved_payload']['graph_key'] = st['graph_key']
+            st['femur_saved_payload']['graph_uid'] = st['graph_uid']
             self._apply_summary_text(result['summary_text'])
 
             left_calc_name = self._femur_force_channel_name(slot, 'left')
@@ -3362,7 +3394,7 @@ class InjuryPage(tk.Frame):
                 dataframe=injury_df,
                 metadata_extra=metadata_override,
             )
-            self.show_femur_graph('combined', slot=slot)
+            self.show_femur_graph(preferred_graph_key, slot=slot)
         except Exception as exc:
             messagebox.showwarning('寃쎄퀬', str(exc))
 
@@ -4962,8 +4994,11 @@ class InjuryPage(tk.Frame):
                 'use_high_res_cumulative_3ms': st['use_high_res_cumulative_3ms'],
                 'summary_format_version': result.get('summary_format_version') or SUMMARY_FORMAT_VERSION,
             }
-            st['graph_key'] = 'accel_resultant'
-            st['graph_uid'] = self._injury_graph_uid(slot, 'accel_resultant')
+            preferred_graph_key = self._preferred_graph_key(slot, 'accel_resultant')
+            st['graph_key'] = preferred_graph_key
+            st['graph_uid'] = self._injury_graph_uid(slot, preferred_graph_key)
+            st['pelvis_saved_payload']['graph_key'] = st['graph_key']
+            st['pelvis_saved_payload']['graph_uid'] = st['graph_uid']
             self._apply_summary_text(result['summary_text'])
             self._save_section_payload(
                 {
@@ -4977,7 +5012,7 @@ class InjuryPage(tk.Frame):
                     'display_message': 'Pelvis injury calculated successfully',
                 }
             )
-            self.show_pelvis_graph('accel_resultant', slot=slot)
+            self.show_pelvis_graph(preferred_graph_key, slot=slot)
         except Exception as exc:
             messagebox.showwarning('\uacbd\uace0', str(exc))
 
@@ -5076,8 +5111,11 @@ class InjuryPage(tk.Frame):
                 'neg_flags': {},
                 'summary_format_version': result.get('summary_format_version') or SUMMARY_FORMAT_VERSION,
             }
-            st['graph_key'] = 'combined'
-            st['graph_uid'] = self._injury_graph_uid(slot, 'combined')
+            preferred_graph_key = self._preferred_graph_key(slot, 'combined')
+            st['graph_key'] = preferred_graph_key
+            st['graph_uid'] = self._injury_graph_uid(slot, preferred_graph_key)
+            st['knee_saved_payload']['graph_key'] = st['graph_key']
+            st['knee_saved_payload']['graph_uid'] = st['graph_uid']
             self._apply_summary_text(result['summary_text'])
             self._save_section_payload(
                 {
@@ -5091,7 +5129,7 @@ class InjuryPage(tk.Frame):
                     'display_message': 'Knee slider calculated successfully',
                 }
             )
-            self.show_knee_graph('combined', slot=slot)
+            self.show_knee_graph(preferred_graph_key, slot=slot)
         except Exception as exc:
             messagebox.showwarning('경고', str(exc))
 
@@ -5144,8 +5182,11 @@ class InjuryPage(tk.Frame):
                 'neg_flags': {},
                 'summary_format_version': result.get('summary_format_version') or SUMMARY_FORMAT_VERSION,
             }
-            st['graph_key'] = 'force'
-            st['graph_uid'] = self._injury_graph_uid(slot, 'force')
+            preferred_graph_key = self._preferred_graph_key(slot, 'force')
+            st['graph_key'] = preferred_graph_key
+            st['graph_uid'] = self._injury_graph_uid(slot, preferred_graph_key)
+            st['iliac_saved_payload']['graph_key'] = st['graph_key']
+            st['iliac_saved_payload']['graph_uid'] = st['graph_uid']
             self._apply_summary_text(result['summary_text'])
             self._save_section_payload(
                 {
@@ -5159,7 +5200,7 @@ class InjuryPage(tk.Frame):
                     'display_message': 'Iliac injury calculated successfully',
                 }
             )
-            self.show_iliac_graph('force', slot=slot)
+            self.show_iliac_graph(preferred_graph_key, slot=slot)
         except Exception as exc:
             messagebox.showwarning('경고', str(exc))
 
@@ -5242,8 +5283,11 @@ class InjuryPage(tk.Frame):
                 'neg_flags': {},
                 'summary_format_version': result.get('summary_format_version') or SUMMARY_FORMAT_VERSION,
             }
-            st['graph_key'] = 'tibia_index'
-            st['graph_uid'] = self._injury_graph_uid(slot, 'tibia_index')
+            preferred_graph_key = self._preferred_graph_key(slot, 'tibia_index')
+            st['graph_key'] = preferred_graph_key
+            st['graph_uid'] = self._injury_graph_uid(slot, preferred_graph_key)
+            st['tibia_saved_payload']['graph_key'] = st['graph_key']
+            st['tibia_saved_payload']['graph_uid'] = st['graph_uid']
             self._apply_summary_text(result['summary_text'])
             self._save_section_payload(
                 {
@@ -5257,7 +5301,7 @@ class InjuryPage(tk.Frame):
                     'display_message': 'Tibia injury calculated successfully',
                 }
             )
-            self.show_tibia_graph('tibia_index', slot=slot)
+            self.show_tibia_graph(preferred_graph_key, slot=slot)
         except Exception as exc:
             messagebox.showwarning('경고', str(exc))
 
