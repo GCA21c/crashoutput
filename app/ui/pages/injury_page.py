@@ -1226,7 +1226,16 @@ class InjuryPage(tk.Frame):
         slots_payload = {}
         for slot in self._active_positions():
             st = self.slot_states[slot]
-            slots_payload[slot] = {
+            payload = {}
+            if self.initial_mode == 'hic':
+                payload.update(dict(st.get('head_metadata') or {}))
+            elif self.initial_mode == 'nij':
+                payload.update(dict(st.get('neck_saved_payload') or {}))
+            elif self.initial_mode == 'chest':
+                payload.update(dict(st.get('chest_saved_payload') or {}))
+            else:
+                payload.update(dict(st.get('femur_saved_payload') or {}))
+            payload.update({
                 'result_uid': st.get('result_uid') or self._injury_result_uid(slot),
                 'section_key': self._section_key(),
                 'slot': slot,
@@ -1237,15 +1246,8 @@ class InjuryPage(tk.Frame):
                 'summary_text': st.get('summary_text') or '-',
                 'graph_key': st.get('graph_key'),
                 'graph_uid': st.get('graph_uid') or (self._injury_graph_uid(slot, st.get('graph_key')) if st.get('graph_key') else ''),
-            }
-            if self.initial_mode == 'hic':
-                slots_payload[slot].update(dict(st.get('head_metadata') or {}))
-            elif self.initial_mode == 'nij':
-                slots_payload[slot].update(dict(st.get('neck_saved_payload') or {}))
-            elif self.initial_mode == 'chest':
-                slots_payload[slot].update(dict(st.get('chest_saved_payload') or {}))
-            else:
-                slots_payload[slot].update(dict(st.get('femur_saved_payload') or {}))
+            })
+            slots_payload[slot] = payload
         return {
             'dummy_count': self._active_count(),
             'active_slot': self._active_slot(),
@@ -3933,18 +3935,7 @@ class InjuryPage(tk.Frame):
         slots_payload = {}
         for slot in self._active_positions():
             st = self.slot_states[slot]
-            payload = {
-                'result_uid': st.get('result_uid') or self._injury_result_uid(slot),
-                'section_key': self._section_key(),
-                'slot': slot,
-                'dummy_name': st.get('dummy_name') or '',
-                'dummy_profile': st.get('dummy_profile') or '',
-                'channels': dict(st.get('channels') or {}),
-                'neg_flags': dict(st.get('neg_flags') or {}),
-                'summary_text': st.get('summary_text') or '-',
-                'graph_key': st.get('graph_key'),
-                'graph_uid': st.get('graph_uid') or (self._injury_graph_uid(slot, st.get('graph_key')) if st.get('graph_key') else ''),
-            }
+            payload = {}
             if self.initial_mode == 'hic':
                 payload.update(dict(st.get('head_metadata') or {}))
             elif self.initial_mode == 'nij':
@@ -3961,6 +3952,18 @@ class InjuryPage(tk.Frame):
                 payload.update(dict(st.get('iliac_saved_payload') or {}))
             else:
                 payload.update(dict(st.get('tibia_saved_payload') or {}))
+            payload.update({
+                'result_uid': st.get('result_uid') or self._injury_result_uid(slot),
+                'section_key': self._section_key(),
+                'slot': slot,
+                'dummy_name': st.get('dummy_name') or '',
+                'dummy_profile': st.get('dummy_profile') or '',
+                'channels': dict(st.get('channels') or {}),
+                'neg_flags': dict(st.get('neg_flags') or {}),
+                'summary_text': st.get('summary_text') or '-',
+                'graph_key': st.get('graph_key'),
+                'graph_uid': st.get('graph_uid') or (self._injury_graph_uid(slot, st.get('graph_key')) if st.get('graph_key') else ''),
+            })
             slots_payload[slot] = payload
         return {
             'dummy_count': self._active_count(),
