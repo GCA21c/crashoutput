@@ -1191,6 +1191,12 @@ class InjuryPage(tk.Frame):
         valid_keys = {spec_key for spec_key, _label in self._graph_tab_specs()}
         return key if key in valid_keys else default_key
 
+    def _default_graph_key(self, fallback_key=''):
+        specs = self._graph_tab_specs()
+        if specs:
+            return specs[0][0]
+        return fallback_key
+
     def _record_graph_selection(self, slot, graph_key):
         if slot not in self.slot_states:
             return
@@ -2715,7 +2721,7 @@ class InjuryPage(tk.Frame):
             meta['channels'] = dict(st['channels'])
             meta['use_high_res_cumulative_3ms'] = self._current_use_high_res_cumulative_3ms()
             st['head_metadata'] = meta
-            preferred_graph_key = self._preferred_graph_key(slot, 'head_resultant')
+            preferred_graph_key = self._default_graph_key('head_resultant')
             st['graph_key'] = preferred_graph_key
             st['graph_uid'] = self._injury_graph_uid(slot, preferred_graph_key)
             st['head_metadata']['graph_key'] = st['graph_key']
@@ -2890,7 +2896,7 @@ class InjuryPage(tk.Frame):
                 'neg_flags': dict(st['neg_flags']),
                 'summary_format_version': result.get('summary_format_version') or SUMMARY_FORMAT_VERSION,
             }
-            preferred_graph_key = self._normalize_neck_graph_key(st.get('graph_key') or 'nij_components')
+            preferred_graph_key = self._default_graph_key('nij_components')
             st['graph_key'] = preferred_graph_key
             st['graph_uid'] = self._injury_graph_uid(slot, preferred_graph_key)
             st['neck_saved_payload']['graph_key'] = st['graph_key']
@@ -3198,7 +3204,7 @@ class InjuryPage(tk.Frame):
                 'resultant_peak_g': float(rp['value']) if rp.get('value') is not None else None,
                 'summary_format_version': result.get('summary_format_version') or SUMMARY_FORMAT_VERSION,
             }
-            preferred_graph_key = self._preferred_graph_key(slot, 'accel')
+            preferred_graph_key = self._default_graph_key('accel')
             st['graph_key'] = preferred_graph_key
             st['graph_uid'] = self._injury_graph_uid(slot, preferred_graph_key)
             st['chest_saved_payload']['graph_key'] = st['graph_key']
@@ -3373,7 +3379,7 @@ class InjuryPage(tk.Frame):
                 'overall_peak_n': float((metrics.get('overall_peak') or {}).get('value')) if (metrics.get('overall_peak') or {}).get('value') is not None else None,
                 'summary_format_version': result.get('summary_format_version') or SUMMARY_FORMAT_VERSION,
             }
-            preferred_graph_key = self._preferred_graph_key(slot, 'combined')
+            preferred_graph_key = self._default_graph_key('combined')
             st['graph_key'] = preferred_graph_key
             st['graph_uid'] = self._injury_graph_uid(slot, preferred_graph_key)
             st['femur_saved_payload']['graph_key'] = st['graph_key']
@@ -5008,7 +5014,7 @@ class InjuryPage(tk.Frame):
                 'use_high_res_cumulative_3ms': st['use_high_res_cumulative_3ms'],
                 'summary_format_version': result.get('summary_format_version') or SUMMARY_FORMAT_VERSION,
             }
-            preferred_graph_key = self._preferred_graph_key(slot, 'accel_resultant')
+            preferred_graph_key = self._default_graph_key('accel_resultant')
             st['graph_key'] = preferred_graph_key
             st['graph_uid'] = self._injury_graph_uid(slot, preferred_graph_key)
             st['pelvis_saved_payload']['graph_key'] = st['graph_key']
@@ -5125,7 +5131,7 @@ class InjuryPage(tk.Frame):
                 'neg_flags': {},
                 'summary_format_version': result.get('summary_format_version') or SUMMARY_FORMAT_VERSION,
             }
-            preferred_graph_key = self._preferred_graph_key(slot, 'combined')
+            preferred_graph_key = self._default_graph_key('combined')
             st['graph_key'] = preferred_graph_key
             st['graph_uid'] = self._injury_graph_uid(slot, preferred_graph_key)
             st['knee_saved_payload']['graph_key'] = st['graph_key']
@@ -5196,7 +5202,7 @@ class InjuryPage(tk.Frame):
                 'neg_flags': {},
                 'summary_format_version': result.get('summary_format_version') or SUMMARY_FORMAT_VERSION,
             }
-            preferred_graph_key = self._preferred_graph_key(slot, 'force')
+            preferred_graph_key = self._default_graph_key('force')
             st['graph_key'] = preferred_graph_key
             st['graph_uid'] = self._injury_graph_uid(slot, preferred_graph_key)
             st['iliac_saved_payload']['graph_key'] = st['graph_key']
@@ -5297,7 +5303,7 @@ class InjuryPage(tk.Frame):
                 'neg_flags': {},
                 'summary_format_version': result.get('summary_format_version') or SUMMARY_FORMAT_VERSION,
             }
-            preferred_graph_key = self._preferred_graph_key(slot, 'tibia_index')
+            preferred_graph_key = self._default_graph_key('tibia_index')
             st['graph_key'] = preferred_graph_key
             st['graph_uid'] = self._injury_graph_uid(slot, preferred_graph_key)
             st['tibia_saved_payload']['graph_key'] = st['graph_key']
