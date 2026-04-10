@@ -134,7 +134,8 @@ def calculate_neck_injury_bundle(
         display_series[axis] = None if series is None else series
         display_units[axis] = unit_getter(channel_name) if channel_name else None
         display_filter_labels[axis] = metrics['source_filter_labels'].get(axis) or 'RAW'
-        display_channel_names[axis] = rewrite_filter_code_in_text(channel_name, display_filter_labels[axis]) if channel_name else '-'
+        rewritten_name = rewrite_filter_code_in_text(channel_name, display_filter_labels[axis]) if channel_name else '-'
+        display_channel_names[axis] = f"{axis} - {rewritten_name}" if channel_name else f"{axis} - -"
         detail = _series_extrema_detail(time_arr, series if series is not None else [])
         bucket = 'force' if axis.startswith('F') else 'moment'
         extrema_blocks[bucket].append(
@@ -173,10 +174,10 @@ def calculate_neck_injury_bundle(
         + fmt_metric_at('Peak Comp. Force (FZ-)', metrics['peak_compression_fz'], unit='N', time_s=metrics.get('peak_compression_time')) + '\n'
         + fmt_metric_at(f'Peak Flexion {moment_input_label}', metrics['peak_flexion_my'], unit='Nm', time_s=metrics.get('peak_flexion_time')) + '\n'
         + fmt_metric_at(f'Peak Extension {moment_input_label}', abs(metrics['peak_extension_my']), unit='Nm', time_s=metrics.get('peak_extension_time')) + '\n\n'
-        + fmt_metric_at('NTF', metrics['peak_ntf'], time_s=metrics.get('peak_ntf_time')) + '\n'
         + fmt_metric_at('NTE', metrics['peak_nte'], time_s=metrics.get('peak_nte_time')) + '\n'
-        + fmt_metric_at('NCF', metrics['peak_ncf'], time_s=metrics.get('peak_ncf_time')) + '\n'
+        + fmt_metric_at('NTF', metrics['peak_ntf'], time_s=metrics.get('peak_ntf_time')) + '\n'
         + fmt_metric_at('NCE', metrics['peak_nce'], time_s=metrics.get('peak_nce_time')) + '\n'
+        + fmt_metric_at('NCF', metrics['peak_ncf'], time_s=metrics.get('peak_ncf_time')) + '\n'
         + fmt_metric_at('Overall Nij', metrics['overall_nij'], time_s=metrics.get('overall_nij_time')) + '\n'
         + f"Dominant Mode: {metrics['dominant_mode']}\n\n"
         + f"사용 채널(선택):\n"

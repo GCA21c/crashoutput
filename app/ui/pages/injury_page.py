@@ -736,7 +736,8 @@ class InjuryPage(tk.Frame):
                 ('fo', 'NECK FO'),
                 ('mo', 'NECK MO'),
                 ('mocy', 'MOCy'),
-                ('nij', 'Nij'),
+                ('nij_components', 'Nij - Components'),
+                ('nij_overall', 'Nij - Overall'),
             ]
         if self.initial_mode == 'chest':
             return [
@@ -1165,6 +1166,11 @@ class InjuryPage(tk.Frame):
         graph_uid = self._injury_graph_uid(slot, graph_key)
         state['graph_key'] = graph_key
         state['graph_uid'] = graph_uid
+        if self.initial_mode == 'nij':
+            payload = dict(state.get('neck_saved_payload') or {})
+            payload['graph_key'] = graph_key
+            payload['graph_uid'] = graph_uid
+            state['neck_saved_payload'] = payload
 
         metadata = dict(getattr(self.workbench, 'dataset_metadata', {}) or {})
         injury_saved = dict(metadata.get('injury_saved_results') or {})
@@ -1290,8 +1296,11 @@ class InjuryPage(tk.Frame):
                 st['use_high_res_cumulative_3ms'] = bool(payload.get('use_high_res_cumulative_3ms'))
             elif 'high_res_3ms_sliding_window' in payload:
                 st['use_high_res_cumulative_3ms'] = bool(payload.get('high_res_3ms_sliding_window'))
-            st['graph_key'] = payload.get('graph_key')
-            st['graph_uid'] = payload.get('graph_uid') or (self._injury_graph_uid(slot, payload.get('graph_key')) if payload.get('graph_key') else '')
+            restored_graph_key = payload.get('graph_key')
+            if self.initial_mode == 'nij':
+                restored_graph_key = self._normalize_neck_graph_key(restored_graph_key)
+            st['graph_key'] = restored_graph_key
+            st['graph_uid'] = payload.get('graph_uid') or (self._injury_graph_uid(slot, restored_graph_key) if restored_graph_key else '')
             if self.initial_mode == 'hic':
                 st['head_metadata'] = payload
             elif self.initial_mode == 'nij':
@@ -2843,9 +2852,11 @@ class InjuryPage(tk.Frame):
                 'neg_flags': dict(st['neg_flags']),
                 'summary_format_version': result.get('summary_format_version') or SUMMARY_FORMAT_VERSION,
             }
-            preferred_graph_key = self._normalize_neck_graph_key(st.get('graph_key') or 'nij')
+            preferred_graph_key = self._normalize_neck_graph_key(st.get('graph_key') or 'nij_components')
             st['graph_key'] = preferred_graph_key
             st['graph_uid'] = self._injury_graph_uid(slot, preferred_graph_key)
+            st['neck_saved_payload']['graph_key'] = st['graph_key']
+            st['neck_saved_payload']['graph_uid'] = st['graph_uid']
             self._apply_summary_text(result['summary_text'])
             injury_df = viewer.df.copy(deep=True)
             calc_channels = build_neck_injury_channels(metrics)
@@ -2952,6 +2963,8 @@ class InjuryPage(tk.Frame):
             self._plot_neck_moment_overlay(metrics, slot)
         elif mode == 'mocy':
             self._plot_neck_mocy(metrics, slot)
+        elif mode == 'nij_overall':
+            self._plot_neck_nij_overall(metrics, slot)
         else:
             self._plot_neck_nij(metrics, slot)
         self.slot_states[slot]['graph_key'] = mode
@@ -2965,9 +2978,11 @@ class InjuryPage(tk.Frame):
         return {
             'fz': 'fo',
             'my': 'mo',
-            'nij_components': 'nij',
-            'upper_neck_index_nij': 'nij',
-        }.get(key, key or 'nij')
+            'nij': 'nij_components',
+            'nij_components': 'nij_components',
+            'nij_overall': 'nij_overall',
+            'upper_neck_index_nij': 'nij_components',
+        }.get(key, key or 'nij_components')
 
     def _plot_neck_force_overlay(self, metrics, slot):
         t = np.asarray(metrics['time'], dtype=float)
@@ -3032,26 +3047,38 @@ class InjuryPage(tk.Frame):
     def _plot_neck_nij(self, metrics, slot):
         t = np.asarray(metrics['time'], dtype=float)
         self.ax.clear()
-        arr = np.asarray(metrics.get('nij'), dtype=float)
-        valid, t_plot, v_plot = self._time_value_valid_mask_ms(t, arr)
-        if np.any(valid):
-            self.ax.plot(t_plot[valid], v_plot[valid], linewidth=1.8, label='Overall Nij')
         for label, key, width in (
-            ('Tension Extension', 'nte', 1.0),
-            ('Tension Flexion', 'ntf', 1.0),
-            ('Compression Extension', 'nce', 1.0),
-            ('Compression Flexion', 'ncf', 1.0),
+            ('NTE', 'nte', 1.0),
+            ('NTF', 'ntf', 1.0),
+            ('NCE', 'nce', 1.0),
+            ('NCF', 'ncf', 1.0),
         ):
             case_arr = np.asarray(metrics.get(key), dtype=float)
             case_valid, case_t_plot, case_v_plot = self._time_value_valid_mask_ms(t, case_arr)
             if np.any(case_valid):
                 self.ax.plot(case_t_plot[case_valid], case_v_plot[case_valid], linewidth=width, label=label)
-        self.ax.set_title(f"INJURY - Nij ({self._graph_subject_label(slot)})")
+        self.ax.set_title(f"INJURY - Nij Components ({self._graph_subject_label(slot)})")
         self.ax.set_xlabel(self._x_axis_label())
         self.ax.set_ylabel('Nij')
         self.ax.grid(True)
         self.ax.legend(loc='best', fontsize=9)
-        self.last_plot_title = f'{slot}_Neck_Nij_graph'
+        self.last_plot_title = f'{slot}_Neck_Nij_Components_graph'
+        self.figure.tight_layout()
+        self.canvas.draw_idle()
+
+    def _plot_neck_nij_overall(self, metrics, slot):
+        t = np.asarray(metrics['time'], dtype=float)
+        self.ax.clear()
+        arr = np.asarray(metrics.get('nij'), dtype=float)
+        valid, t_plot, v_plot = self._time_value_valid_mask_ms(t, arr)
+        if np.any(valid):
+            self.ax.plot(t_plot[valid], v_plot[valid], linewidth=1.8, label='Overall Nij')
+        self.ax.set_title(f"INJURY - Nij Overall ({self._graph_subject_label(slot)})")
+        self.ax.set_xlabel(self._x_axis_label())
+        self.ax.set_ylabel('Nij')
+        self.ax.grid(True)
+        self.ax.legend(loc='best', fontsize=9)
+        self.last_plot_title = f'{slot}_Neck_Nij_Overall_graph'
         self.figure.tight_layout()
         self.canvas.draw_idle()
 
@@ -3588,7 +3615,7 @@ class InjuryPage(tk.Frame):
         if self.initial_mode == 'hic':
             return [('head_xyz', 'HEAD X/Y/Z'), ('head_resultant', 'HEAD RESULTANT')]
         if self.initial_mode == 'nij':
-            return [('fo', 'NECK FO'), ('mo', 'NECK MO'), ('mocy', 'MOCy'), ('nij', 'Nij')]
+            return [('fo', 'NECK FO'), ('mo', 'NECK MO'), ('mocy', 'MOCy'), ('nij_components', 'Nij - Components'), ('nij_overall', 'Nij - Overall')]
         if self.initial_mode == 'chest':
             return [('accel', 'Acceleration'), ('disp', 'Displacement'), ('vc', 'V*C')]
         if self.initial_mode == 'pelvis':
@@ -3938,8 +3965,11 @@ class InjuryPage(tk.Frame):
                 st['use_high_res_cumulative_3ms'] = bool(payload.get('use_high_res_cumulative_3ms'))
             elif 'high_res_3ms_sliding_window' in payload:
                 st['use_high_res_cumulative_3ms'] = bool(payload.get('high_res_3ms_sliding_window'))
-            st['graph_key'] = payload.get('graph_key')
-            st['graph_uid'] = payload.get('graph_uid') or (self._injury_graph_uid(slot, payload.get('graph_key')) if payload.get('graph_key') else '')
+            restored_graph_key = payload.get('graph_key')
+            if self.initial_mode == 'nij':
+                restored_graph_key = self._normalize_neck_graph_key(restored_graph_key)
+            st['graph_key'] = restored_graph_key
+            st['graph_uid'] = payload.get('graph_uid') or (self._injury_graph_uid(slot, restored_graph_key) if restored_graph_key else '')
             if self.initial_mode == 'hic':
                 st['head_metadata'] = payload
             elif self.initial_mode == 'nij':
