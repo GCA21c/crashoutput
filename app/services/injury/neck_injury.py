@@ -1,6 +1,44 @@
-from app.core.utils.formatting import SUMMARY_FORMAT_VERSION, fmt_metric_at, fmt_value
+import numpy as np
+
+from app.core.utils.formatting import SUMMARY_FORMAT_VERSION, fmt_metric_at, fmt_time_ms, fmt_value
 from app.services.preprocessing.service import compute_neck_nij_metrics
 
+
+def _series_extrema_detail(time_s, values):
+    t = np.asarray(time_s, dtype=float)
+    v = np.asarray(values, dtype=float)
+    n = min(len(t), len(v))
+    if n <= 0:
+        return {'max_value': None, 'max_time': None, 'min_value': None, 'min_time': None}
+    t = t[:n]
+    v = v[:n]
+    valid = np.isfinite(t) & np.isfinite(v)
+    if not np.any(valid):
+        return {'max_value': None, 'max_time': None, 'min_value': None, 'min_time': None}
+    tv = t[valid]
+    vv = v[valid]
+    max_idx = int(np.nanargmax(vv))
+    min_idx = int(np.nanargmin(vv))
+    return {
+        'max_value': float(vv[max_idx]),
+        'max_time': float(tv[max_idx]),
+        'min_value': float(vv[min_idx]),
+        'min_time': float(tv[min_idx]),
+    }
+
+
+def _format_value_at_line(label, value, time_s, unit=''):
+    value_text = fmt_value(value, unit, unit_style='suffix')
+    time_text = fmt_time_ms(time_s)
+    return f"{label:<4}: {value_text} at {time_text}" if time_text != '-' else f"{label:<4}: {value_text}"
+
+
+def _format_neck_axis_block(axis_label, filter_label, detail, unit=''):
+    return '\n'.join([
+        f"{axis_label} [{filter_label or 'RAW'}]",
+        _format_value_at_line('Max', detail.get('max_value'), detail.get('max_time'), unit=unit),
+        _format_value_at_line('Min', detail.get('min_value'), detail.get('min_time'), unit=unit),
+    ])
 
 
 def calculate_neck_injury_bundle(
@@ -13,6 +51,7 @@ def calculate_neck_injury_bundle(
     channel_desc_getter,
     resolve_series_for_calc,
 ):
+    time_arr = np.asarray(time, dtype=float)
     fz_peak, used_fz_peak = resolve_series_for_calc(selected['Fz'], 'fz', 1000, sign_flags['Fz'])
     fz, used_fz_nij = resolve_series_for_calc(selected['Fz'], 'fz', 600, sign_flags['Fz'])
     my, used_my_nij = resolve_series_for_calc(selected['My'], 'my', 600, sign_flags['My'])
@@ -75,10 +114,43 @@ def calculate_neck_injury_bundle(
         'fx_nij': ((getattr(viewer, 'external_filter_labels', {}) or {}).get(used_fx_nij or selected['Fx']) if (used_fx_nij or selected['Fx']) else None),
         'my_nij': ((getattr(viewer, 'external_filter_labels', {}) or {}).get(used_my_nij or selected['My']) if (used_my_nij or selected['My']) else None),
     }
+    display_series = {}
+    display_units = {}
+    display_filter_labels = {}
+    extrema_blocks = {'force': [], 'moment': []}
+    for axis in ('Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz'):
+        channel_name = selected.get(axis)
+        sign = float(sign_flags.get(axis, 1.0) or 1.0)
+        series = None
+        if channel_name and getattr(viewer, 'df', None) is not None and channel_name in viewer.df.columns:
+            series = np.asarray(viewer.df[channel_name], dtype=float) * sign
+        display_series[axis] = None if series is None else series
+        display_units[axis] = unit_getter(channel_name) if channel_name else None
+        display_filter_labels[axis] = metrics['source_filter_labels'].get(axis) or 'RAW'
+        detail = _series_extrema_detail(time_arr, series if series is not None else [])
+        bucket = 'force' if axis.startswith('F') else 'moment'
+        extrema_blocks[bucket].append(
+            _format_neck_axis_block(
+                axis,
+                display_filter_labels[axis],
+                detail,
+                unit=display_units[axis] or '',
+            )
+        )
+    metrics['display_series'] = display_series
+    metrics['display_units'] = display_units
+    metrics['display_filter_labels'] = display_filter_labels
 
     crit = metrics.get('criteria', {})
     moment_input_label = crit.get('input_moment', 'My')
     moc_line = f"Lever arm D: {crit.get('moc_d', 0.0):.6f} m | MOC 적용: {'Yes' if crit.get('moc_applied') else 'No'} | Load Cell: {crit.get('load_cell_type', 'Preset D')}\n"
+    summary_detail = (
+        "UPPER NECK FORCE\n"
+        + '\n\n'.join(extrema_blocks['force'])
+        + "\n\nUPPER NECK MOMENT\n"
+        + '\n\n'.join(extrema_blocks['moment'])
+        + "\n\n"
+    )
     summary = (
         f"Criterion: {crit.get('criterion_label', criterion_key)}\n"
         f"Dummy Family: {crit.get('dummy_family', '-')}\n"
@@ -88,6 +160,7 @@ def calculate_neck_injury_bundle(
         f"Peak Limits (Fz+ / Fz-): {crit.get('peak_tension_limit') if crit.get('peak_tension_limit') is not None else '-'} / {crit.get('peak_compression_limit') if crit.get('peak_compression_limit') is not None else '-'} N\n"
         f"Moment Input: {moment_input_label}\n"
         f"{moc_line}\n"
+        + summary_detail
         + fmt_metric_at('Peak Tension Force (FZ+)', metrics['peak_tension_fz'], unit='N', time_s=metrics.get('peak_tension_time')) + '\n'
         + fmt_metric_at('Peak Comp. Force (FZ-)', metrics['peak_compression_fz'], unit='N', time_s=metrics.get('peak_compression_time')) + '\n'
         + fmt_metric_at(f'Peak Flexion {moment_input_label}', metrics['peak_flexion_my'], unit='Nm', time_s=metrics.get('peak_flexion_time')) + '\n'

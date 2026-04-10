@@ -733,9 +733,10 @@ class InjuryPage(tk.Frame):
             ]
         if self.initial_mode == 'nij':
             return [
-                ('fz', 'Fz'),
-                ('my', 'My'),
-                ('nij_components', 'Nij Components'),
+                ('fo', 'NECK FO'),
+                ('mo', 'NECK MO'),
+                ('mocy', 'MOCy'),
+                ('nij', 'UPPER NECK INDEX Nij'),
             ]
         if self.initial_mode == 'chest':
             return [
@@ -2842,8 +2843,8 @@ class InjuryPage(tk.Frame):
                 'neg_flags': dict(st['neg_flags']),
                 'summary_format_version': result.get('summary_format_version') or SUMMARY_FORMAT_VERSION,
             }
-            st['graph_key'] = 'nij_components'
-            st['graph_uid'] = self._injury_graph_uid(slot, 'nij_components')
+            st['graph_key'] = 'nij'
+            st['graph_uid'] = self._injury_graph_uid(slot, 'nij')
             self._apply_summary_text(result['summary_text'])
             injury_df = viewer.df.copy(deep=True)
             calc_channels = build_neck_injury_channels(metrics)
@@ -2932,7 +2933,7 @@ class InjuryPage(tk.Frame):
                 dataframe=injury_df,
                 metadata_extra=metadata_override,
             )
-            self.show_neck_graph('nij_components', slot=slot)
+            self.show_neck_graph('nij', slot=slot)
         except Exception as exc:
             messagebox.showwarning('경고', str(exc))
 
@@ -2943,10 +2944,13 @@ class InjuryPage(tk.Frame):
             if not silent:
                 messagebox.showwarning('경고', '먼저 NECK 계산을 실행하세요.')
             return
-        if mode == 'fz':
-            self._plot_neck_fz(metrics, slot)
-        elif mode == 'my':
-            self._plot_neck_my(metrics, slot)
+        mode = {'fz': 'fo', 'my': 'mo', 'nij_components': 'nij'}.get(mode, mode)
+        if mode == 'fo':
+            self._plot_neck_force_overlay(metrics, slot)
+        elif mode == 'mo':
+            self._plot_neck_moment_overlay(metrics, slot)
+        elif mode == 'mocy':
+            self._plot_neck_mocy(metrics, slot)
         else:
             self._plot_neck_nij(metrics, slot)
         self.slot_states[slot]['graph_key'] = mode
@@ -2955,41 +2959,73 @@ class InjuryPage(tk.Frame):
         if not silent:
             self._record_graph_selection(slot, mode)
 
-    def _plot_neck_fz(self, metrics, slot):
+    def _plot_neck_force_overlay(self, metrics, slot):
         t = np.asarray(metrics['time'], dtype=float)
-        y = np.asarray(metrics.get('fz_filtered', metrics.get('fz_nij_filtered', metrics.get('fz', []))), dtype=float)
         self.ax.clear()
-        valid, t_plot, v_plot = self._time_value_valid_mask_ms(t, y)
-        if np.any(valid):
-            self.ax.plot(t_plot[valid], v_plot[valid], linewidth=1.4, label='Fz')
-        self.ax.set_title(f"INJURY - NECK ({self._graph_subject_label(slot)})")
+        display_series = dict(metrics.get('display_series') or {})
+        display_units = dict(metrics.get('display_units') or {})
+        for label in ('Fx', 'Fy', 'Fz'):
+            arr = display_series.get(label)
+            if arr is None:
+                continue
+            valid, t_plot, v_plot = self._time_value_valid_mask_ms(t, np.asarray(arr, dtype=float))
+            if np.any(valid):
+                self.ax.plot(t_plot[valid], v_plot[valid], linewidth=1.2, label=label)
+        force_unit = next((display_units.get(label) for label in ('Fx', 'Fy', 'Fz') if display_units.get(label)), 'N')
+        self.ax.set_title(f"INJURY - NECK FO ({self._graph_subject_label(slot)})")
         self.ax.set_xlabel(self._x_axis_label())
-        self.ax.set_ylabel(f"Force ({metrics.get('fz_unit', 'N')})")
+        self.ax.set_ylabel(f"Force ({force_unit})")
         self.ax.grid(True)
         self.ax.legend(loc='best', fontsize=9)
-        self.last_plot_title = f'{slot}_Neck_Fz_graph'
+        self.last_plot_title = f'{slot}_Neck_FO_graph'
         self.figure.tight_layout()
         self.canvas.draw_idle()
 
-    def _plot_neck_my(self, metrics, slot):
+    def _plot_neck_moment_overlay(self, metrics, slot):
+        t = np.asarray(metrics['time'], dtype=float)
+        self.ax.clear()
+        display_series = dict(metrics.get('display_series') or {})
+        display_units = dict(metrics.get('display_units') or {})
+        for label in ('Mx', 'My', 'Mz'):
+            arr = display_series.get(label)
+            if arr is None:
+                continue
+            valid, t_plot, v_plot = self._time_value_valid_mask_ms(t, np.asarray(arr, dtype=float))
+            if np.any(valid):
+                self.ax.plot(t_plot[valid], v_plot[valid], linewidth=1.2, label=label)
+        moment_unit = next((display_units.get(label) for label in ('Mx', 'My', 'Mz') if display_units.get(label)), 'Nm')
+        self.ax.set_title(f"INJURY - NECK MO ({self._graph_subject_label(slot)})")
+        self.ax.set_xlabel(self._x_axis_label())
+        self.ax.set_ylabel(f"Moment ({moment_unit})")
+        self.ax.grid(True)
+        self.ax.legend(loc='best', fontsize=9)
+        self.last_plot_title = f'{slot}_Neck_MO_graph'
+        self.figure.tight_layout()
+        self.canvas.draw_idle()
+
+    def _plot_neck_mocy(self, metrics, slot):
         t = np.asarray(metrics['time'], dtype=float)
         y = np.asarray(metrics.get('my_filtered', metrics.get('my_raw_filtered', metrics.get('my', []))), dtype=float)
         self.ax.clear()
         valid, t_plot, v_plot = self._time_value_valid_mask_ms(t, y)
         if np.any(valid):
-            self.ax.plot(t_plot[valid], v_plot[valid], linewidth=1.4, label='My')
-        self.ax.set_title(f"INJURY - NECK ({self._graph_subject_label(slot)})")
+            self.ax.plot(t_plot[valid], v_plot[valid], linewidth=1.4, label='MOCy')
+        self.ax.set_title(f"INJURY - NECK MOCy ({self._graph_subject_label(slot)})")
         self.ax.set_xlabel(self._x_axis_label())
         self.ax.set_ylabel(f"Moment ({metrics.get('my_unit', 'Nm')})")
         self.ax.grid(True)
         self.ax.legend(loc='best', fontsize=9)
-        self.last_plot_title = f'{slot}_Neck_My_graph'
+        self.last_plot_title = f'{slot}_Neck_MOCy_graph'
         self.figure.tight_layout()
         self.canvas.draw_idle()
 
     def _plot_neck_nij(self, metrics, slot):
         t = np.asarray(metrics['time'], dtype=float)
         self.ax.clear()
+        arr = np.asarray(metrics.get('nij'), dtype=float)
+        valid, t_plot, v_plot = self._time_value_valid_mask_ms(t, arr)
+        if np.any(valid):
+            self.ax.plot(t_plot[valid], v_plot[valid], linewidth=1.8, label='Nij')
         for label, key, width in (
             ('NTF', 'ntf', 1.0),
             ('NTE', 'nte', 1.0),
@@ -3000,12 +3036,12 @@ class InjuryPage(tk.Frame):
             valid, t_plot, v_plot = self._time_value_valid_mask_ms(t, arr)
             if np.any(valid):
                 self.ax.plot(t_plot[valid], v_plot[valid], linewidth=width, label=label)
-        self.ax.set_title(f"INJURY - NECK ({self._graph_subject_label(slot)})")
+        self.ax.set_title(f"INJURY - UPPER NECK INDEX Nij ({self._graph_subject_label(slot)})")
         self.ax.set_xlabel(self._x_axis_label())
-        self.ax.set_ylabel('Nij Component')
+        self.ax.set_ylabel('Nij')
         self.ax.grid(True)
         self.ax.legend(loc='best', fontsize=9)
-        self.last_plot_title = f'{slot}_Neck_Nij_components_graph'
+        self.last_plot_title = f'{slot}_Neck_Nij_graph'
         self.figure.tight_layout()
         self.canvas.draw_idle()
 
@@ -3542,7 +3578,7 @@ class InjuryPage(tk.Frame):
         if self.initial_mode == 'hic':
             return [('head_xyz', 'HEAD X/Y/Z'), ('head_resultant', 'HEAD RESULTANT')]
         if self.initial_mode == 'nij':
-            return [('fz', 'Fz'), ('my', 'My'), ('nij_components', 'Nij Components')]
+            return [('fo', 'NECK FO'), ('mo', 'NECK MO'), ('mocy', 'MOCy'), ('nij', 'UPPER NECK INDEX Nij')]
         if self.initial_mode == 'chest':
             return [('accel', 'Acceleration'), ('disp', 'Displacement'), ('vc', 'V*C')]
         if self.initial_mode == 'pelvis':
