@@ -1067,17 +1067,7 @@ def _estimate_constant_dt(time_s):
 
 
 def compute_3ms_multiple_peak_exceedance_details(time_s, signal, use_abs=True, window_s=0.003, high_res_sliding_window=True):
-    """Return cumulative Xms details with selectable search behavior.
-
-    When ``high_res_sliding_window`` is enabled, use the previous continuous
-    threshold-duration search that yields sub-millisecond boundaries. When it is
-    disabled, use the compatibility-oriented constant-rate sample-span rule when
-    possible, and fall back to the continuous cumulative search for non-uniform
-    time axes.
-    """
-    if bool(high_res_sliding_window):
-        return _clip_exceedance_detail(time_s, signal, window_s=window_s, mode='multiple', use_abs=use_abs)
-
+    """Return cumulative Xms details with selectable sample-span behavior."""
     t, y_src = _prepare_hic_series(time_s, signal)
     empty = {
         'value': None,
@@ -1100,11 +1090,9 @@ def compute_3ms_multiple_peak_exceedance_details(time_s, signal, use_abs=True, w
     if dt is None or req <= 0.0:
         return _clip_exceedance_detail(time_s, signal, window_s=window_s, mode='multiple', use_abs=use_abs)
 
-    # Match cumulative Xms with a sample-span interpretation:
-    # to cover at least x ms on a constant-rate signal, we need enough samples
-    # so the span between the first and last retained sample is >= x ms.
-    # That requires one more sample than the interval-count-only ceil(x/dt) rule.
-    samples_required = max(1, int(np.ceil((req - 1e-15) / dt)) + 1)
+    samples_required = max(1, int(np.ceil((req - 1e-15) / dt)))
+    if not bool(high_res_sliding_window):
+        samples_required += 1
     finite_vals = y[np.isfinite(y)]
     if finite_vals.size < samples_required:
         return empty
@@ -1112,10 +1100,6 @@ def compute_3ms_multiple_peak_exceedance_details(time_s, signal, use_abs=True, w
     sorted_vals = np.sort(finite_vals)[::-1]
     value = float(sorted_vals[samples_required - 1])
 
-    # Reconstruct cumulative threshold-crossing intervals on the original signal.
-    # Use a tiny epsilon below the sorted threshold so tied samples at the cut-off
-    # remain included in the duration accounting, which more closely matches how
-    # sample-based cumulative Xms is reported in crash tools.
     eps = max(1e-12, abs(value) * 1e-12)
     intervals, t2, y2 = _level_exceedance_intervals(t, y, value - eps)
     if not intervals:
