@@ -812,8 +812,19 @@ class InjuryPage(tk.Frame):
             self.show_neck_graph(key, slot=slot, silent=True)
         elif self.initial_mode == 'chest':
             self.show_chest_graph(key, slot=slot, silent=True)
-        else:
+        elif self.initial_mode == 'pelvis':
+            self.show_pelvis_graph(key, slot=slot, silent=True)
+        elif self.initial_mode == 'femur':
             self.show_femur_graph(key, slot=slot, silent=True)
+        elif self.initial_mode == 'knee':
+            self.show_knee_graph(key, slot=slot, silent=True)
+        elif self.initial_mode == 'iliac':
+            self.show_iliac_graph(key, slot=slot, silent=True)
+        elif self.initial_mode == 'tibia':
+            self.show_tibia_graph(key, slot=slot, silent=True)
+        else:
+            return
+        self._record_graph_selection(slot, key)
 
     def _legacy_reset_session_state(self):
         self.detected_groups = {}
