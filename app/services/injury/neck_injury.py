@@ -104,10 +104,15 @@ def calculate_neck_injury_bundle(
         'fx_nij': used_fx_nij or selected['Fx'],
         'my_nij': used_my_nij or selected['My'],
     }
-    metrics['source_filter_labels'] = {
-        key: ((getattr(viewer, 'external_filter_labels', {}) or {}).get(ch) if ch else None)
-        for key, ch in selected.items()
-    }
+    metrics['source_filter_labels'] = {}
+    for key, ch in selected.items():
+        if not ch:
+            metrics['source_filter_labels'][key] = None
+            continue
+        label = viewer.get_current_filter_title_label(ch) if hasattr(viewer, 'get_current_filter_title_label') else ''
+        if not label or str(label).strip().lower() == 'raw':
+            label = ((getattr(viewer, 'external_filter_labels', {}) or {}).get(ch) or '')
+        metrics['source_filter_labels'][key] = str(label or 'RAW').strip().upper()
     metrics['used_filter_labels'] = {
         'fz_peak': ((getattr(viewer, 'external_filter_labels', {}) or {}).get(used_fz_peak or selected['Fz']) if (used_fz_peak or selected['Fz']) else None),
         'fz_nij': ((getattr(viewer, 'external_filter_labels', {}) or {}).get(used_fz_nij or selected['Fz']) if (used_fz_nij or selected['Fz']) else None),

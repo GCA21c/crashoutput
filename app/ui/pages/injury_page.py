@@ -736,7 +736,7 @@ class InjuryPage(tk.Frame):
                 ('fo', 'NECK FO'),
                 ('mo', 'NECK MO'),
                 ('mocy', 'MOCy'),
-                ('nij', 'UPPER NECK INDEX Nij'),
+                ('nij', 'Nij'),
             ]
         if self.initial_mode == 'chest':
             return [
@@ -3026,17 +3026,7 @@ class InjuryPage(tk.Frame):
         valid, t_plot, v_plot = self._time_value_valid_mask_ms(t, arr)
         if np.any(valid):
             self.ax.plot(t_plot[valid], v_plot[valid], linewidth=1.8, label='Nij')
-        for label, key, width in (
-            ('NTF', 'ntf', 1.0),
-            ('NTE', 'nte', 1.0),
-            ('NCF', 'ncf', 1.0),
-            ('NCE', 'nce', 1.0),
-        ):
-            arr = np.asarray(metrics.get(key), dtype=float)
-            valid, t_plot, v_plot = self._time_value_valid_mask_ms(t, arr)
-            if np.any(valid):
-                self.ax.plot(t_plot[valid], v_plot[valid], linewidth=width, label=label)
-        self.ax.set_title(f"INJURY - UPPER NECK INDEX Nij ({self._graph_subject_label(slot)})")
+        self.ax.set_title(f"INJURY - Nij ({self._graph_subject_label(slot)})")
         self.ax.set_xlabel(self._x_axis_label())
         self.ax.set_ylabel('Nij')
         self.ax.grid(True)
@@ -3578,7 +3568,7 @@ class InjuryPage(tk.Frame):
         if self.initial_mode == 'hic':
             return [('head_xyz', 'HEAD X/Y/Z'), ('head_resultant', 'HEAD RESULTANT')]
         if self.initial_mode == 'nij':
-            return [('fo', 'NECK FO'), ('mo', 'NECK MO'), ('mocy', 'MOCy'), ('nij', 'UPPER NECK INDEX Nij')]
+            return [('fo', 'NECK FO'), ('mo', 'NECK MO'), ('mocy', 'MOCy'), ('nij', 'Nij')]
         if self.initial_mode == 'chest':
             return [('accel', 'Acceleration'), ('disp', 'Displacement'), ('vc', 'V*C')]
         if self.initial_mode == 'pelvis':
