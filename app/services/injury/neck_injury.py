@@ -1,5 +1,6 @@
 import numpy as np
 
+from app.core.isocode import rewrite_filter_code_in_text
 from app.core.utils.formatting import SUMMARY_FORMAT_VERSION, fmt_metric_at, fmt_time_ms, fmt_value
 from app.services.preprocessing.service import compute_neck_nij_metrics
 
@@ -33,9 +34,9 @@ def _format_value_at_line(label, value, time_s, unit=''):
     return f"{label:<4}: {value_text} at {time_text}" if time_text != '-' else f"{label:<4}: {value_text}"
 
 
-def _format_neck_axis_block(axis_label, filter_label, detail, unit=''):
+def _format_neck_axis_block(display_name, detail, unit=''):
     return '\n'.join([
-        f"{axis_label} [{filter_label or 'RAW'}]",
+        str(display_name or '-'),
         _format_value_at_line('Max', detail.get('max_value'), detail.get('max_time'), unit=unit),
         _format_value_at_line('Min', detail.get('min_value'), detail.get('min_time'), unit=unit),
     ])
@@ -122,6 +123,7 @@ def calculate_neck_injury_bundle(
     display_series = {}
     display_units = {}
     display_filter_labels = {}
+    display_channel_names = {}
     extrema_blocks = {'force': [], 'moment': []}
     for axis in ('Fx', 'Fy', 'Fz', 'Mx', 'My', 'Mz'):
         channel_name = selected.get(axis)
@@ -132,12 +134,12 @@ def calculate_neck_injury_bundle(
         display_series[axis] = None if series is None else series
         display_units[axis] = unit_getter(channel_name) if channel_name else None
         display_filter_labels[axis] = metrics['source_filter_labels'].get(axis) or 'RAW'
+        display_channel_names[axis] = rewrite_filter_code_in_text(channel_name, display_filter_labels[axis]) if channel_name else '-'
         detail = _series_extrema_detail(time_arr, series if series is not None else [])
         bucket = 'force' if axis.startswith('F') else 'moment'
         extrema_blocks[bucket].append(
             _format_neck_axis_block(
-                axis,
-                display_filter_labels[axis],
+                display_channel_names[axis],
                 detail,
                 unit=display_units[axis] or '',
             )
@@ -145,6 +147,7 @@ def calculate_neck_injury_bundle(
     metrics['display_series'] = display_series
     metrics['display_units'] = display_units
     metrics['display_filter_labels'] = display_filter_labels
+    metrics['display_channel_names'] = display_channel_names
 
     crit = metrics.get('criteria', {})
     moment_input_label = crit.get('input_moment', 'My')

@@ -2843,8 +2843,9 @@ class InjuryPage(tk.Frame):
                 'neg_flags': dict(st['neg_flags']),
                 'summary_format_version': result.get('summary_format_version') or SUMMARY_FORMAT_VERSION,
             }
-            st['graph_key'] = 'nij'
-            st['graph_uid'] = self._injury_graph_uid(slot, 'nij')
+            preferred_graph_key = self._normalize_neck_graph_key(st.get('graph_key') or 'nij')
+            st['graph_key'] = preferred_graph_key
+            st['graph_uid'] = self._injury_graph_uid(slot, preferred_graph_key)
             self._apply_summary_text(result['summary_text'])
             injury_df = viewer.df.copy(deep=True)
             calc_channels = build_neck_injury_channels(metrics)
@@ -2933,7 +2934,7 @@ class InjuryPage(tk.Frame):
                 dataframe=injury_df,
                 metadata_extra=metadata_override,
             )
-            self.show_neck_graph('nij', slot=slot)
+            self.show_neck_graph(preferred_graph_key, slot=slot)
         except Exception as exc:
             messagebox.showwarning('경고', str(exc))
 
@@ -2944,7 +2945,7 @@ class InjuryPage(tk.Frame):
             if not silent:
                 messagebox.showwarning('경고', '먼저 NECK 계산을 실행하세요.')
             return
-        mode = {'fz': 'fo', 'my': 'mo', 'nij_components': 'nij'}.get(mode, mode)
+        mode = self._normalize_neck_graph_key(mode)
         if mode == 'fo':
             self._plot_neck_force_overlay(metrics, slot)
         elif mode == 'mo':
@@ -2958,6 +2959,15 @@ class InjuryPage(tk.Frame):
         self._select_graph_tab(mode)
         if not silent:
             self._record_graph_selection(slot, mode)
+
+    def _normalize_neck_graph_key(self, graph_key):
+        key = str(graph_key or '').strip().lower()
+        return {
+            'fz': 'fo',
+            'my': 'mo',
+            'nij_components': 'nij',
+            'upper_neck_index_nij': 'nij',
+        }.get(key, key or 'nij')
 
     def _plot_neck_force_overlay(self, metrics, slot):
         t = np.asarray(metrics['time'], dtype=float)
@@ -3025,7 +3035,17 @@ class InjuryPage(tk.Frame):
         arr = np.asarray(metrics.get('nij'), dtype=float)
         valid, t_plot, v_plot = self._time_value_valid_mask_ms(t, arr)
         if np.any(valid):
-            self.ax.plot(t_plot[valid], v_plot[valid], linewidth=1.8, label='Nij')
+            self.ax.plot(t_plot[valid], v_plot[valid], linewidth=1.8, label='Overall Nij')
+        for label, key, width in (
+            ('Tension Extension', 'nte', 1.0),
+            ('Tension Flexion', 'ntf', 1.0),
+            ('Compression Extension', 'nce', 1.0),
+            ('Compression Flexion', 'ncf', 1.0),
+        ):
+            case_arr = np.asarray(metrics.get(key), dtype=float)
+            case_valid, case_t_plot, case_v_plot = self._time_value_valid_mask_ms(t, case_arr)
+            if np.any(case_valid):
+                self.ax.plot(case_t_plot[case_valid], case_v_plot[case_valid], linewidth=width, label=label)
         self.ax.set_title(f"INJURY - Nij ({self._graph_subject_label(slot)})")
         self.ax.set_xlabel(self._x_axis_label())
         self.ax.set_ylabel('Nij')
