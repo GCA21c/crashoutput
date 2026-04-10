@@ -273,6 +273,7 @@ class OffsetPage(tk.Frame):
                 'display_message': f"Offset applied: all numeric channels, first {sample_count} samples from data start to Time0",
             },
             op_suffix="_O",
+            update_pre_filter_reference=True,
         )
         self.refresh_channels()
         self.refresh_plot()

@@ -315,8 +315,13 @@ class FilteringPage(tk.Frame):
 
         filter_label = self.cfc_var.get().strip() or FILTER_OPTIONS[1]
         channel_to_filter = {channel: filter_label for channel in selected_channels}
-        original_df = self.base_df
-        original_time_column = viewer.time_column
+        original_df = getattr(self.workbench, 'pre_filter_reference_df', None)
+        if original_df is None:
+            original_df = self.base_df
+        original_time_column = (
+            getattr(self.workbench, 'pre_filter_reference_time_column', None)
+            or viewer.time_column
+        )
         self.pending_df, meta_updates = apply_filtering_with_derivatives(
             self.pending_df,
             viewer.time_column,

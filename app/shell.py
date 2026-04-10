@@ -46,6 +46,7 @@ class CrashAnalysisWorkbench(tk.Frame):
         self._last_root_size = None
         self._resize_commit_delay_ms = 600
         self.original_df = None
+        self.pre_filter_reference_df = None
         self.working_df = None
         self.source_file_label = "선택된 파일 없음"
         self.original_file_path = None
@@ -57,6 +58,7 @@ class CrashAnalysisWorkbench(tk.Frame):
         self.channel_filter_labels = {}
         self.dataset_metadata = {}
         self.original_metadata = {}
+        self.pre_filter_reference_time_column = None
         self.dataset_info_var = tk.StringVar(value="파일: 선택된 파일 없음")
         self.history_info_var = tk.StringVar(value="History: 0")
         self.injury_test_mode_var = tk.StringVar(value="-")
@@ -462,6 +464,15 @@ class CrashAnalysisWorkbench(tk.Frame):
         metadata["units"] = self._current_units(metadata)
         metadata["descriptions"] = self._current_descriptions(metadata)
         metadata["channel_filter_labels"] = dict(self.channel_filter_labels or metadata.get("channel_filter_labels", {}) or {})
+        metadata["pre_filter_reference_df"] = (
+            self.pre_filter_reference_df.copy(deep=True)
+            if self.pre_filter_reference_df is not None else None
+        )
+        metadata["pre_filter_reference_time_column"] = (
+            self.pre_filter_reference_time_column
+            or self.viewer.time_column
+            or metadata.get("time_column")
+        )
         metadata = self._enrich_isocode_metadata(dataframe, metadata)
         save_dataset_pickle(
             current_file,
@@ -481,6 +492,8 @@ class CrashAnalysisWorkbench(tk.Frame):
         self.dataset_metadata = {}
         self.original_metadata = {}
         self.original_df = None
+        self.pre_filter_reference_df = None
+        self.pre_filter_reference_time_column = None
         self.working_df = None
         self.source_file_label = "선택된 파일 없음"
         self.original_file_path = None
@@ -536,6 +549,18 @@ class CrashAnalysisWorkbench(tk.Frame):
         self.channel_filter_labels = dict(self.dataset_metadata.get('channel_filter_labels') or {})
         self.dataset_metadata = self._enrich_isocode_metadata(self.working_df, self.dataset_metadata)
         self.original_metadata = dict(self.dataset_metadata)
+        stored_reference_df = self.dataset_metadata.get("pre_filter_reference_df")
+        if stored_reference_df is not None:
+            try:
+                self.pre_filter_reference_df = stored_reference_df.copy(deep=True)
+            except Exception:
+                self.pre_filter_reference_df = dataframe.copy(deep=True)
+        else:
+            self.pre_filter_reference_df = dataframe.copy(deep=True)
+        self.pre_filter_reference_time_column = (
+            self.dataset_metadata.get("pre_filter_reference_time_column")
+            or self.dataset_metadata.get("time_column")
+        )
         self.set_shared_dummy_config(self.dataset_metadata.get("shared_dummy_config") or self._default_shared_dummy_config())
 
         source_format = str(self.dataset_metadata.get("source_format", "")).upper()
@@ -595,6 +620,15 @@ class CrashAnalysisWorkbench(tk.Frame):
         metadata["units"] = self._current_units(metadata)
         metadata["descriptions"] = self._current_descriptions(metadata)
         metadata["channel_filter_labels"] = dict(self.channel_filter_labels or metadata.get("channel_filter_labels", {}) or {})
+        metadata["pre_filter_reference_df"] = (
+            self.pre_filter_reference_df.copy(deep=True)
+            if self.pre_filter_reference_df is not None else None
+        )
+        metadata["pre_filter_reference_time_column"] = (
+            self.pre_filter_reference_time_column
+            or self.viewer.time_column
+            or metadata.get("time_column")
+        )
         metadata = self._enrich_isocode_metadata(dataframe, metadata)
         return save_dataset_pickle(
             save_path,
@@ -605,12 +639,24 @@ class CrashAnalysisWorkbench(tk.Frame):
             source_label=self.source_file_label,
         )
 
-    def apply_processed_dataframe(self, dataframe, history_text, op_suffix=None, reset_plot=False, metadata_override=None):
+    def apply_processed_dataframe(self, dataframe, history_text, op_suffix=None, reset_plot=False, metadata_override=None, update_pre_filter_reference=False):
         self.working_df = dataframe.copy(deep=True)
         if metadata_override:
             merged_metadata = dict(self.dataset_metadata)
             merged_metadata.update(dict(metadata_override))
             self.dataset_metadata = merged_metadata
+        if update_pre_filter_reference:
+            self.pre_filter_reference_df = self.working_df.copy(deep=True)
+            self.pre_filter_reference_time_column = self.viewer.time_column or self.dataset_metadata.get("time_column")
+        self.dataset_metadata["pre_filter_reference_df"] = (
+            self.pre_filter_reference_df.copy(deep=True)
+            if self.pre_filter_reference_df is not None else None
+        )
+        self.dataset_metadata["pre_filter_reference_time_column"] = (
+            self.pre_filter_reference_time_column
+            or self.viewer.time_column
+            or self.dataset_metadata.get("time_column")
+        )
         self.dataset_metadata = self._enrich_isocode_metadata(self.working_df, self.dataset_metadata)
         self.channel_filter_labels = dict(self.dataset_metadata.get("channel_filter_labels") or self.channel_filter_labels or {})
         file_label_text = self.source_file_label
@@ -642,6 +688,10 @@ class CrashAnalysisWorkbench(tk.Frame):
         self.source_file_label = self.original_source_path or self.source_file_label
         self.dataset_metadata = dict(self.original_metadata)
         self.channel_filter_labels = dict(self.dataset_metadata.get('channel_filter_labels') or {})
+        self.pre_filter_reference_df = self.original_df.copy(deep=True)
+        self.pre_filter_reference_time_column = self.dataset_metadata.get("time_column")
+        self.dataset_metadata["pre_filter_reference_df"] = self.pre_filter_reference_df.copy(deep=True)
+        self.dataset_metadata["pre_filter_reference_time_column"] = self.pre_filter_reference_time_column
         self.dataset_metadata = self._enrich_isocode_metadata(self.working_df, self.dataset_metadata)
         self.add_history_entry("Restored original dataset")
         self.viewer.load_dataframe(self.working_df, file_label_text=self.source_file_label, reset_plot=True, metadata=self.dataset_metadata)

@@ -2335,8 +2335,8 @@ class InjuryPage(tk.Frame):
         metadata = dict((self.workbench.dataset_metadata or {}).get('derived_channels') or {})
         viewer_df = getattr(self.workbench.viewer, 'df', pd.DataFrame())
         columns = set(getattr(viewer_df, 'columns', []))
-        original_df = getattr(self.workbench, 'original_df', None)
-        original_columns = set(getattr(original_df, 'columns', [])) if original_df is not None else set()
+        reference_df = getattr(self.workbench, 'pre_filter_reference_df', None)
+        reference_columns = set(getattr(reference_df, 'columns', [])) if reference_df is not None else set()
         current = str(channel_name)
         visited = set()
         while current and current not in visited:
@@ -2348,7 +2348,7 @@ class InjuryPage(tk.Frame):
             # Composite sources like x|y|z are not physical raw channels.
             if "|" in source:
                 break
-            if source in columns or source in original_columns:
+            if source in columns or source in reference_columns:
                 current = source
                 continue
             break
@@ -2358,8 +2358,8 @@ class InjuryPage(tk.Frame):
         channel_name = self._normalize_channel_reference(channel_name)
         if not channel_name:
             return ''
-        original_df = getattr(self.workbench, 'original_df', None)
-        original_columns = set(getattr(original_df, 'columns', [])) if original_df is not None else set()
+        reference_df = getattr(self.workbench, 'pre_filter_reference_df', None)
+        reference_columns = set(getattr(reference_df, 'columns', [])) if reference_df is not None else set()
         meta = self._channel_metadata(channel_name)
         for candidate in (
             meta.get('root_source_channel'),
@@ -2367,12 +2367,12 @@ class InjuryPage(tk.Frame):
             channel_name,
         ):
             candidate = str(candidate or '').strip()
-            if candidate and candidate in original_columns:
+            if candidate and candidate in reference_columns:
                 return candidate
         raw_isocode = str(meta.get('raw_isocode') or '').strip().upper()
         if raw_isocode:
             rewritten = str(rewrite_filter_code_in_text(channel_name, 'Raw', raw_code=raw_isocode) or '').strip()
-            if rewritten and rewritten in original_columns:
+            if rewritten and rewritten in reference_columns:
                 return rewritten
         return str(meta.get('root_source_channel') or self._derived_source_channel(channel_name) or channel_name or '').strip()
 
@@ -2406,18 +2406,22 @@ class InjuryPage(tk.Frame):
     def _align_original_series(self, channel_name):
         viewer = self.workbench.viewer
         time = self._get_time()
-        original_df = getattr(self.workbench, 'original_df', None)
+        reference_df = getattr(self.workbench, 'pre_filter_reference_df', None)
         channel_name = self._raw_root_channel_name(channel_name) or self._normalize_channel_reference(channel_name)
-        if time is None or original_df is None or channel_name not in original_df.columns:
+        if time is None or reference_df is None or channel_name not in reference_df.columns:
             return None
         try:
-            raw_values = pd.to_numeric(original_df[channel_name], errors='coerce').to_numpy(dtype=float)
+            raw_values = pd.to_numeric(reference_df[channel_name], errors='coerce').to_numpy(dtype=float)
             if raw_values.shape == time.shape:
                 return raw_values
-            orig_time_col = self.workbench.original_metadata.get('time_column') or self.workbench.dataset_metadata.get('time_column') or viewer.time_column
-            if not orig_time_col or orig_time_col not in original_df.columns:
+            orig_time_col = (
+                getattr(self.workbench, 'pre_filter_reference_time_column', None)
+                or self.workbench.dataset_metadata.get('time_column')
+                or viewer.time_column
+            )
+            if not orig_time_col or orig_time_col not in reference_df.columns:
                 return None
-            raw_time = pd.to_numeric(original_df[orig_time_col], errors='coerce').to_numpy(dtype=float)
+            raw_time = pd.to_numeric(reference_df[orig_time_col], errors='coerce').to_numpy(dtype=float)
             if raw_time.shape != raw_values.shape or time.size == 0:
                 return None
             aligned = np.full(time.shape, np.nan, dtype=float)
