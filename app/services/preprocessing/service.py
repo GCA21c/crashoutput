@@ -848,37 +848,38 @@ def compute_hic_details(time_s, accel_g, max_window_s=0.036):
         return None
 
     integ = _cumtrapz(a, t)
-    n = t.size
     window = float(max_window_s)
     best_info = None
 
-    # 1) Exact sample-to-sample candidates using the real time channel.
-    j = 1
-    for i in range(n - 1):
-        if j < i + 1:
-            j = i + 1
-        while j < n and (t[j] - t[i]) <= window + 1e-15:
-            j += 1
-        end_limit = j - 1
-        for k in range(i + 1, end_limit + 1):
-            area = float(integ[k] - integ[i])
-            best_info = _update_best_hic(best_info, t[i], t[k], area, t, a)
+    # Experimental compatibility search:
+    # explore HIC windows on an integer-millisecond grid while still integrating
+    # the original signal over those grid-aligned boundaries.
+    start_ms = int(np.ceil(float(t[0]) * 1000.0 - 1e-12))
+    end_ms = int(np.floor(float(t[-1]) * 1000.0 + 1e-12))
+    window_ms = max(1, int(round(window * 1000.0)))
+    if end_ms > start_ms:
+        for s_ms in range(start_ms, end_ms):
+            start_t = float(s_ms / 1000.0)
+            max_end_ms = min(end_ms, s_ms + window_ms)
+            for e_ms in range(s_ms + 1, max_end_ms + 1):
+                end_t = float(e_ms / 1000.0)
+                area = _integral_at_query(end_t, t, a, integ) - _integral_at_query(start_t, t, a, integ)
+                best_info = _update_best_hic(best_info, start_t, end_t, area, t, a)
 
-    # 2) Exact full-window end candidates at t[i] + window using linear interpolation.
-    for i in range(n - 1):
-        end_t = float(t[i] + window)
-        if end_t > float(t[-1]) + 1e-15:
-            break
-        area = _integral_at_query(end_t, t, a, integ) - float(integ[i])
-        best_info = _update_best_hic(best_info, t[i], end_t, area, t, a)
-
-    # 3) Exact full-window start candidates at t[j] - window using linear interpolation.
-    for j in range(1, n):
-        start_t = float(t[j] - window)
-        if start_t < float(t[0]) - 1e-15:
-            continue
-        area = float(integ[j]) - _integral_at_query(start_t, t, a, integ)
-        best_info = _update_best_hic(best_info, start_t, t[j], area, t, a)
+    # Fallback to exact sample-to-sample search only when the integer-ms grid
+    # cannot form any candidate window.
+    if best_info is None:
+        n = t.size
+        j = 1
+        for i in range(n - 1):
+            if j < i + 1:
+                j = i + 1
+            while j < n and (t[j] - t[i]) <= window + 1e-15:
+                j += 1
+            end_limit = j - 1
+            for k in range(i + 1, end_limit + 1):
+                area = float(integ[k] - integ[i])
+                best_info = _update_best_hic(best_info, t[i], t[k], area, t, a)
 
     if best_info is None:
         return None
