@@ -502,16 +502,26 @@ def apply_filtering_with_derivatives(
         if purpose is None or role is None:
             continue
 
-        raw_source_channel = _raw_source_channel_name(channel_name)
-        raw_series_source = df
-        if original_df is not None and raw_source_channel in getattr(original_df, "columns", []):
-            raw_series_source = original_df
-        source_column_name = raw_source_channel if raw_series_source is original_df else channel_name
-        raw_y = pd.to_numeric(raw_series_source[source_column_name], errors="coerce").to_numpy(dtype=float)
+        resolved_source = _resolve_filter_source_series(
+            df,
+            time_column,
+            channel_name,
+            original_df=original_df,
+            original_time_column=original_time_column,
+            derived_channels=derived_channels,
+        )
+        raw_source_channel = str(
+            (resolved_source or {}).get('root_source_channel')
+            or _raw_source_channel_name(channel_name)
+            or channel_name
+        ).strip()
+        raw_y = np.asarray((resolved_source or {}).get('values'), dtype=float)
+        source_mode = str((resolved_source or {}).get('source_mode') or '').strip()
+        created_from_raw = bool((resolved_source or {}).get('created_from_raw'))
         if raw_y.shape != x_all.shape and channel_name in df.columns:
-            raw_series_source = df
-            source_column_name = channel_name
             raw_y = pd.to_numeric(df[channel_name], errors="coerce").to_numpy(dtype=float)
+            source_mode = 'current_channel_shape_fallback'
+            created_from_raw = False
         valid = np.isfinite(x_all) & np.isfinite(raw_y)
         if not np.any(valid):
             continue
@@ -554,13 +564,14 @@ def apply_filtering_with_derivatives(
                     "from_channel": raw_source_channel or channel_name,
                     "from_filter_label": "Raw",
                     "to_filter_label": f"CFC {int(cfc_value)}",
-                    "raw_based": bool(original_df is not None and source_column_name == raw_source_channel),
+                    "raw_based": created_from_raw,
                     "purpose": purpose,
                     "role": role,
+                    "source_mode": source_mode or None,
                 }],
             }
             if purpose == "chest_injury" and role == "disp":
-                derived_meta["created_from_raw"] = bool(original_df is not None and source_column_name == raw_source_channel)
+                derived_meta["created_from_raw"] = created_from_raw
                 derived_meta["rebuild_policy"] = "raw_aligned_only"
             derived_channels[derived_name] = derived_meta
 
