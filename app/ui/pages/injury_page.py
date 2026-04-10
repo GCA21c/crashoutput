@@ -3379,6 +3379,14 @@ class InjuryPage(tk.Frame):
         ).pack(fill=tk.X, padx=10, pady=(0, 6))
         opt = tk.Frame(box, bg="#ffffff")
         opt.pack(fill=tk.X, padx=10, pady=(2, 4))
+        tk.Checkbutton(
+            opt,
+            text="High-Res 3ms Sliding Window",
+            variable=self.high_res_3ms_var,
+            onvalue=True,
+            offvalue=False,
+            bg="#ffffff",
+        ).pack(side=tk.LEFT)
         tk.Button(opt, text="\uc804\uccb4 \uacc4\uc0b0", command=self.calculate_pelvis_all).pack(side=tk.RIGHT)
         return panel
 
