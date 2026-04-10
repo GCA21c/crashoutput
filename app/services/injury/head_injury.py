@@ -88,7 +88,18 @@ def _peak_metric_line(label, unit, detail, decimals=4):
 
 
 
-def build_head_injury_bundle(time, resultant_g, x_plot, y_plot, z_plot, plot_unit, channels, resultant_channel=None, resultant_filter_label=None):
+def build_head_injury_bundle(
+    time,
+    resultant_g,
+    x_plot,
+    y_plot,
+    z_plot,
+    plot_unit,
+    channels,
+    resultant_channel=None,
+    resultant_filter_label=None,
+    high_res_3ms_sliding_window=True,
+):
     time_arr = np.asarray(time, dtype=float)
     resultant_arr = np.asarray(resultant_g, dtype=float)
     x_arr = np.asarray(x_plot, dtype=float)
@@ -97,7 +108,13 @@ def build_head_injury_bundle(time, resultant_g, x_plot, y_plot, z_plot, plot_uni
 
     hic15 = compute_hic_details(time_arr, resultant_arr, max_window_s=0.015)
     hic36 = compute_hic_details(time_arr, resultant_arr, max_window_s=0.036)
-    peak_3ms_bundle = compute_3ms_bundle(time_arr, resultant_arr, use_abs=True, include_res_peak=True)
+    peak_3ms_bundle = compute_3ms_bundle(
+        time_arr,
+        resultant_arr,
+        use_abs=True,
+        include_res_peak=True,
+        high_res_sliding_window=high_res_3ms_sliding_window,
+    )
     one_peak_3ms = peak_3ms_bundle.get('one_peak_3ms', {})
     multiple_peak_3ms = peak_3ms_bundle.get('multiple_peak_3ms', {})
     resultant_peak = peak_3ms_bundle.get('res_peak', {})

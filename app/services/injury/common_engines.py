@@ -24,14 +24,22 @@ def _resultant_peak_detail(time_s, signal, use_abs=False):
     }
 
 
-def compute_3ms_bundle(time_s, signal, use_abs=True, window_s=0.003, include_res_peak=True):
+def compute_3ms_bundle(time_s, signal, use_abs=True, window_s=0.003, include_res_peak=True, high_res_sliding_window=True):
     from app.services.preprocessing.service import (
         compute_3ms_one_peak_exceedance_details,
         compute_3ms_multiple_peak_exceedance_details,
     )
 
     one_peak = dict(compute_3ms_one_peak_exceedance_details(time_s, signal, use_abs=use_abs, window_s=window_s) or {})
-    multiple_peak = dict(compute_3ms_multiple_peak_exceedance_details(time_s, signal, use_abs=use_abs, window_s=window_s) or {})
+    multiple_peak = dict(
+        compute_3ms_multiple_peak_exceedance_details(
+            time_s,
+            signal,
+            use_abs=use_abs,
+            window_s=window_s,
+            high_res_sliding_window=high_res_sliding_window,
+        ) or {}
+    )
     out = {
         'one_peak_3ms': one_peak,
         'multiple_peak_3ms': multiple_peak,
@@ -44,8 +52,15 @@ def compute_3ms_bundle(time_s, signal, use_abs=True, window_s=0.003, include_res
 compute_3ms_result_bundle = compute_3ms_bundle
 
 
-def compute_3ms_engine_detail(time_s, signal, use_abs=True, window_s=0.003):
-    bundle = compute_3ms_bundle(time_s, signal, use_abs=use_abs, window_s=window_s, include_res_peak=False)
+def compute_3ms_engine_detail(time_s, signal, use_abs=True, window_s=0.003, high_res_sliding_window=True):
+    bundle = compute_3ms_bundle(
+        time_s,
+        signal,
+        use_abs=use_abs,
+        window_s=window_s,
+        include_res_peak=False,
+        high_res_sliding_window=high_res_sliding_window,
+    )
     return bundle.get('one_peak_3ms', {})
 
 

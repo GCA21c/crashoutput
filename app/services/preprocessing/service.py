@@ -1066,15 +1066,18 @@ def _estimate_constant_dt(time_s):
     return dt
 
 
-def compute_3ms_multiple_peak_exceedance_details(time_s, signal, use_abs=True, window_s=0.003):
-    """Return cumulative Xms details using the constant-rate sorting rule when possible.
+def compute_3ms_multiple_peak_exceedance_details(time_s, signal, use_abs=True, window_s=0.003, high_res_sliding_window=True):
+    """Return cumulative Xms details with selectable search behavior.
 
-    Crash-analysis guidance describes Xms multiple-peak / cumulative calculation for
-    constant sample rates as: sort amplitudes in descending order, then take the
-    value reached after x ms. For display, reconstruct the corresponding threshold
-    crossing intervals on the original time axis. For non-uniform sampling, fall back
-    to the continuous threshold-duration approach.
+    When ``high_res_sliding_window`` is enabled, use the previous continuous
+    threshold-duration search that yields sub-millisecond boundaries. When it is
+    disabled, use the compatibility-oriented constant-rate sample-span rule when
+    possible, and fall back to the continuous cumulative search for non-uniform
+    time axes.
     """
+    if bool(high_res_sliding_window):
+        return _clip_exceedance_detail(time_s, signal, window_s=window_s, mode='multiple', use_abs=use_abs)
+
     t, y_src = _prepare_hic_series(time_s, signal)
     empty = {
         'value': None,
@@ -1765,6 +1768,7 @@ def compute_chest_metrics(
     disp_filter_label=None,
     disp_prefiltered=None,
     vc_sign_pref=1.0,
+    high_res_3ms_sliding_window=True,
 ):
     t = np.asarray(time_s, dtype=float)
 
@@ -1884,7 +1888,13 @@ def compute_chest_metrics(
         'y': compute_3ms_clip_details(t, yg, use_abs=True),
         'z': compute_3ms_clip_details(t, zg, use_abs=True),
     }
-    peak_3ms_bundle = compute_3ms_bundle(t, res_g, use_abs=True, include_res_peak=True)
+    peak_3ms_bundle = compute_3ms_bundle(
+        t,
+        res_g,
+        use_abs=True,
+        include_res_peak=True,
+        high_res_sliding_window=high_res_3ms_sliding_window,
+    )
     one_peak_detail = dict(peak_3ms_bundle.get('one_peak_3ms', {}))
     one_peak_detail['axis'] = None
     res_clip_detail = dict(peak_3ms_bundle.get('multiple_peak_3ms', {}))
