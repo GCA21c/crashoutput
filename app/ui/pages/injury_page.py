@@ -164,7 +164,7 @@ class InjuryPage(tk.Frame):
         self.hic15_var = tk.StringVar(value="HIC15")
         self.hic36_var = tk.StringVar(value="HIC36")
         self.clip3_var = tk.StringVar(value="3ms Clip")
-        self.high_res_3ms_var = tk.BooleanVar(value=True)
+        self.use_high_res_cumulative_3ms_var = tk.BooleanVar(value=True)
         self.head_dummy_profile_var = tk.StringVar(value=HEAD_PROFILE_OPTIONS[0] if HEAD_PROFILE_OPTIONS else "")
 
         self.nij_fx_var = tk.StringVar()
@@ -618,8 +618,8 @@ class InjuryPage(tk.Frame):
         row.pack(fill=tk.X, padx=10, pady=(8, 4))
         tk.Checkbutton(
             row,
-            text="High-Res 3ms Sliding Window",
-            variable=self.high_res_3ms_var,
+            text="High-Resolution 3ms Search",
+            variable=self.use_high_res_cumulative_3ms_var,
             onvalue=True,
             offvalue=False,
             bg="#ffffff",
@@ -661,8 +661,8 @@ class InjuryPage(tk.Frame):
         opt.pack(fill=tk.X, padx=10, pady=(2, 4))
         tk.Checkbutton(
             opt,
-            text="High-Res 3ms Sliding Window",
-            variable=self.high_res_3ms_var,
+            text="High-Resolution 3ms Search",
+            variable=self.use_high_res_cumulative_3ms_var,
             onvalue=True,
             offvalue=False,
             bg="#ffffff",
@@ -694,8 +694,8 @@ class InjuryPage(tk.Frame):
         opt.pack(fill=tk.X, padx=10, pady=(2, 4))
         tk.Checkbutton(
             opt,
-            text="High-Res 3ms Sliding Window",
-            variable=self.high_res_3ms_var,
+            text="High-Resolution 3ms Search",
+            variable=self.use_high_res_cumulative_3ms_var,
             onvalue=True,
             offvalue=False,
             bg="#ffffff",
@@ -1285,8 +1285,10 @@ class InjuryPage(tk.Frame):
             st['summary_text'] = payload.get('summary_text') or '-'
             if payload_version and payload_version < SUMMARY_FORMAT_VERSION:
                 st['summary_text'] = '-'
-            if 'high_res_3ms_sliding_window' in payload:
-                st['high_res_3ms_sliding_window'] = bool(payload.get('high_res_3ms_sliding_window'))
+            if 'use_high_res_cumulative_3ms' in payload:
+                st['use_high_res_cumulative_3ms'] = bool(payload.get('use_high_res_cumulative_3ms'))
+            elif 'high_res_3ms_sliding_window' in payload:
+                st['use_high_res_cumulative_3ms'] = bool(payload.get('high_res_3ms_sliding_window'))
             st['graph_key'] = payload.get('graph_key')
             st['graph_uid'] = payload.get('graph_uid') or (self._injury_graph_uid(slot, payload.get('graph_key')) if payload.get('graph_key') else '')
             if self.initial_mode == 'hic':
@@ -1341,17 +1343,17 @@ class InjuryPage(tk.Frame):
                     channels=(x_ch, y_ch, z_ch),
                     resultant_channel=resultant_channel,
                     resultant_filter_label='CFC 1000',
-                    high_res_3ms_sliding_window=self._slot_high_res_3ms_enabled(slot),
+                    use_high_res_cumulative_3ms=self._slot_use_high_res_cumulative_3ms(slot),
                 )
                 state['head_bundle'] = result['bundle']
                 meta = dict(result.get('metadata') or {})
                 meta['dummy_name'] = state.get('dummy_name') or ''
                 meta['dummy_profile'] = state.get('dummy_profile') or ''
                 meta['channels'] = dict(channels)
-                meta['high_res_3ms_sliding_window'] = self._slot_high_res_3ms_enabled(slot)
+                meta['use_high_res_cumulative_3ms'] = self._slot_use_high_res_cumulative_3ms(slot)
                 state['head_metadata'] = meta
                 state['summary_text'] = result.get('summary_text') or state.get('summary_text') or '-'
-                state['high_res_3ms_sliding_window'] = self._slot_high_res_3ms_enabled(slot)
+                state['use_high_res_cumulative_3ms'] = self._slot_use_high_res_cumulative_3ms(slot)
                 return True
 
             if self.initial_mode == 'nij':
@@ -1430,10 +1432,10 @@ class InjuryPage(tk.Frame):
                     disp_filter_label=self._channel_filter_label_for_calc(disp_ch),
                     disp_prefiltered=disp_prefiltered,
                     vc_sign_pref=1.0,
-                    high_res_3ms_sliding_window=self._slot_high_res_3ms_enabled(slot),
+                    use_high_res_cumulative_3ms=self._slot_use_high_res_cumulative_3ms(slot),
                 )
                 state['chest_metrics'] = result['metrics']
-                state['high_res_3ms_sliding_window'] = self._slot_high_res_3ms_enabled(slot)
+                state['use_high_res_cumulative_3ms'] = self._slot_use_high_res_cumulative_3ms(slot)
                 if not state.get('chest_saved_payload'):
                     rp = result['metrics'].get('resultant_peak', {})
                     state['chest_saved_payload'] = {
@@ -1444,7 +1446,7 @@ class InjuryPage(tk.Frame):
                         'dummy_profile': state.get('dummy_profile') or '',
                         'channels': dict(channels),
                         'neg_flags': {},
-                        'high_res_3ms_sliding_window': state['high_res_3ms_sliding_window'],
+                        'use_high_res_cumulative_3ms': state['use_high_res_cumulative_3ms'],
                         'resultant_peak_g': float(rp['value']) if rp.get('value') is not None else None,
                         'summary_format_version': result.get('summary_format_version') or SUMMARY_FORMAT_VERSION,
                     }
@@ -2613,19 +2615,23 @@ class InjuryPage(tk.Frame):
             'source_channel': str(source_channel or ''),
         }
 
-    def _current_high_res_3ms_enabled(self):
-        return bool(self.high_res_3ms_var.get())
+    def _current_use_high_res_cumulative_3ms(self):
+        return bool(self.use_high_res_cumulative_3ms_var.get())
 
-    def _slot_high_res_3ms_enabled(self, slot=None):
+    def _slot_use_high_res_cumulative_3ms(self, slot=None):
         slot = slot or self._active_slot()
         state = dict(self.slot_states.get(slot) or {})
+        if 'use_high_res_cumulative_3ms' in state:
+            return bool(state.get('use_high_res_cumulative_3ms'))
         if 'high_res_3ms_sliding_window' in state:
             return bool(state.get('high_res_3ms_sliding_window'))
         for payload_key in ('head_metadata', 'chest_saved_payload', 'pelvis_saved_payload'):
             payload = dict(state.get(payload_key) or {})
+            if 'use_high_res_cumulative_3ms' in payload:
+                return bool(payload.get('use_high_res_cumulative_3ms'))
             if 'high_res_3ms_sliding_window' in payload:
                 return bool(payload.get('high_res_3ms_sliding_window'))
-        return self._current_high_res_3ms_enabled()
+        return self._current_use_high_res_cumulative_3ms()
 
 
     def calculate_hic_bundle(self):
@@ -2650,7 +2656,7 @@ class InjuryPage(tk.Frame):
                 channels=channels,
                 resultant_channel=resultant_channel,
                 resultant_filter_label='CFC 1000',
-                high_res_3ms_sliding_window=self._current_high_res_3ms_enabled(),
+                use_high_res_cumulative_3ms=self._current_use_high_res_cumulative_3ms(),
             )
             st = self.slot_states[slot]
             st['dummy_name'] = self.multi_dummy_panel.name_var(slot).get().strip()
@@ -2662,11 +2668,11 @@ class InjuryPage(tk.Frame):
             meta['dummy_name'] = st['dummy_name']
             meta['dummy_profile'] = st['dummy_profile']
             meta['channels'] = dict(st['channels'])
-            meta['high_res_3ms_sliding_window'] = self._current_high_res_3ms_enabled()
+            meta['use_high_res_cumulative_3ms'] = self._current_use_high_res_cumulative_3ms()
             st['head_metadata'] = meta
             st['graph_key'] = 'head_resultant'
             st['graph_uid'] = self._injury_graph_uid(slot, 'head_resultant')
-            st['high_res_3ms_sliding_window'] = self._current_high_res_3ms_enabled()
+            st['use_high_res_cumulative_3ms'] = self._current_use_high_res_cumulative_3ms()
             self._apply_summary_text(result['summary_text'])
             injury_df = viewer.df.copy(deep=True)
             injury_df[resultant_channel] = np.asarray(result['bundle']['resultant_g'], dtype=float)
@@ -3056,7 +3062,7 @@ class InjuryPage(tk.Frame):
                 disp_filter_label=self._channel_filter_label_for_calc(disp_ch),
                 disp_prefiltered=disp_prefiltered,
                 vc_sign_pref=1.0,
-                high_res_3ms_sliding_window=self._current_high_res_3ms_enabled(),
+                use_high_res_cumulative_3ms=self._current_use_high_res_cumulative_3ms(),
             )
             metrics = result['metrics']
             st = self.slot_states[slot]
@@ -3067,7 +3073,7 @@ class InjuryPage(tk.Frame):
             st['result_uid'] = st.get('result_uid') or self._injury_result_uid(slot)
             st['neg_flags'] = {}
             st['chest_metrics'] = metrics
-            st['high_res_3ms_sliding_window'] = self._current_high_res_3ms_enabled()
+            st['use_high_res_cumulative_3ms'] = self._current_use_high_res_cumulative_3ms()
             rp = metrics.get('resultant_peak', {})
             st['chest_saved_payload'] = {
                 'result_uid': st['result_uid'],
@@ -3077,7 +3083,7 @@ class InjuryPage(tk.Frame):
                 'dummy_profile': st['dummy_profile'],
                 'channels': dict(st['channels']),
                 'neg_flags': dict(st['neg_flags']),
-                'high_res_3ms_sliding_window': st['high_res_3ms_sliding_window'],
+                'use_high_res_cumulative_3ms': st['use_high_res_cumulative_3ms'],
                 'resultant_peak_g': float(rp['value']) if rp.get('value') is not None else None,
                 'summary_format_version': result.get('summary_format_version') or SUMMARY_FORMAT_VERSION,
             }
@@ -3381,8 +3387,8 @@ class InjuryPage(tk.Frame):
         opt.pack(fill=tk.X, padx=10, pady=(2, 4))
         tk.Checkbutton(
             opt,
-            text="High-Res 3ms Sliding Window",
-            variable=self.high_res_3ms_var,
+            text="High-Resolution 3ms Search",
+            variable=self.use_high_res_cumulative_3ms_var,
             onvalue=True,
             offvalue=False,
             bg="#ffffff",
@@ -3882,8 +3888,10 @@ class InjuryPage(tk.Frame):
             st['summary_text'] = payload.get('summary_text') or '-'
             if payload_version and payload_version < SUMMARY_FORMAT_VERSION:
                 st['summary_text'] = '-'
-            if 'high_res_3ms_sliding_window' in payload:
-                st['high_res_3ms_sliding_window'] = bool(payload.get('high_res_3ms_sliding_window'))
+            if 'use_high_res_cumulative_3ms' in payload:
+                st['use_high_res_cumulative_3ms'] = bool(payload.get('use_high_res_cumulative_3ms'))
+            elif 'high_res_3ms_sliding_window' in payload:
+                st['use_high_res_cumulative_3ms'] = bool(payload.get('high_res_3ms_sliding_window'))
             st['graph_key'] = payload.get('graph_key')
             st['graph_uid'] = payload.get('graph_uid') or (self._injury_graph_uid(slot, payload.get('graph_key')) if payload.get('graph_key') else '')
             if self.initial_mode == 'hic':
@@ -4526,17 +4534,17 @@ class InjuryPage(tk.Frame):
                     channels=(x_ch, y_ch, z_ch),
                     resultant_channel=resultant_channel,
                     resultant_filter_label='CFC 1000',
-                    high_res_3ms_sliding_window=self._slot_high_res_3ms_enabled(slot),
+                    use_high_res_cumulative_3ms=self._slot_use_high_res_cumulative_3ms(slot),
                 )
                 state['head_bundle'] = result['bundle']
                 meta = dict(result.get('metadata') or {})
                 meta['dummy_name'] = state.get('dummy_name') or ''
                 meta['dummy_profile'] = state.get('dummy_profile') or ''
                 meta['channels'] = dict(channels)
-                meta['high_res_3ms_sliding_window'] = self._slot_high_res_3ms_enabled(slot)
+                meta['use_high_res_cumulative_3ms'] = self._slot_use_high_res_cumulative_3ms(slot)
                 state['head_metadata'] = meta
                 state['summary_text'] = result.get('summary_text') or state.get('summary_text') or '-'
-                state['high_res_3ms_sliding_window'] = self._slot_high_res_3ms_enabled(slot)
+                state['use_high_res_cumulative_3ms'] = self._slot_use_high_res_cumulative_3ms(slot)
                 return True
 
             if self.initial_mode == 'nij':
@@ -4608,10 +4616,10 @@ class InjuryPage(tk.Frame):
                     disp_filter_label=self._channel_filter_label_for_calc(disp_ch),
                     disp_prefiltered=disp_prefiltered,
                     vc_sign_pref=1.0,
-                    high_res_3ms_sliding_window=self._slot_high_res_3ms_enabled(slot),
+                    use_high_res_cumulative_3ms=self._slot_use_high_res_cumulative_3ms(slot),
                 )
                 state['chest_metrics'] = result['metrics']
-                state['high_res_3ms_sliding_window'] = self._slot_high_res_3ms_enabled(slot)
+                state['use_high_res_cumulative_3ms'] = self._slot_use_high_res_cumulative_3ms(slot)
                 if not state.get('chest_saved_payload'):
                     rp = result['metrics'].get('resultant_peak', {})
                     state['chest_saved_payload'] = {
@@ -4622,7 +4630,7 @@ class InjuryPage(tk.Frame):
                         'dummy_profile': state.get('dummy_profile') or '',
                         'channels': dict(channels),
                         'neg_flags': {},
-                        'high_res_3ms_sliding_window': state['high_res_3ms_sliding_window'],
+                        'use_high_res_cumulative_3ms': state['use_high_res_cumulative_3ms'],
                         'resultant_peak_g': float(rp['value']) if rp.get('value') is not None else None,
                         'summary_format_version': result.get('summary_format_version') or SUMMARY_FORMAT_VERSION,
                     }
@@ -4647,10 +4655,10 @@ class InjuryPage(tk.Frame):
                     y_values=self._convert_channel_to_head_plot_unit(y_values, y_ch),
                     z_values=self._convert_channel_to_head_plot_unit(z_values, z_ch),
                     plot_unit=plot_unit,
-                    high_res_3ms_sliding_window=self._slot_high_res_3ms_enabled(slot),
+                    use_high_res_cumulative_3ms=self._slot_use_high_res_cumulative_3ms(slot),
                 )
                 state['pelvis_metrics'] = result['metrics']
-                state['high_res_3ms_sliding_window'] = self._slot_high_res_3ms_enabled(slot)
+                state['use_high_res_cumulative_3ms'] = self._slot_use_high_res_cumulative_3ms(slot)
                 if not state.get('pelvis_saved_payload'):
                     state['pelvis_saved_payload'] = {
                         'result_uid': state.get('result_uid') or self._injury_result_uid(slot),
@@ -4660,7 +4668,7 @@ class InjuryPage(tk.Frame):
                         'dummy_profile': state.get('dummy_profile') or '',
                         'channels': dict(channels),
                         'neg_flags': {},
-                        'high_res_3ms_sliding_window': state['high_res_3ms_sliding_window'],
+                        'use_high_res_cumulative_3ms': state['use_high_res_cumulative_3ms'],
                         'summary_format_version': result.get('summary_format_version') or SUMMARY_FORMAT_VERSION,
                     }
                 state['summary_text'] = result.get('summary_text') or state.get('summary_text') or '-'
@@ -4855,7 +4863,7 @@ class InjuryPage(tk.Frame):
                 y_values=self._convert_channel_to_head_plot_unit(y_values, y_ch),
                 z_values=self._convert_channel_to_head_plot_unit(z_values, z_ch),
                 plot_unit=self._head_plot_unit((x_ch, y_ch, z_ch)),
-                high_res_3ms_sliding_window=self._current_high_res_3ms_enabled(),
+                use_high_res_cumulative_3ms=self._current_use_high_res_cumulative_3ms(),
             )
             metrics = result['metrics']
             st = self.slot_states[slot]
@@ -4866,7 +4874,7 @@ class InjuryPage(tk.Frame):
             st['summary_text'] = result['summary_text']
             st['result_uid'] = st.get('result_uid') or self._injury_result_uid(slot)
             st['pelvis_metrics'] = metrics
-            st['high_res_3ms_sliding_window'] = self._current_high_res_3ms_enabled()
+            st['use_high_res_cumulative_3ms'] = self._current_use_high_res_cumulative_3ms()
             st['pelvis_saved_payload'] = {
                 'result_uid': st['result_uid'],
                 'summary_text': result['summary_text'],
@@ -4875,7 +4883,7 @@ class InjuryPage(tk.Frame):
                 'dummy_profile': st['dummy_profile'],
                 'channels': dict(st['channels']),
                 'neg_flags': {},
-                'high_res_3ms_sliding_window': st['high_res_3ms_sliding_window'],
+                'use_high_res_cumulative_3ms': st['use_high_res_cumulative_3ms'],
                 'summary_format_version': result.get('summary_format_version') or SUMMARY_FORMAT_VERSION,
             }
             st['graph_key'] = 'accel_resultant'

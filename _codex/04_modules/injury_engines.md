@@ -13,7 +13,7 @@
 
 ## Shared concerns
 - peak/clip engine behavior
-- `High-Res 3ms Sliding Window` changes only the `Multiple Peak 3ms_Clip` sample-span rule
+- `High-Resolution 3ms Search` changes only the `Multiple Peak 3ms_Clip` cumulative-search resolution mode
 - dummy-factor usage
 - filtered-channel selection
 - generated channel naming

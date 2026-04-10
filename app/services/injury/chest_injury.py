@@ -86,7 +86,7 @@ def calculate_chest_injury_bundle(
     disp_filter_label,
     disp_prefiltered=None,
     vc_sign_pref=1.0,
-    high_res_3ms_sliding_window=True,
+    use_high_res_cumulative_3ms=True,
 ):
     metrics = compute_chest_metrics(
         time,
@@ -103,7 +103,7 @@ def calculate_chest_injury_bundle(
         disp_filter_label=disp_filter_label,
         disp_prefiltered=disp_prefiltered,
         vc_sign_pref=vc_sign_pref,
-        high_res_3ms_sliding_window=high_res_3ms_sliding_window,
+        use_high_res_cumulative_3ms=use_high_res_cumulative_3ms,
     )
 
     lines = []

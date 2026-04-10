@@ -59,7 +59,7 @@ def _interval_detail_line(label, unit, detail):
     return fmt_metric_at(label, detail.get('value'), unit=unit, time_s=detail.get('time_s'))
 
 
-def calculate_pelvis_injury_bundle(time, x_values, y_values, z_values, plot_unit, high_res_3ms_sliding_window=True):
+def calculate_pelvis_injury_bundle(time, x_values, y_values, z_values, plot_unit, use_high_res_cumulative_3ms=True):
     time_arr = np.asarray(time, dtype=float)
     x_arr = np.asarray(x_values, dtype=float)
     y_arr = np.asarray(y_values, dtype=float)
@@ -70,7 +70,7 @@ def calculate_pelvis_injury_bundle(time, x_values, y_values, z_values, plot_unit
         resultant,
         use_abs=True,
         include_res_peak=True,
-        high_res_sliding_window=high_res_3ms_sliding_window,
+        use_high_res_cumulative_3ms=use_high_res_cumulative_3ms,
     )
     one_peak_3ms = dict(peak_3ms_bundle.get('one_peak_3ms', {}))
     multiple_peak_3ms = dict(peak_3ms_bundle.get('multiple_peak_3ms', {}))

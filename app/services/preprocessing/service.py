@@ -1066,8 +1066,8 @@ def _estimate_constant_dt(time_s):
     return dt
 
 
-def compute_3ms_multiple_peak_exceedance_details(time_s, signal, use_abs=True, window_s=0.003, high_res_sliding_window=True):
-    """Return cumulative Xms details with selectable sample-span behavior."""
+def compute_3ms_multiple_peak_exceedance_details(time_s, signal, use_abs=True, window_s=0.003, use_high_res_cumulative_3ms=True):
+    """Return cumulative Xms details with selectable search resolution."""
     t, y_src = _prepare_hic_series(time_s, signal)
     empty = {
         'value': None,
@@ -1091,7 +1091,7 @@ def compute_3ms_multiple_peak_exceedance_details(time_s, signal, use_abs=True, w
         return _clip_exceedance_detail(time_s, signal, window_s=window_s, mode='multiple', use_abs=use_abs)
 
     samples_required = max(1, int(np.ceil((req - 1e-15) / dt)))
-    if not bool(high_res_sliding_window):
+    if not bool(use_high_res_cumulative_3ms):
         samples_required += 1
     finite_vals = y[np.isfinite(y)]
     if finite_vals.size < samples_required:
@@ -1752,7 +1752,7 @@ def compute_chest_metrics(
     disp_filter_label=None,
     disp_prefiltered=None,
     vc_sign_pref=1.0,
-    high_res_3ms_sliding_window=True,
+    use_high_res_cumulative_3ms=True,
 ):
     t = np.asarray(time_s, dtype=float)
 
@@ -1877,7 +1877,7 @@ def compute_chest_metrics(
         res_g,
         use_abs=True,
         include_res_peak=True,
-        high_res_sliding_window=high_res_3ms_sliding_window,
+        use_high_res_cumulative_3ms=use_high_res_cumulative_3ms,
     )
     one_peak_detail = dict(peak_3ms_bundle.get('one_peak_3ms', {}))
     one_peak_detail['axis'] = None

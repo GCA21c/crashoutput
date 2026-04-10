@@ -98,7 +98,7 @@ def build_head_injury_bundle(
     channels,
     resultant_channel=None,
     resultant_filter_label=None,
-    high_res_3ms_sliding_window=True,
+    use_high_res_cumulative_3ms=True,
 ):
     time_arr = np.asarray(time, dtype=float)
     resultant_arr = np.asarray(resultant_g, dtype=float)
@@ -113,7 +113,7 @@ def build_head_injury_bundle(
         resultant_arr,
         use_abs=True,
         include_res_peak=True,
-        high_res_sliding_window=high_res_3ms_sliding_window,
+        use_high_res_cumulative_3ms=use_high_res_cumulative_3ms,
     )
     one_peak_3ms = peak_3ms_bundle.get('one_peak_3ms', {})
     multiple_peak_3ms = peak_3ms_bundle.get('multiple_peak_3ms', {})
