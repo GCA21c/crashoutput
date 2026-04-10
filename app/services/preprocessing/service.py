@@ -1097,7 +1097,11 @@ def compute_3ms_multiple_peak_exceedance_details(time_s, signal, use_abs=True, w
     if dt is None or req <= 0.0:
         return _clip_exceedance_detail(time_s, signal, window_s=window_s, mode='multiple', use_abs=use_abs)
 
-    samples_required = max(1, int(np.ceil((req - 1e-15) / dt)))
+    # Match cumulative Xms with a sample-span interpretation:
+    # to cover at least x ms on a constant-rate signal, we need enough samples
+    # so the span between the first and last retained sample is >= x ms.
+    # That requires one more sample than the interval-count-only ceil(x/dt) rule.
+    samples_required = max(1, int(np.ceil((req - 1e-15) / dt)) + 1)
     finite_vals = y[np.isfinite(y)]
     if finite_vals.size < samples_required:
         return empty
