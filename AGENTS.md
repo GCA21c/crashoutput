@@ -1,47 +1,29 @@
-# AGENTS.md
+# AGENTS
 
-This repository is a Python crash-analysis application.
+이 저장소에서 Codex는 아래 순서로만 문서를 읽고 작업한다.
 
-## Repository truth
-- Production entry point: `main.py`
-- Production code root: `app/`
-- Project knowledge base for Codex: `_codex/`
-- Do not create new markdown files inside `app/` unless explicitly requested.
-- Keep code changes in `app/` and documentation updates in `_codex/`.
+## 시작 순서
+1. 이 파일을 먼저 읽는다.
+2. `_codex/02_rules/dev_rules.md`를 읽는다.
+3. 요청에 맞는 `_codex/03_workflows/` 및 `_codex/04_modules/` 문서를 읽는다.
+4. 필요한 코드 파일만 최소 범위로 확인한다.
 
-## First read order
-1. `_codex/00_project/project_overview.md`
-2. `_codex/00_project/repo_layout.md`
-3. `_codex/01_architecture/system_map.md`
-4. `_codex/02_rules/dev_rules.md`
-5. `_codex/05_reference/file_to_responsibility_map.md`
+## 절대 규칙
+- 코드 수정은 사용자 요청 범위 안에서만 한다.
+- 문서 정본은 `_codex/02_rules/dev_rules.md`이다.
+- 절차 정본은 `_codex/03_workflows/codex_workflow.md`이다.
+- RAW reference 기준 정본은 `_codex/04_modules/raw_reference_policy.md`이다.
+- 이미 필터링된 채널의 의도적 재필터링은 금지한다.
+- 파생 채널은 꼭 필요할 때만 만든다.
+- `_codex/` 문서를 `app/` 아래로 이동하지 않는다.
 
-## When the task touches a specific area
-- Dummy configuration / multi-dummy UI: read `_codex/04_modules/dummy_set.md`
-- Filtering / preprocessing: read `_codex/04_modules/filtering.md`
-- Injury UI orchestration: read `_codex/04_modules/injury_ui.md`
-- Head / neck / chest calculations: read `_codex/04_modules/injury_engines.md`
-- ISO grouping / dummy routing: read `_codex/04_modules/isocode_and_dummy_profiles.md`
+## 외부 참조
+- crash 규정, 계산식, 필터링 기준, 평가 기준을 건드릴 때는 `crash-reference` MCP를 우선 사용한다.
+- 사용자가 `소스자료`라고 말하면 동일하게 `crash-reference` 참조 흐름으로 처리한다.
 
-## Working rules
-- Use the global MCP server `crash-reference` for external crash-reference lookup before changing calculation, filtering, regulation, or rating logic.
-- Treat user references to `소스자료` as referring to the same `crash-reference` MCP server and its source documents.
-- Reference priority: calculation -> source 1, filtering -> source 2, regulations/NCAP/IIHS -> source 3, theory fallback -> source 4.
-- Preserve the existing raw -> filter -> compute philosophy.
-- Do not re-filter already filtered channels.
-- Minimize unnecessary derived-channel creation.
-- Prefer changing existing modules over duplicating logic.
-- Keep naming consistent with current channel/result conventions.
-- Respect multi-dummy architecture based on ISO prefixes such as B1~B6.
-- When changing one injury module, review side effects on shared engines and UI state flow.
-
-## Change discipline
-- For meaningful code changes, update `_codex/08_change_logs/` with a short note.
-- Record: changed files, reason, behavior impact, known risks, follow-up items.
-
-## Completion standard
-A task is not complete unless:
-- the changed behavior matches the request,
-- impacted module boundaries were reviewed,
-- naming/state persistence side effects were checked,
-- and the change is documented if it materially affects architecture or workflow.
+## 문서 읽기 경로
+- 규칙: `_codex/02_rules/dev_rules.md`
+- 절차: `_codex/03_workflows/codex_workflow.md`
+- 아키텍처: `_codex/01_architecture/system_map.md`
+- 모듈 정책: `_codex/04_modules/`
+- 파일 책임: `_codex/05_reference/file_to_responsibility_map.md`

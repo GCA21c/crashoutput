@@ -1,29 +1,37 @@
 # Codex workflow
 
-## Recommended operating sequence
-1. Open repository root.
-2. Read root `AGENTS.md`.
-3. Confirm the `crash-reference` MCP server is available when external crash-document lookup is needed.
-4. Read module docs relevant to the request.
-5. Inspect the exact code files to be changed.
-6. Treat user wording like `소스자료` as the same external reference flow through `crash-reference`.
-7. Use `crash-reference` for source lookup before changing crash criteria, filtering, or rating logic.
-8. Apply minimal code changes.
-9. Re-check adjacent modules for side effects.
-10. Record a concise change log if the change is material.
+이 문서는 **절차 정본**이다.
+규칙 내용은 `_codex/02_rules/dev_rules.md`를 따른다.
 
-## For bug fixes
-- reproduce mentally from page -> service -> core boundary
-- identify state owner
-- identify computation owner
-- inspect shared helpers before patching
+## 기본 작업 순서
+1. 저장소 루트에서 시작한다.
+2. 루트 `AGENTS.md`를 읽는다.
+3. `_codex/02_rules/dev_rules.md`를 읽는다.
+4. 요청과 직접 관련된 `_codex/04_modules/` 문서를 읽는다.
+5. 관련 코드 파일만 최소 범위로 확인한다.
+6. 수정 전 side effect 가능성이 있는 인접 파일을 짚는다.
+7. 최소 수정으로 반영한다.
+8. material change면 change log를 남긴다.
 
-## For feature changes
-- define whether the change is UI-only, service-only, or cross-layer
-- preserve existing data flow unless change explicitly requires redesign
-- update docs if architecture, workflow, or module contract changed
+## crash-reference MCP 사용 시점
+다음 경우에는 `crash-reference`를 먼저 확인한다.
+- crash criteria 계산식 변경
+- filtering / CFC 기준 변경
+- rating / threshold / regulation 반영
+- 사용자가 `소스자료`, 규정, 기준, 법규, NCAP 근거를 요구한 경우
 
-## Environment checks
-- Keep in mind that development may happen on macOS while final manual verification may happen on Windows.
-- Before closing a task that touches UI or file IO, quickly review path handling, font assumptions, icon behavior, encoding, and generated file expectations.
-- Record environment-related risks in change logs without including sensitive network or machine-identifying details.
+## Bug fix 절차
+- page -> service -> core 경계를 따라 원인 위치를 좁힌다.
+- state owner와 computation owner를 분리해서 본다.
+- shared helper를 먼저 확인한 뒤 패치한다.
+
+## Feature change 절차
+- UI-only / service-only / cross-layer 중 어디인지 먼저 정한다.
+- 명시 요구가 없으면 기존 data flow를 유지한다.
+- 아키텍처 계약이 바뀌면 관련 문서를 함께 갱신한다.
+
+## 종료 전 점검
+- adjacent module side effect
+- naming consistency
+- raw reference / filtering 충돌 여부
+- Windows 기준 path, font, icon, encoding 리스크

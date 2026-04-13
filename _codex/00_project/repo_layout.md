@@ -1,6 +1,6 @@
 # Repository layout
 
-## Exact production paths in this project
+## Code paths
 ```text
 main.py
 app/
@@ -20,7 +20,7 @@ app/
    └─ viewer_module.py
 ```
 
-## Codex documentation paths to add
+## Codex documentation paths
 ```text
 AGENTS.md
 _codex/
@@ -34,8 +34,3 @@ _codex/
 ├─ 07_handoffs/
 └─ 08_change_logs/
 ```
-
-## Separation rule
-- Code lives in `main.py` and `app/`
-- Operational knowledge for Codex lives in `_codex/`
-- Root `AGENTS.md` is the single entry point that tells Codex what to read first
