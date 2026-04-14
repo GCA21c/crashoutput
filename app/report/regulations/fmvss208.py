@@ -78,15 +78,6 @@ FMVSS_208_ITEMS = (
         limit_key="peak_compression_limit",
     ),
     _item(
-        "neck.peak_flexion_mocy",
-        "Peak Flexion MOCy",
-        "neck",
-        "neck",
-        "peak_flexion_my",
-        unit="Nm",
-        limit_key="MyF",
-    ),
-    _item(
         "neck.peak_extension_mocy",
         "Peak Extension MOCy",
         "neck",
@@ -95,6 +86,15 @@ FMVSS_208_ITEMS = (
         unit="Nm",
         limit_key="MyE",
         value_transform="abs",
+    ),
+    _item(
+        "neck.peak_flexion_mocy",
+        "Peak Flexion MOCy",
+        "neck",
+        "neck",
+        "peak_flexion_my",
+        unit="Nm",
+        limit_key="MyF",
     ),
     _item(
         "neck.nte",
