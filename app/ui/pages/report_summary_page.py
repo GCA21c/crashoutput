@@ -167,7 +167,12 @@ class ReportSummaryPage(tk.Frame):
             dummy_label = row.get("dummy_name") or row.get("dummy_profile") or "-"
             value_text = self._tree_value_text(row.get("value"))
             limit_text = self._tree_value_text(row.get("limit"))
-            source_text = "Saved value" if row.get("value_source") == "payload" else "Summary text" if row.get("value_source") == "summary_text" else "-"
+            source_name = row.get("value_source")
+            source_text = {
+                "report_values": "Saved value (report_values)",
+                "structured_metrics": "Saved value (structured_metrics)",
+                "top_level": "Saved value (top-level payload)",
+            }.get(source_name, "-")
             tag = row.get("status") or "N/A"
             self.tree.insert(
                 "",
