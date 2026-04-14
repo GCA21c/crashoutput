@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
 
-from app.report import build_report_snapshot, get_regulation_choices
+from app.report import build_report_snapshot, get_regulation_choices, get_regulation_definition
 
 
 class ReportSummaryPage(tk.Frame):
@@ -168,7 +168,70 @@ class ReportSummaryPage(tk.Frame):
         self.speed_var.set(fields.get("speed") or "")
         self.test_date_var.set(fields.get("test_date") or "")
         self.test_id_var.set(fields.get("test_id") or "")
+        restored_snapshot = self._snapshot_from_saved_report(saved)
+        if restored_snapshot:
+            self._snapshot = restored_snapshot
+            self._valuation_ready = True
+            self._populate_tree(restored_snapshot)
+            total_rows = len(restored_snapshot.get("rows") or [])
+            loaded_rows = int(restored_snapshot.get("value_count") or 0)
+            self.loaded_values_var.set(f"Loaded injury values: {loaded_rows} / {total_rows}")
+            self.status_var.set("Loaded saved summary report results.")
+        else:
+            self._snapshot = None
+            self._valuation_ready = False
         return True
+
+    def _snapshot_from_saved_report(self, saved):
+        saved = dict(saved or {})
+        saved_rows = list(saved.get("rows") or [])
+        if not saved_rows:
+            return None
+        definition = get_regulation_definition(saved.get("regulation") or self.regulation_var.get())
+        item_map = {item.get("result_key"): dict(item) for item in (definition or {}).get("items", ())}
+        slot_map = {}
+        for slot_info in list(saved.get("slots") or []):
+            info = dict(slot_info or {})
+            slot_key = info.get("slot")
+            if slot_key:
+                slot_map[slot_key] = info
+
+        rows = []
+        value_count = 0
+        for saved_row in saved_rows:
+            row = dict(saved_row or {})
+            item = item_map.get(row.get("result_key"), {})
+            slot_info = dict(slot_map.get(row.get("slot")) or {})
+            value = row.get("value")
+            if value is not None:
+                value_count += 1
+            rows.append({
+                "slot": row.get("slot"),
+                "slot_label": row.get("slot_label") or slot_info.get("slot_label") or row.get("slot") or "-",
+                "dummy_name": row.get("dummy_name") or slot_info.get("dummy_name") or "",
+                "dummy_profile": row.get("dummy_profile") or slot_info.get("dummy_profile") or "",
+                "section_key": row.get("section_key") or item.get("section_key"),
+                "result_key": row.get("result_key"),
+                "label": row.get("label") or item.get("label") or "-",
+                "unit": row.get("unit") or item.get("unit") or "",
+                "value": value,
+                "limit": row.get("limit"),
+                "status": row.get("status"),
+                "comparison": row.get("comparison") or item.get("comparison"),
+                "result_uid": row.get("result_uid") or "",
+                "value_source": row.get("value_source"),
+                "value_path": row.get("value_path") or "",
+                "limit_source": row.get("limit_source") or "",
+            })
+
+        return {
+            "regulation_name": saved.get("regulation") or self.regulation_var.get(),
+            "definition": definition,
+            "slots": list(saved.get("slots") or []),
+            "rows": rows,
+            "excel_mapping": dict(saved.get("excel_mapping") or {}),
+            "value_count": value_count,
+        }
 
     def _tree_value_text(self, value):
         return "-" if value is None else f"{float(value):.4f}"
@@ -218,13 +281,21 @@ class ReportSummaryPage(tk.Frame):
         for row in snapshot.get("rows", []):
             rows.append({
                 "slot": row.get("slot"),
+                "slot_label": row.get("slot_label"),
+                "dummy_name": row.get("dummy_name"),
+                "dummy_profile": row.get("dummy_profile"),
+                "section_key": row.get("section_key"),
                 "result_key": row.get("result_key"),
+                "label": row.get("label"),
                 "result_uid": row.get("result_uid"),
                 "value": row.get("value"),
                 "unit": row.get("unit"),
                 "limit": row.get("limit"),
                 "status": row.get("status"),
+                "comparison": row.get("comparison"),
                 "value_source": row.get("value_source"),
+                "value_path": row.get("value_path"),
+                "limit_source": row.get("limit_source"),
             })
         return {
             "report_type": "summary_report",
