@@ -459,8 +459,11 @@ class InjuryPage(tk.Frame):
         enriched = dict(payload or {})
         metrics = self._result_metrics_for_state(state)
         time_values = dict(metrics or {}).get('time')
+        report_values = self._build_report_values(metrics)
         enriched['result_schema_version'] = 1
-        enriched['report_values'] = self._build_report_values(metrics)
+        enriched['report_values'] = report_values
+        for key, value in report_values.items():
+            enriched[key] = value
         enriched['structured_metrics'] = self._to_storable_metric_value(metrics)
         enriched['metric_extrema'] = self._collect_metric_extrema(metrics, time_values)
         return enriched
