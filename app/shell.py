@@ -14,6 +14,8 @@ from app.ui.pages.filtering_page import FilteringPage
 from app.ui.pages.trimming_page import TrimmingPage
 from app.ui.pages.injury_page import InjuryPage
 from app.ui.pages.dummy_set_page import DummySetPage
+from app.ui.pages.report_summary_page import ReportSummaryPage
+from app.ui.pages.report_ploting_page import ReportPlotingPage
 
 
 INJURY_NAV_ORDER = ("hic", "nij", "chest", "pelvis", "femur", "knee", "iliac", "tibia")
@@ -151,6 +153,7 @@ class CrashAnalysisWorkbench(tk.Frame):
         self._add_nav_button("trimming", "DATA TRIMMING", indent=18)
         self._add_nav_section("POST-PROCESSING")
         self._build_injury_nav_group()
+        self._build_report_nav_group()
 
         quick = tk.LabelFrame(self.sidebar, text="Quick Guide", bg="#f4f6fb")
         quick.pack(fill=tk.X, padx=12, pady=(16, 8))
@@ -189,6 +192,8 @@ class CrashAnalysisWorkbench(tk.Frame):
         self.pages["iliac"] = InjuryPage(self.page_host, self, initial_mode="iliac", show_internal_menu=False)
         self.pages["tibia"] = InjuryPage(self.page_host, self, initial_mode="tibia", show_internal_menu=False)
         self.pages["dummyset"] = DummySetPage(self.page_host, self)
+        self.pages["report_summary"] = ReportSummaryPage(self.page_host, self)
+        self.pages["report_ploting"] = ReportPlotingPage(self.page_host, self)
         self._apply_injury_mode_nav()
 
     def _add_nav_section(self, text):
@@ -236,6 +241,24 @@ class CrashAnalysisWorkbench(tk.Frame):
         self._injury_nav_frame.pack(fill=tk.X)
         for key in self.injury_page_keys:
             self._add_nav_button(key, INJURY_PAGE_LABELS[key], indent=34, parent=self._injury_nav_frame)
+
+    def _build_report_nav_group(self):
+        group = tk.Frame(self.sidebar, bg="#f4f6fb")
+        group.pack(fill=tk.X)
+        header = tk.Frame(group, bg="#f4f6fb")
+        header.pack(fill=tk.X)
+        tk.Label(
+            header,
+            text="REPORT",
+            font=("Arial", 10, "bold"),
+            bg="#f4f6fb",
+            fg="#374151",
+            anchor="w",
+            padx=32,
+            pady=6,
+        ).pack(side=tk.LEFT)
+        self._add_nav_button("report_summary", "SUMMARY REPORT", indent=34, parent=group)
+        self._add_nav_button("report_ploting", "PLOTING", indent=34, parent=group)
 
     def _available_injury_pages(self):
         if not bool((self.shared_dummy_config or {}).get("setup_complete")):
@@ -587,24 +610,59 @@ class CrashAnalysisWorkbench(tk.Frame):
         self._refresh_history_view()
         self._update_dataset_info()
 
-    def _build_next_save_path(self, suffix):
-        current = self.current_file_path
-        if current:
-            current_path = Path(current)
-            stem = current_path.stem
-            parent = current_path.parent
-        elif self.original_source_path:
-            source_path = Path(self.original_source_path)
-            stem = source_path.stem
-            parent = source_path.parent
+    def _build_save_path(self, suffix, prefer_original_source=False):
+        naming_source = None
+        if prefer_original_source:
+            naming_source = (
+                self.original_source_path
+                or self.dataset_metadata.get("source_file_path")
+                or self.source_file_label
+                or self.current_file_path
+            )
         else:
+            naming_source = self.current_file_path or self.original_source_path
+        if not naming_source:
             return None
+        naming_path = Path(naming_source)
+        stem = naming_path.stem
+
+        parent_candidates = []
+        if prefer_original_source:
+            parent_candidates.extend([
+                naming_path.parent,
+                Path(self.current_file_path).parent if self.current_file_path else None,
+                Path(self.source_file_label).parent if self.source_file_label else None,
+            ])
+        else:
+            parent_candidates.extend([
+                naming_path.parent,
+                Path(self.original_source_path).parent if self.original_source_path else None,
+            ])
+
+        parent = None
+        for candidate in parent_candidates:
+            if candidate is None:
+                continue
+            try:
+                if candidate.exists() and candidate.is_dir():
+                    parent = candidate
+                    break
+            except Exception:
+                continue
+        if parent is None:
+            parent = Path.cwd()
 
         if suffix:
             while stem.endswith(suffix):
                 stem = stem[:-len(suffix)]
             stem = f"{stem}{suffix}"
         return str(parent / f"{stem}{DATASET_EXT}")
+
+    def _build_next_save_path(self, suffix):
+        return self._build_save_path(suffix, prefer_original_source=False)
+
+    def _build_original_source_save_path(self, suffix):
+        return self._build_save_path(suffix, prefer_original_source=True)
 
     def save_dataframe_to_next_stage(self, dataframe, suffix):
         save_path = self._build_next_save_path(suffix)
@@ -638,6 +696,50 @@ class CrashAnalysisWorkbench(tk.Frame):
             source_file_path=self.original_source_path or self.source_file_label,
             source_label=self.source_file_label,
         )
+
+    def save_current_dataset_snapshot(self, suffix, metadata_override=None, prefer_original_source=False):
+        dataframe = self.working_df
+        if dataframe is None:
+            return None
+        save_path = self._build_save_path(suffix, prefer_original_source=prefer_original_source)
+        if not save_path:
+            return None
+        metadata = dict(self.dataset_metadata or {})
+        if metadata_override:
+            metadata.update(dict(metadata_override))
+        metadata["source_format"] = "PICKLE"
+        metadata["source_file_path"] = self.original_source_path or self.source_file_label
+        metadata["saved_history"] = list(self.history)
+        metadata["saved_history_entries"] = list(self.history_entries)
+        metadata["shared_dummy_config"] = self.get_shared_dummy_config()
+        metadata["time_column"] = self.viewer.time_column or metadata.get("time_column")
+        metadata["units"] = self._current_units(metadata)
+        metadata["descriptions"] = self._current_descriptions(metadata)
+        metadata["channel_filter_labels"] = dict(self.channel_filter_labels or metadata.get("channel_filter_labels", {}) or {})
+        metadata["pre_filter_reference_df"] = (
+            self.pre_filter_reference_df.copy(deep=True)
+            if self.pre_filter_reference_df is not None else None
+        )
+        metadata["pre_filter_reference_time_column"] = (
+            self.pre_filter_reference_time_column
+            or self.viewer.time_column
+            or metadata.get("time_column")
+        )
+        metadata = self._enrich_isocode_metadata(dataframe, metadata)
+        saved_path = save_dataset_pickle(
+            save_path,
+            dataframe,
+            metadata=metadata,
+            history=self.history,
+            source_file_path=self.original_source_path or self.source_file_label,
+            source_label=self.source_file_label,
+        )
+        self.dataset_metadata = metadata
+        self.current_file_path = saved_path
+        self.last_saved_file_path = saved_path
+        self.source_file_label = saved_path
+        self._update_dataset_info()
+        return saved_path
 
     def apply_processed_dataframe(self, dataframe, history_text, op_suffix=None, reset_plot=False, metadata_override=None, update_pre_filter_reference=False):
         self.working_df = dataframe.copy(deep=True)

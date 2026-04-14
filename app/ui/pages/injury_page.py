@@ -279,6 +279,195 @@ class InjuryPage(tk.Frame):
             'filtered_channels': {},
         }
 
+    def _result_metrics_for_state(self, state):
+        if self.initial_mode == 'hic':
+            merged = dict(state.get('head_metadata') or {})
+            bundle = dict(state.get('head_bundle') or {})
+            for key, value in bundle.items():
+                merged.setdefault(key, value)
+            return merged
+        if self.initial_mode == 'nij':
+            return dict(state.get('neck_metrics') or {})
+        if self.initial_mode == 'chest':
+            return dict(state.get('chest_metrics') or {})
+        if self.initial_mode == 'pelvis':
+            return dict(state.get('pelvis_metrics') or {})
+        if self.initial_mode == 'femur':
+            return dict(state.get('femur_metrics') or {})
+        if self.initial_mode == 'knee':
+            return dict(state.get('knee_metrics') or {})
+        if self.initial_mode == 'iliac':
+            return dict(state.get('iliac_metrics') or {})
+        if self.initial_mode == 'tibia':
+            return dict(state.get('tibia_metrics') or {})
+        return {}
+
+    def _to_storable_metric_value(self, value):
+        if isinstance(value, dict):
+            return {str(key): self._to_storable_metric_value(val) for key, val in value.items()}
+        if isinstance(value, np.ndarray):
+            return self._to_storable_metric_value(value.tolist())
+        if isinstance(value, (list, tuple)):
+            return [self._to_storable_metric_value(item) for item in value]
+        if isinstance(value, (np.floating, np.integer, np.bool_)):
+            value = value.item()
+        if isinstance(value, float):
+            return value if np.isfinite(value) else None
+        if isinstance(value, (int, bool)) or value is None:
+            return value
+        if isinstance(value, str):
+            return value
+        return str(value)
+
+    def _series_extrema_detail(self, time_values, series_values):
+        try:
+            arr_t = np.asarray(time_values, dtype=float)
+            arr_v = np.asarray(series_values, dtype=float)
+        except Exception:
+            return None
+        if arr_t.ndim != 1 or arr_v.ndim != 1 or arr_t.size == 0 or arr_v.size == 0:
+            return None
+        n = min(arr_t.size, arr_v.size)
+        arr_t = arr_t[:n]
+        arr_v = arr_v[:n]
+        valid = np.isfinite(arr_t) & np.isfinite(arr_v)
+        if not np.any(valid):
+            return None
+        idx = np.flatnonzero(valid)
+        values = arr_v[idx]
+        max_local = int(np.nanargmax(values))
+        min_local = int(np.nanargmin(values))
+        abs_local = int(np.nanargmax(np.abs(values)))
+        max_idx = int(idx[max_local])
+        min_idx = int(idx[min_local])
+        abs_idx = int(idx[abs_local])
+        return {
+            'max_value': float(arr_v[max_idx]),
+            'max_time_s': float(arr_t[max_idx]),
+            'min_value': float(arr_v[min_idx]),
+            'min_time_s': float(arr_t[min_idx]),
+            'abs_peak_value': float(abs(arr_v[abs_idx])),
+            'abs_peak_time_s': float(arr_t[abs_idx]),
+        }
+
+    def _collect_metric_extrema(self, node, time_values, prefix=''):
+        extrema = {}
+        if isinstance(node, dict):
+            for key, value in node.items():
+                child_prefix = f'{prefix}.{key}' if prefix else str(key)
+                extrema.update(self._collect_metric_extrema(value, time_values, child_prefix))
+            return extrema
+        if not prefix:
+            return extrema
+        detail = self._series_extrema_detail(time_values, node)
+        if detail:
+            extrema[prefix] = detail
+        return extrema
+
+    def _safe_metric_float(self, value):
+        try:
+            result = float(value)
+        except Exception:
+            return None
+        return result if np.isfinite(result) else None
+
+    def _detail_value(self, detail):
+        return self._safe_metric_float((detail or {}).get('value'))
+
+    def _detail_time(self, detail):
+        return self._safe_metric_float((detail or {}).get('time_s'))
+
+    def _build_report_values(self, metrics):
+        metrics = dict(metrics or {})
+        if self.initial_mode == 'hic':
+            return {
+                'hic15': self._safe_metric_float(metrics.get('hic15_value')),
+                'hic36': self._safe_metric_float(metrics.get('hic36_value')),
+                'head_3ms_clip': self._safe_metric_float(metrics.get('one_peak_3ms_value') or metrics.get('clip3_value')),
+                'resultant_peak_g': self._safe_metric_float(metrics.get('resultant_peak_value')),
+                'head_x_max': self._safe_metric_float(metrics.get('head_x_max_value')),
+                'head_x_min': self._safe_metric_float(metrics.get('head_x_min_value')),
+                'head_y_max': self._safe_metric_float(metrics.get('head_y_max_value')),
+                'head_y_min': self._safe_metric_float(metrics.get('head_y_min_value')),
+                'head_z_max': self._safe_metric_float(metrics.get('head_z_max_value')),
+                'head_z_min': self._safe_metric_float(metrics.get('head_z_min_value')),
+                'head_resultant_max': self._safe_metric_float(metrics.get('head_resultant_max_value')),
+                'head_resultant_min': self._safe_metric_float(metrics.get('head_resultant_min_value')),
+            }
+        if self.initial_mode == 'nij':
+            return {
+                'overall_nij': self._safe_metric_float(metrics.get('overall_nij')),
+                'peak_tension_fz': self._safe_metric_float(metrics.get('peak_tension_fz')),
+                'peak_compression_fz': self._safe_metric_float(metrics.get('peak_compression_fz')),
+                'peak_flexion_my': self._safe_metric_float(metrics.get('peak_flexion_my')),
+                'peak_extension_my': self._safe_metric_float(metrics.get('peak_extension_my')),
+                'peak_nte': self._safe_metric_float(metrics.get('peak_nte')),
+                'peak_ntf': self._safe_metric_float(metrics.get('peak_ntf')),
+                'peak_nce': self._safe_metric_float(metrics.get('peak_nce')),
+                'peak_ncf': self._safe_metric_float(metrics.get('peak_ncf')),
+            }
+        if self.initial_mode == 'chest':
+            return {
+                'chest_3ms_clip': self._safe_metric_float(metrics.get('one_peak_3ms_g')),
+                'chest_multiple_3ms_clip': self._safe_metric_float(metrics.get('multiple_peak_3ms_g')),
+                'resultant_peak_g': self._detail_value(metrics.get('resultant_peak')),
+                'displacement_peak_mm': self._detail_value(metrics.get('displacement_peak')),
+                'vc_sae_peak_mps': self._detail_value(metrics.get('vc_sae_peak')),
+                'vc_ece_peak_mps': self._detail_value(metrics.get('vc_ece_peak')),
+            }
+        if self.initial_mode == 'pelvis':
+            return {
+                'pelvis_3ms_clip': self._detail_value(metrics.get('one_peak_3ms')),
+                'pelvis_multiple_3ms_clip': self._detail_value(metrics.get('multiple_peak_3ms')),
+                'pelvis_resultant_peak': self._detail_value(metrics.get('resultant_peak')),
+            }
+        if self.initial_mode == 'femur':
+            return {
+                'left_peak_axial_force_n': self._detail_value(metrics.get('left_peak_abs')),
+                'right_peak_axial_force_n': self._detail_value(metrics.get('right_peak_abs')),
+                'overall_peak_n': self._detail_value(metrics.get('overall_peak')),
+            }
+        if self.initial_mode == 'knee':
+            return {
+                'left_peak_slider': self._detail_value(metrics.get('left_peak')),
+                'left_peak_slider_time_s': self._detail_time(metrics.get('left_peak')),
+                'right_peak_slider': self._detail_value(metrics.get('right_peak')),
+                'right_peak_slider_time_s': self._detail_time(metrics.get('right_peak')),
+            }
+        if self.initial_mode == 'iliac':
+            left = dict(metrics.get('left_summary') or {})
+            right = dict(metrics.get('right_summary') or {})
+            return {
+                'left_compression_force_n': self._safe_metric_float(left.get('compression_force_n')),
+                'left_tension_force_n': self._safe_metric_float(left.get('tension_force_n')),
+                'left_peak_moment_nm': self._safe_metric_float(left.get('peak_moment_nm')),
+                'right_compression_force_n': self._safe_metric_float(right.get('compression_force_n')),
+                'right_tension_force_n': self._safe_metric_float(right.get('tension_force_n')),
+                'right_peak_moment_nm': self._safe_metric_float(right.get('peak_moment_nm')),
+            }
+        if self.initial_mode == 'tibia':
+            return {
+                'overall_peak_tibia_index': self._detail_value(metrics.get('overall_peak_tibia_index')),
+                'left_upper_peak_tibia_index': self._detail_value((metrics.get('left_upper') or {}).get('peak_tibia_index')),
+                'left_lower_peak_tibia_index': self._detail_value((metrics.get('left_lower') or {}).get('peak_tibia_index')),
+                'right_upper_peak_tibia_index': self._detail_value((metrics.get('right_upper') or {}).get('peak_tibia_index')),
+                'right_lower_peak_tibia_index': self._detail_value((metrics.get('right_lower') or {}).get('peak_tibia_index')),
+            }
+        return {}
+
+    def _enrich_payload_with_structured_results(self, payload, state):
+        enriched = dict(payload or {})
+        metrics = self._result_metrics_for_state(state)
+        time_values = dict(metrics or {}).get('time')
+        report_values = self._build_report_values(metrics)
+        enriched['result_schema_version'] = 1
+        enriched['report_values'] = report_values
+        for key, value in report_values.items():
+            enriched[key] = value
+        enriched['structured_metrics'] = self._to_storable_metric_value(metrics)
+        enriched['metric_extrema'] = self._collect_metric_extrema(metrics, time_values)
+        return enriched
+
     def _section_key(self):
         return {'hic': 'head', 'nij': 'neck', 'chest': 'chest', 'pelvis': 'pelvis', 'femur': 'femur', 'knee': 'knee', 'iliac': 'iliac', 'tibia': 'tibia'}[self.initial_mode]
 
@@ -1264,6 +1453,10 @@ class InjuryPage(tk.Frame):
                 'graph_key': st.get('graph_key'),
                 'graph_uid': st.get('graph_uid') or (self._injury_graph_uid(slot, st.get('graph_key')) if st.get('graph_key') else ''),
             })
+            payload = self._enrich_payload_with_structured_results(payload, st)
+            payload_key = self._slot_saved_payload_key()
+            if payload_key:
+                st[payload_key] = dict(payload)
             slots_payload[slot] = payload
         return {
             'dummy_count': self._active_count(),
