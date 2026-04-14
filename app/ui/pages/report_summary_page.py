@@ -20,6 +20,8 @@ class ReportSummaryPage(tk.Frame):
         self._snapshot = None
         self._valuation_ready = False
         self._build_ui()
+        for var in (self.manufacturer_var, self.vehicle_var, self.speed_var, self.test_id_var):
+            var.trace_add("write", lambda *_: self._cache_report_state_in_memory())
 
     def _build_ui(self):
         outer = tk.Frame(self, bg="#ffffff")
@@ -145,7 +147,7 @@ class ReportSummaryPage(tk.Frame):
     def _load_saved_state(self):
         identity = self._dataset_identity()
         if identity == self._loaded_dataset_identity:
-            return
+            return False
         self._loaded_dataset_identity = identity
         saved = dict((dict(getattr(self.workbench, "dataset_metadata", {}) or {}).get("report_saved_results") or {}).get("summary_report") or {})
         self.regulation_var.set(saved.get("regulation") or (get_regulation_choices()[0] if get_regulation_choices() else ""))
@@ -154,7 +156,7 @@ class ReportSummaryPage(tk.Frame):
         self.vehicle_var.set(fields.get("vehicle") or "")
         self.speed_var.set(fields.get("speed") or "")
         self.test_id_var.set(fields.get("test_id") or "")
-        self._set_waiting_state()
+        return True
 
     def _tree_value_text(self, value):
         return "-" if value is None else f"{float(value):.4f}"
@@ -171,7 +173,7 @@ class ReportSummaryPage(tk.Frame):
                 "",
                 tk.END,
                 values=(
-                    row.get("slot") or "-",
+                    row.get("slot_label") or row.get("slot") or "-",
                     dummy_label,
                     row.get("label") or "-",
                     value_text,
@@ -215,7 +217,23 @@ class ReportSummaryPage(tk.Frame):
             "excel_mapping": dict(snapshot.get("excel_mapping") or {}),
         }
 
+    def _cache_report_state_in_memory(self):
+        metadata = dict(getattr(self.workbench, "dataset_metadata", {}) or {})
+        report_saved = dict(metadata.get("report_saved_results") or {})
+        existing = dict(report_saved.get("summary_report") or {})
+        existing["regulation"] = self.regulation_var.get()
+        existing["report_fields"] = self._report_fields()
+        if self._snapshot:
+            existing["slots"] = list(self._snapshot.get("slots") or [])
+            existing["rows"] = list(self._build_report_payload().get("rows") or [])
+            existing["excel_mapping"] = dict(self._snapshot.get("excel_mapping") or {})
+            existing["report_type"] = "summary_report"
+        report_saved["summary_report"] = existing
+        metadata["report_saved_results"] = report_saved
+        self.workbench.dataset_metadata = metadata
+
     def _on_regulation_changed(self, _event=None):
+        self._cache_report_state_in_memory()
         self._set_waiting_state()
 
     def _set_waiting_state(self):
@@ -245,6 +263,7 @@ class ReportSummaryPage(tk.Frame):
             self.status_var.set("Stored uid results were found, but no numeric FMVSS 208 values are currently extractable.")
         else:
             self.status_var.set("Valuation refreshed from existing uid-based saved results.")
+        self._cache_report_state_in_memory()
 
     def save_report(self):
         if getattr(self.workbench, "working_df", None) is None:
@@ -254,7 +273,7 @@ class ReportSummaryPage(tk.Frame):
             self.run_valuation()
         report_saved = dict((getattr(self.workbench, "dataset_metadata", {}) or {}).get("report_saved_results") or {})
         report_saved["summary_report"] = self._build_report_payload()
-        save_name = self.workbench._build_original_source_save_path("_R")
+        save_name = self.workbench._build_next_save_path("_R")
         display_name = save_name or "_R"
         self.workbench.add_history_entry(
             {
@@ -267,7 +286,7 @@ class ReportSummaryPage(tk.Frame):
         saved_path = self.workbench.save_current_dataset_snapshot(
             "_R",
             metadata_override={"report_saved_results": report_saved},
-            prefer_original_source=True,
+            prefer_original_source=False,
         )
         if not saved_path:
             messagebox.showwarning("REPORT", "REPORT 저장 경로를 만들 수 없습니다.")
@@ -295,5 +314,6 @@ class ReportSummaryPage(tk.Frame):
             self.tree.delete(*self.tree.get_children())
 
     def on_show(self):
-        self._load_saved_state()
-        self._set_waiting_state()
+        changed = self._load_saved_state()
+        if changed and not self._valuation_ready:
+            self._set_waiting_state()

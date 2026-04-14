@@ -17,6 +17,9 @@ def _structured_metric_value(payload, module_key, value_key):
     report_values = dict(payload.get("report_values") or {})
     if value_key in report_values:
         return _as_float(report_values.get(value_key))
+    structured_metrics = dict(payload.get("structured_metrics") or {})
+    if value_key in structured_metrics:
+        return _as_float(structured_metrics.get(value_key))
     if module_key == "head":
         if value_key == "hic15":
             return _as_float(payload.get("hic15_value"))
@@ -106,10 +109,12 @@ def _slot_payload(injury_saved, section_key, slot):
 def _slot_identity(slot, slot_payload, slot_meta):
     payload = dict(slot_payload or {})
     meta = dict(slot_meta or {})
+    dummy_name = payload.get("dummy_name") or meta.get("dummy_name") or ""
     return {
         "slot": slot,
-        "dummy_name": payload.get("dummy_name") or meta.get("dummy_name") or "",
+        "dummy_name": dummy_name,
         "dummy_profile": payload.get("dummy_profile") or payload.get("criterion_key") or meta.get("dummy_profile") or "",
+        "slot_label": f"{slot} - {dummy_name}" if dummy_name else slot,
     }
 
 
@@ -153,7 +158,7 @@ def build_report_snapshot(metadata, regulation_name):
             identity = _slot_identity(slot, slot_payload, slot_meta_map.get(slot))
             rows.append({
                 "slot": slot,
-                "slot_label": slot,
+                "slot_label": identity["slot_label"],
                 "dummy_name": identity["dummy_name"],
                 "dummy_profile": identity["dummy_profile"],
                 "section_key": item.get("section_key"),
