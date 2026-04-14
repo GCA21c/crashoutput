@@ -257,8 +257,8 @@ class CrashAnalysisWorkbench(tk.Frame):
             padx=32,
             pady=6,
         ).pack(side=tk.LEFT)
-        self._add_nav_button("report_summary", "SUMMARY REPORT", indent=34, parent=group)
-        self._add_nav_button("report_ploting", "PLOTING", indent=34, parent=group)
+        self._add_nav_button("report_summary", "L SUMMARY REPORT", indent=34, parent=group)
+        self._add_nav_button("report_ploting", "L PLOTING", indent=34, parent=group)
 
     def _available_injury_pages(self):
         if not bool((self.shared_dummy_config or {}).get("setup_complete")):

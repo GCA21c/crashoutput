@@ -13,6 +13,7 @@ class ReportSummaryPage(tk.Frame):
         self.manufacturer_var = tk.StringVar()
         self.vehicle_var = tk.StringVar()
         self.speed_var = tk.StringVar()
+        self.test_date_var = tk.StringVar()
         self.test_id_var = tk.StringVar()
         self.status_var = tk.StringVar(value="Summary report is ready.")
         self.loaded_values_var = tk.StringVar(value="Loaded injury values: 0")
@@ -20,7 +21,7 @@ class ReportSummaryPage(tk.Frame):
         self._snapshot = None
         self._valuation_ready = False
         self._build_ui()
-        for var in (self.manufacturer_var, self.vehicle_var, self.speed_var, self.test_id_var):
+        for var in (self.manufacturer_var, self.vehicle_var, self.speed_var, self.test_date_var, self.test_id_var):
             var.trace_add("write", lambda *_: self._cache_report_state_in_memory())
 
     def _build_ui(self):
@@ -30,8 +31,14 @@ class ReportSummaryPage(tk.Frame):
         body = tk.Frame(outer, bg="#ffffff")
         body.pack(fill=tk.BOTH, expand=True, anchor="nw", padx=16, pady=(16, 8))
 
+        header = tk.Frame(body, bg="#ffffff")
+        header.pack(fill=tk.X, pady=(0, 10))
+        tk.Label(header, text="REPORT - SUMMARY", font=("Arial", 15, "bold"), bg="#ffffff").pack(side=tk.LEFT)
+
         top = tk.Frame(body, bg="#ffffff")
-        top.pack(fill=tk.X, pady=(0, 10))
+        top.pack(fill=tk.X, pady=(0, 12))
+
+        tk.Label(top, text="평가모드", bg="#ffffff", anchor="w").pack(side=tk.LEFT, padx=(2, 10))
 
         self.regulation_combo = ttk.Combobox(
             top,
@@ -40,35 +47,39 @@ class ReportSummaryPage(tk.Frame):
             state="readonly",
             width=18,
         )
-        self.regulation_combo.pack(side=tk.LEFT)
+        self.regulation_combo.pack(side=tk.LEFT, padx=(0, 12))
         self.regulation_combo.bind("<<ComboboxSelected>>", self._on_regulation_changed)
 
-        tk.Button(top, text="Valuation", command=self.run_valuation, width=12).pack(side=tk.LEFT, padx=(8, 0))
+        tk.Button(top, text="Valuation", command=self.run_valuation, width=12).pack(side=tk.LEFT, padx=(4, 0))
         tk.Button(top, text="Save", command=self.save_report, width=10).pack(side=tk.LEFT, padx=(8, 0))
         tk.Button(top, text="Export", command=self.export_placeholder, width=10).pack(side=tk.LEFT, padx=(8, 0))
 
         input_box = tk.LabelFrame(body, text="Report Inputs", bg="#ffffff")
         input_box.pack(fill=tk.X, pady=(0, 10))
-        self._inline_entry(input_box, "Manufacturer", self.manufacturer_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(10, 6), pady=10)
-        self._inline_entry(input_box, "Vehicle", self.vehicle_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=6, pady=10)
-        self._inline_entry(input_box, "Speed", self.speed_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=6, pady=10)
-        self._inline_entry(input_box, "Test ID", self.test_id_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(6, 10), pady=10)
+        inputs_row = tk.Frame(input_box, bg="#ffffff")
+        inputs_row.pack(fill=tk.X, padx=10, pady=8)
+        self._inline_entry(inputs_row, "Manufacturer", self.manufacturer_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 6))
+        self._inline_entry(inputs_row, "Vehicle", self.vehicle_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=6)
+        self._inline_entry(inputs_row, "Speed", self.speed_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=6)
+        self._inline_entry(inputs_row, "Test DATE", self.test_date_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=6)
+        self._inline_entry(inputs_row, "Test ID", self.test_id_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(6, 0))
 
         info_row = tk.Frame(body, bg="#ffffff")
         info_row.pack(fill=tk.X, pady=(0, 10))
 
         selected_box = tk.LabelFrame(info_row, text="Selected Regulation", bg="#ffffff")
         selected_box.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 6))
-        tk.Label(selected_box, text="Regulation", bg="#ffffff", width=12, anchor="w").grid(row=0, column=0, padx=10, pady=(10, 4), sticky="w")
-        tk.Label(selected_box, textvariable=self.regulation_var, bg="#ffffff", anchor="w").grid(row=0, column=1, padx=(0, 10), pady=(10, 4), sticky="w")
-        tk.Label(selected_box, text="Manufacturer", bg="#ffffff", width=12, anchor="w").grid(row=1, column=0, padx=10, pady=4, sticky="w")
-        tk.Label(selected_box, textvariable=self.manufacturer_var, bg="#ffffff", anchor="w").grid(row=1, column=1, padx=(0, 10), pady=4, sticky="w")
-        tk.Label(selected_box, text="Vehicle", bg="#ffffff", width=12, anchor="w").grid(row=2, column=0, padx=10, pady=4, sticky="w")
-        tk.Label(selected_box, textvariable=self.vehicle_var, bg="#ffffff", anchor="w").grid(row=2, column=1, padx=(0, 10), pady=4, sticky="w")
-        tk.Label(selected_box, text="Speed", bg="#ffffff", width=12, anchor="w").grid(row=3, column=0, padx=10, pady=4, sticky="w")
-        tk.Label(selected_box, textvariable=self.speed_var, bg="#ffffff", anchor="w").grid(row=3, column=1, padx=(0, 10), pady=4, sticky="w")
-        tk.Label(selected_box, text="Test ID", bg="#ffffff", width=12, anchor="w").grid(row=4, column=0, padx=10, pady=(4, 10), sticky="w")
-        tk.Label(selected_box, textvariable=self.test_id_var, bg="#ffffff", anchor="w").grid(row=4, column=1, padx=(0, 10), pady=(4, 10), sticky="w")
+        for idx, (label_text, variable) in enumerate((
+            ("Regulation", self.regulation_var),
+            ("Manufacturer", self.manufacturer_var),
+            ("Vehicle", self.vehicle_var),
+            ("Speed", self.speed_var),
+            ("Test DATE", self.test_date_var),
+            ("Test ID", self.test_id_var),
+        )):
+            pady = (8, 2) if idx == 0 else ((2, 8) if idx == 5 else 2)
+            tk.Label(selected_box, text=label_text, bg="#ffffff", width=12, anchor="w").grid(row=idx, column=0, padx=10, pady=pady, sticky="w")
+            tk.Label(selected_box, textvariable=variable, bg="#ffffff", anchor="w").grid(row=idx, column=1, padx=(0, 10), pady=pady, sticky="w")
 
         loaded_box = tk.LabelFrame(info_row, text="Loaded Injury Values", bg="#ffffff")
         loaded_box.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(6, 0))
@@ -79,7 +90,7 @@ class ReportSummaryPage(tk.Frame):
             justify="left",
             anchor="w",
             wraplength=360,
-        ).pack(fill=tk.X, padx=10, pady=(10, 6))
+        ).pack(fill=tk.X, padx=10, pady=(8, 4))
         tk.Label(
             loaded_box,
             textvariable=self.status_var,
@@ -88,7 +99,7 @@ class ReportSummaryPage(tk.Frame):
             justify="left",
             anchor="w",
             wraplength=360,
-        ).pack(fill=tk.X, padx=10, pady=(0, 10))
+        ).pack(fill=tk.X, padx=10, pady=(0, 8))
 
         table_box = tk.LabelFrame(body, text="SUMMARY REPORT", bg="#ffffff")
         table_box.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
@@ -136,7 +147,7 @@ class ReportSummaryPage(tk.Frame):
     def _inline_entry(self, parent, label, variable):
         frame = tk.Frame(parent, bg="#ffffff")
         tk.Label(frame, text=label, bg="#ffffff", anchor="w").pack(anchor="w")
-        tk.Entry(frame, textvariable=variable, width=22).pack(fill=tk.X, pady=(4, 0))
+        tk.Entry(frame, textvariable=variable, width=18).pack(fill=tk.X, pady=(3, 0))
         return frame
 
     def _dataset_identity(self):
@@ -155,6 +166,7 @@ class ReportSummaryPage(tk.Frame):
         self.manufacturer_var.set(fields.get("manufacturer") or "")
         self.vehicle_var.set(fields.get("vehicle") or "")
         self.speed_var.set(fields.get("speed") or "")
+        self.test_date_var.set(fields.get("test_date") or "")
         self.test_id_var.set(fields.get("test_id") or "")
         return True
 
@@ -196,6 +208,7 @@ class ReportSummaryPage(tk.Frame):
             "manufacturer": self.manufacturer_var.get().strip(),
             "vehicle": self.vehicle_var.get().strip(),
             "speed": self.speed_var.get().strip(),
+            "test_date": self.test_date_var.get().strip(),
             "test_id": self.test_id_var.get().strip(),
         }
 
@@ -310,6 +323,7 @@ class ReportSummaryPage(tk.Frame):
         self.manufacturer_var.set("")
         self.vehicle_var.set("")
         self.speed_var.set("")
+        self.test_date_var.set("")
         self.test_id_var.set("")
         self.status_var.set("Summary report is ready.")
         self.loaded_values_var.set("Loaded injury values: waiting for Valuation")

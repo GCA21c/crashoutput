@@ -1,7 +1,7 @@
 from .definitions import get_regulation_definition
 
 
-REPORT_FIELD_KEYS = ("regulation", "manufacturer", "vehicle", "speed", "test_id")
+REPORT_FIELD_KEYS = ("regulation", "manufacturer", "vehicle", "speed", "test_date", "test_id")
 
 
 def build_excel_mapping(regulation_name, slots):

@@ -13,7 +13,7 @@ class ReportPlotingPage(tk.Frame):
 
         header = tk.Frame(body, bg="#ffffff")
         header.pack(fill=tk.X, pady=(0, 12))
-        tk.Label(header, text="PLOTING", font=("Arial", 15, "bold"), bg="#ffffff").pack(side=tk.LEFT)
+        tk.Label(header, text="REPORT - PLOTING", font=("Arial", 15, "bold"), bg="#ffffff").pack(side=tk.LEFT)
 
         info = tk.LabelFrame(body, text="Status", bg="#ffffff")
         info.pack(fill=tk.X)
