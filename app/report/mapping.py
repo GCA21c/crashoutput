@@ -12,46 +12,44 @@ def _as_float(value):
     return result if result == result else None
 
 
-def _structured_metric_value(payload, module_key, value_key):
-    payload = dict(payload or {})
-    report_values = dict(payload.get("report_values") or {})
-    if value_key in report_values:
-        return _as_float(report_values.get(value_key))
-    structured_metrics = dict(payload.get("structured_metrics") or {})
-    if value_key in structured_metrics:
-        return _as_float(structured_metrics.get(value_key))
-    if module_key == "head":
-        if value_key == "hic15":
-            return _as_float(payload.get("hic15_value"))
-        if value_key == "hic36":
-            return _as_float(payload.get("hic36_value"))
-        if value_key == "head_3ms_clip":
-            return _as_float(payload.get("one_peak_3ms_value"))
-    if module_key == "chest":
-        if value_key == "chest_3ms_clip":
-            return _as_float(payload.get("one_peak_3ms_g"))
-        if value_key == "displacement_peak_mm":
-            return _as_float(payload.get("displacement_peak_mm"))
-    if module_key == "femur":
-        if value_key == "left_peak_axial_force_n":
-            return _as_float(payload.get("left_peak_axial_force_n"))
-        if value_key == "right_peak_axial_force_n":
-            return _as_float(payload.get("right_peak_axial_force_n"))
-    if module_key == "neck":
-        if value_key == "overall_nij":
-            return _as_float(payload.get("overall_nij"))
-        if value_key == "peak_tension_fz":
-            return _as_float(payload.get("peak_tension_fz"))
-        if value_key == "peak_compression_fz":
-            return _as_float(payload.get("peak_compression_fz"))
+def _candidate_paths(item):
+    value_key = str(item.get("value_key") or "").strip()
+    aliases = [str(path).strip() for path in (item.get("payload_aliases") or ()) if str(path or "").strip()]
+    return tuple(path for path in (value_key, *aliases) if path)
+
+
+def _read_path(container, path):
+    current = container
+    for part in str(path or "").split("."):
+        if not isinstance(current, dict):
+            return None
+        current = current.get(part)
+        if current is None:
+            return None
+    return current
+
+
+def _extract_from_container(container, paths, source_name):
+    container = dict(container or {})
+    for path in paths:
+        value = _as_float(_read_path(container, path))
+        if value is not None:
+            return value, source_name, path
     return None
 
 
 def _extract_metric_value(item, slot_payload):
-    value = _structured_metric_value(slot_payload, item.get("module_key"), item.get("value_key"))
-    if value is not None:
-        return value, "payload"
-    return None, "missing"
+    slot_payload = dict(slot_payload or {})
+    candidate_paths = _candidate_paths(item)
+    for source_name, container in (
+        ("report_values", slot_payload.get("report_values")),
+        ("structured_metrics", slot_payload.get("structured_metrics")),
+        ("top_level", slot_payload),
+    ):
+        extracted = _extract_from_container(container, candidate_paths, source_name)
+        if extracted:
+            return extracted
+    return None, "missing", ""
 
 
 def _resolve_limit_value(item, slot_payload, test_mode):
@@ -72,6 +70,8 @@ def _resolve_limit_value(item, slot_payload, test_mode):
 
 
 def _evaluate_status(value, limit, comparison):
+    value = _as_float(value)
+    limit = _as_float(limit)
     if value is None:
         return "MISSING"
     if limit is None:
@@ -150,7 +150,7 @@ def build_report_snapshot(metadata, regulation_name):
     for item in definition.get("items", ()):
         for slot in slots:
             slot_payload = _slot_payload(injury_saved, item.get("section_key"), slot)
-            value, value_source = _extract_metric_value(item, slot_payload)
+            value, value_source, value_path = _extract_metric_value(item, slot_payload)
             limit, limit_source = _resolve_limit_value(item, slot_payload, test_mode)
             status = _evaluate_status(value, limit, item.get("comparison"))
             if value is not None:
@@ -171,6 +171,7 @@ def build_report_snapshot(metadata, regulation_name):
                 "comparison": item.get("comparison"),
                 "result_uid": slot_payload.get("result_uid") or "",
                 "value_source": value_source,
+                "value_path": value_path,
                 "limit_source": limit_source,
             })
 
