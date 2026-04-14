@@ -611,21 +611,47 @@ class CrashAnalysisWorkbench(tk.Frame):
         self._update_dataset_info()
 
     def _build_save_path(self, suffix, prefer_original_source=False):
-        base_path_text = None
+        naming_source = None
         if prefer_original_source:
-            base_path_text = (
+            naming_source = (
                 self.original_source_path
                 or self.dataset_metadata.get("source_file_path")
                 or self.source_file_label
                 or self.current_file_path
             )
         else:
-            base_path_text = self.current_file_path or self.original_source_path
-        if not base_path_text:
+            naming_source = self.current_file_path or self.original_source_path
+        if not naming_source:
             return None
-        target_path = Path(base_path_text)
-        stem = target_path.stem
-        parent = target_path.parent
+        naming_path = Path(naming_source)
+        stem = naming_path.stem
+
+        parent_candidates = []
+        if prefer_original_source:
+            parent_candidates.extend([
+                naming_path.parent,
+                Path(self.current_file_path).parent if self.current_file_path else None,
+                Path(self.source_file_label).parent if self.source_file_label else None,
+            ])
+        else:
+            parent_candidates.extend([
+                naming_path.parent,
+                Path(self.original_source_path).parent if self.original_source_path else None,
+            ])
+
+        parent = None
+        for candidate in parent_candidates:
+            if candidate is None:
+                continue
+            try:
+                if candidate.exists() and candidate.is_dir():
+                    parent = candidate
+                    break
+            except Exception:
+                continue
+        if parent is None:
+            parent = Path.cwd()
+
         if suffix:
             while stem.endswith(suffix):
                 stem = stem[:-len(suffix)]

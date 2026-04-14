@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
 
-from app.core.utils.formatting import fmt_value
 from app.report import build_report_snapshot, get_regulation_choices
 
 
@@ -19,6 +18,7 @@ class ReportSummaryPage(tk.Frame):
         self.loaded_values_var = tk.StringVar(value="Loaded injury values: 0")
         self._loaded_dataset_identity = None
         self._snapshot = None
+        self._valuation_ready = False
         self._build_ui()
 
     def _build_ui(self):
@@ -44,6 +44,13 @@ class ReportSummaryPage(tk.Frame):
         tk.Button(top, text="Valuation", command=self.run_valuation, width=12).pack(side=tk.LEFT, padx=(8, 0))
         tk.Button(top, text="Save", command=self.save_report, width=10).pack(side=tk.LEFT, padx=(8, 0))
         tk.Button(top, text="Export", command=self.export_placeholder, width=10).pack(side=tk.LEFT, padx=(8, 0))
+
+        input_box = tk.LabelFrame(body, text="Report Inputs", bg="#ffffff")
+        input_box.pack(fill=tk.X, pady=(0, 10))
+        self._inline_entry(input_box, "Manufacturer", self.manufacturer_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(10, 6), pady=10)
+        self._inline_entry(input_box, "Vehicle", self.vehicle_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=6, pady=10)
+        self._inline_entry(input_box, "Speed", self.speed_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=6, pady=10)
+        self._inline_entry(input_box, "Test ID", self.test_id_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(6, 10), pady=10)
 
         info_row = tk.Frame(body, bg="#ffffff")
         info_row.pack(fill=tk.X, pady=(0, 10))
@@ -84,6 +91,21 @@ class ReportSummaryPage(tk.Frame):
         table_box = tk.LabelFrame(body, text="SUMMARY REPORT", bg="#ffffff")
         table_box.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
 
+        guide = tk.Frame(table_box, bg="#ffffff")
+        guide.pack(fill=tk.X, padx=8, pady=(8, 0))
+        tk.Label(
+            guide,
+            text=(
+                "Status: PASS=limit 만족, FAIL=limit 초과, MISSING=저장된 결과값 없음, N/A=비교 limit 없음 | "
+                "Source: Saved value=uid 결과 payload에 구조화된 수치가 저장되어 그 값을 직접 읽음"
+            ),
+            bg="#ffffff",
+            fg="#4b5563",
+            justify="left",
+            anchor="w",
+            wraplength=980,
+        ).pack(fill=tk.X)
+
         columns = ("slot", "dummy", "criterion", "value", "unit", "limit", "status", "uid", "source")
         self.tree = ttk.Treeview(table_box, columns=columns, show="headings", height=16)
         for column, heading, width in (
@@ -109,16 +131,11 @@ class ReportSummaryPage(tk.Frame):
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(8, 0), pady=8)
         y_scroll.pack(side=tk.RIGHT, fill=tk.Y, padx=(0, 8), pady=8)
 
-        input_box = tk.LabelFrame(body, text="Report Inputs", bg="#ffffff")
-        input_box.pack(fill=tk.X)
-        self._entry_row(input_box, 0, "Manufacturer", self.manufacturer_var)
-        self._entry_row(input_box, 1, "Vehicle", self.vehicle_var)
-        self._entry_row(input_box, 2, "Speed", self.speed_var)
-        self._entry_row(input_box, 3, "Test ID", self.test_id_var)
-
-    def _entry_row(self, parent, row, label, variable):
-        tk.Label(parent, text=label, bg="#ffffff", width=12, anchor="w").grid(row=row, column=0, padx=10, pady=6, sticky="w")
-        tk.Entry(parent, textvariable=variable, width=42).grid(row=row, column=1, padx=(0, 10), pady=6, sticky="w")
+    def _inline_entry(self, parent, label, variable):
+        frame = tk.Frame(parent, bg="#ffffff")
+        tk.Label(frame, text=label, bg="#ffffff", anchor="w").pack(anchor="w")
+        tk.Entry(frame, textvariable=variable, width=22).pack(fill=tk.X, pady=(4, 0))
+        return frame
 
     def _dataset_identity(self):
         current = getattr(self.workbench, "current_file_path", None) or ""
@@ -137,12 +154,7 @@ class ReportSummaryPage(tk.Frame):
         self.vehicle_var.set(fields.get("vehicle") or "")
         self.speed_var.set(fields.get("speed") or "")
         self.test_id_var.set(fields.get("test_id") or "")
-
-    def _format_metric(self, value, unit):
-        if value is None:
-            return "-"
-        unit_text = "" if unit in ("", "-") else unit
-        return fmt_value(value, unit_text, decimals=4, unit_style="suffix_space" if unit_text else "suffix")
+        self._set_waiting_state()
 
     def _tree_value_text(self, value):
         return "-" if value is None else f"{float(value):.4f}"
@@ -153,7 +165,7 @@ class ReportSummaryPage(tk.Frame):
             dummy_label = row.get("dummy_name") or row.get("dummy_profile") or "-"
             value_text = self._tree_value_text(row.get("value"))
             limit_text = self._tree_value_text(row.get("limit"))
-            source_text = "payload" if row.get("value_source") == "payload" else "summary" if row.get("value_source") == "summary_text" else "-"
+            source_text = "Saved value" if row.get("value_source") == "payload" else "Summary text" if row.get("value_source") == "summary_text" else "-"
             tag = row.get("status") or "N/A"
             self.tree.insert(
                 "",
@@ -204,11 +216,23 @@ class ReportSummaryPage(tk.Frame):
         }
 
     def _on_regulation_changed(self, _event=None):
-        self.run_valuation()
+        self._set_waiting_state()
+
+    def _set_waiting_state(self):
+        self._snapshot = None
+        self._valuation_ready = False
+        if hasattr(self, "tree"):
+            self.tree.delete(*self.tree.get_children())
+        self.loaded_values_var.set("Loaded injury values: waiting for Valuation")
+        if getattr(self.workbench, "working_df", None) is None:
+            self.status_var.set("Load a dataset first.")
+        else:
+            self.status_var.set("SUMMARY REPORT is waiting. Click Valuation to load uid-based results.")
 
     def run_valuation(self):
         snapshot = build_report_snapshot(getattr(self.workbench, "dataset_metadata", {}) or {}, self.regulation_var.get())
         self._snapshot = snapshot
+        self._valuation_ready = True
         self._populate_tree(snapshot)
         total_rows = len(snapshot.get("rows") or [])
         loaded_rows = int(snapshot.get("value_count") or 0)
@@ -226,7 +250,8 @@ class ReportSummaryPage(tk.Frame):
         if getattr(self.workbench, "working_df", None) is None:
             messagebox.showwarning("REPORT", "먼저 데이터를 로드하세요.")
             return
-        self.run_valuation()
+        if not self._valuation_ready:
+            self.run_valuation()
         report_saved = dict((getattr(self.workbench, "dataset_metadata", {}) or {}).get("report_saved_results") or {})
         report_saved["summary_report"] = self._build_report_payload()
         save_name = self.workbench._build_original_source_save_path("_R")
@@ -263,11 +288,12 @@ class ReportSummaryPage(tk.Frame):
         self.speed_var.set("")
         self.test_id_var.set("")
         self.status_var.set("FMVSS 208 summary report is ready.")
-        self.loaded_values_var.set("Loaded injury values: 0")
+        self.loaded_values_var.set("Loaded injury values: waiting for Valuation")
         self._snapshot = None
+        self._valuation_ready = False
         if hasattr(self, "tree"):
             self.tree.delete(*self.tree.get_children())
 
     def on_show(self):
         self._load_saved_state()
-        self.run_valuation()
+        self._set_waiting_state()

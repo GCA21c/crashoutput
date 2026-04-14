@@ -1,12 +1,7 @@
-import re
-
 from app.core.dummy.engine import get_dummy_module_factors
 
 from .definitions import get_regulation_definition
 from .excel_mapping import build_excel_mapping
-
-
-_LINE_VALUE_PATTERN = re.compile(r":\s*([-+]?\d+(?:\.\d+)?)")
 
 
 def _as_float(value):
@@ -17,22 +12,11 @@ def _as_float(value):
     return result if result == result else None
 
 
-def _parse_summary_metric(summary_text, label):
-    text = str(summary_text or "")
-    if not text or not label:
-        return None
-    for line in text.splitlines():
-        stripped = line.strip()
-        if not stripped.startswith(f"{label}:"):
-            continue
-        match = _LINE_VALUE_PATTERN.search(stripped)
-        if match:
-            return _as_float(match.group(1))
-    return None
-
-
 def _structured_metric_value(payload, module_key, value_key):
     payload = dict(payload or {})
+    report_values = dict(payload.get("report_values") or {})
+    if value_key in report_values:
+        return _as_float(report_values.get(value_key))
     if module_key == "head":
         if value_key == "hic15":
             return _as_float(payload.get("hic15_value"))
@@ -64,9 +48,6 @@ def _extract_metric_value(item, slot_payload):
     value = _structured_metric_value(slot_payload, item.get("module_key"), item.get("value_key"))
     if value is not None:
         return value, "payload"
-    parsed = _parse_summary_metric(slot_payload.get("summary_text"), item.get("summary_label"))
-    if parsed is not None:
-        return parsed, "summary_text"
     return None, "missing"
 
 
