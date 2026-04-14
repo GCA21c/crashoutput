@@ -110,10 +110,11 @@ def _slot_identity(slot, slot_payload, slot_meta):
     payload = dict(slot_payload or {})
     meta = dict(slot_meta or {})
     dummy_name = payload.get("dummy_name") or meta.get("dummy_name") or ""
+    dummy_profile_display = meta.get("dummy_profile") or payload.get("dummy_profile") or payload.get("criterion_key") or ""
     return {
         "slot": slot,
         "dummy_name": dummy_name,
-        "dummy_profile": payload.get("dummy_profile") or payload.get("criterion_key") or meta.get("dummy_profile") or "",
+        "dummy_profile": dummy_profile_display,
         "slot_label": f"{slot} - {dummy_name}" if dummy_name else slot,
     }
 

@@ -8,3 +8,4 @@
 - 후속 수정 2: `REPORT`가 `summary_text`를 파싱하지 않도록 바꾸고, 각 상해 모듈 저장 payload에 `report_values`, `structured_metrics`, `metric_extrema`를 함께 저장하도록 정리했다.
 - 후속 수정 3: REPORT 저장 파일명은 현재 작업 단계 파일명 뒤에 `_R`을 붙이도록 조정했고, 페이지 이동 후에도 REPORT 입력/valuation 상태를 메모리에서 유지하도록 보완했다.
 - 후속 수정 4: `NECK`의 Peak Tension / Peak Compression 같은 REPORT 대상 scalar는 uid 결과 payload 최상단에도 함께 펼쳐 저장하도록 보강했다. 원인은 uid 충돌이 아니라 neck scalar 값의 직접 저장 부족이었다.
+- 후속 수정 5: false `MISSING`의 실제 원인은 `uid` 매칭이 아니라 현재 저장 경로인 `_build_section_payload()`가 `report_values` / `structured_metrics` 보강을 누락한 것이었다. 계산 직후 저장 payload도 REPORT 친화 구조를 포함하도록 맞췄고, SUMMARY REPORT의 `Dummy` 컬럼은 Dummy Set 공통 설정의 더미 종류를 우선 표시하도록 조정했다.

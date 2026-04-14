@@ -164,7 +164,7 @@ class ReportSummaryPage(tk.Frame):
     def _populate_tree(self, snapshot):
         self.tree.delete(*self.tree.get_children())
         for row in snapshot.get("rows", []):
-            dummy_label = row.get("dummy_name") or row.get("dummy_profile") or "-"
+            dummy_label = row.get("dummy_profile") or "-"
             value_text = self._tree_value_text(row.get("value"))
             limit_text = self._tree_value_text(row.get("limit"))
             source_name = row.get("value_source")

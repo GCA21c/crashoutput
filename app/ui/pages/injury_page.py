@@ -4174,6 +4174,10 @@ class InjuryPage(tk.Frame):
                 'graph_key': st.get('graph_key'),
                 'graph_uid': st.get('graph_uid') or (self._injury_graph_uid(slot, st.get('graph_key')) if st.get('graph_key') else ''),
             })
+            payload = self._enrich_payload_with_structured_results(payload, st)
+            payload_key = self._slot_saved_payload_key()
+            if payload_key:
+                st[payload_key] = dict(payload)
             slots_payload[slot] = payload
         return {
             'dummy_count': self._active_count(),
