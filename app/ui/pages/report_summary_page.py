@@ -14,7 +14,7 @@ class ReportSummaryPage(tk.Frame):
         self.vehicle_var = tk.StringVar()
         self.speed_var = tk.StringVar()
         self.test_id_var = tk.StringVar()
-        self.status_var = tk.StringVar(value="FMVSS 208 summary report is ready.")
+        self.status_var = tk.StringVar(value="Summary report is ready.")
         self.loaded_values_var = tk.StringVar(value="Loaded injury values: 0")
         self._loaded_dataset_identity = None
         self._snapshot = None
@@ -113,7 +113,7 @@ class ReportSummaryPage(tk.Frame):
         for column, heading, width in (
             ("slot", "Slot", 60),
             ("dummy", "Dummy", 160),
-            ("criterion", "Criteria", 210),
+            ("criterion", "Criteria", 250),
             ("value", "Value", 90),
             ("unit", "Unit", 70),
             ("limit", "Limit", 90),
@@ -263,9 +263,9 @@ class ReportSummaryPage(tk.Frame):
         if getattr(self.workbench, "working_df", None) is None:
             self.status_var.set("Load a dataset first.")
         elif not snapshot.get("rows"):
-            self.status_var.set("No FMVSS 208 summary rows are available.")
+            self.status_var.set("No summary rows are available for the selected regulation.")
         elif loaded_rows == 0:
-            self.status_var.set("Stored uid results were found, but no numeric FMVSS 208 values are currently extractable.")
+            self.status_var.set("Stored uid results were found, but no numeric values are currently extractable for the selected regulation.")
         else:
             self.status_var.set("Valuation refreshed from existing uid-based saved results.")
         self._cache_report_state_in_memory()
@@ -311,7 +311,7 @@ class ReportSummaryPage(tk.Frame):
         self.vehicle_var.set("")
         self.speed_var.set("")
         self.test_id_var.set("")
-        self.status_var.set("FMVSS 208 summary report is ready.")
+        self.status_var.set("Summary report is ready.")
         self.loaded_values_var.set("Loaded injury values: waiting for Valuation")
         self._snapshot = None
         self._valuation_ready = False

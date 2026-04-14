@@ -18,6 +18,16 @@ def _candidate_paths(item):
     return tuple(path for path in (value_key, *aliases) if path)
 
 
+def _apply_transform(value, transform_name):
+    numeric = _as_float(value)
+    if numeric is None:
+        return None
+    transform = str(transform_name or "").strip().lower()
+    if transform == "abs":
+        return abs(numeric)
+    return numeric
+
+
 def _read_path(container, path):
     current = container
     for part in str(path or "").split("."):
@@ -48,7 +58,8 @@ def _extract_metric_value(item, slot_payload):
     ):
         extracted = _extract_from_container(container, candidate_paths, source_name)
         if extracted:
-            return extracted
+            value, resolved_source, resolved_path = extracted
+            return _apply_transform(value, item.get("value_transform")), resolved_source, resolved_path
     return None, "missing", ""
 
 
