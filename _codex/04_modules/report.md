@@ -82,7 +82,9 @@ into `resources/templates/FMVSS208 Sumy_temp.xlsx`.
 The export flow is:
 1. `report_summary_page.py` ensures `Valuation` has populated `_snapshot`.
 2. The export file is saved to the application execution folder.
-3. `app/report/excel_export.py` opens the template workbook with `openpyxl`.
+3. `app/report/excel_export.py` uses `openpyxl` only to inspect anchors and cell
+   coordinates. The exported workbook is produced by copying the template and patching
+   worksheet XML cell values only; `workbook.save()` is not used for export.
 4. Metadata fields are found by anchor labels and written to the merged cell immediately
    to the right of the label:
    - `manufacturer` -> `vehicle manufacture`
@@ -109,8 +111,8 @@ The export flow is:
    FMVSS 208 template rows `HEAD / Resultant Acc. 3ms Clip` and
    `CHEST / Chest Acc. 3ms Clip` export the SUMMARY REPORT `Multiple Peak 3ms`
    value while keeping the template row label unchanged.
-12. Fonts, fills, borders, alignment,
-   row heights, column widths, merges, and formulas are not modified by the exporter.
+12. Fonts, fills, borders, alignment, row heights, column widths, merges, number formats,
+   and formulas are not modified by the exporter.
 
 The current template has two occupant column groups:
 - first slot: `IARV` / `RESULT`

@@ -5,6 +5,9 @@
 - Writer: `app/report/excel_export.py`
 - Mapping constants: `app/report/excel_summary_mapping.py`
 - Runtime dependency: `openpyxl`
+- Export writer rule: use `openpyxl` only for template inspection. Final output is a
+  byte-for-byte template copy with worksheet XML cell values patched. Do not call
+  `workbook.save()` for export because it can rewrite merged-cell styles.
 
 ## Metadata anchors
 The exporter searches normalized label text and writes to the merged/input cell immediately
@@ -97,6 +100,7 @@ The exporter opens the template workbook and assigns values only. It must not:
 - alter fonts, fills, borders, or alignment
 - overwrite formulas outside the IARV/RESULT targets
 - create a new workbook from scratch
+- save the workbook through `openpyxl`
 
 When the template changes, re-run the workbook anchor inspection and update only the alias
 or detection helpers needed for the new labels.

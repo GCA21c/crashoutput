@@ -17,6 +17,8 @@
   that point to `C:\Windows\System32`.
 - Excel export writes TEST SETUP occupant labels to `C9` and `G9` without touching cell
   styles.
+- Excel export no longer saves the workbook through `openpyxl`; it copies the template
+  and patches worksheet XML values only to avoid merged-cell style rewrites.
 
 ## Why
 - SUMMARY REPORT needs to expose the existing one-peak and multiple-peak 3ms values for acceleration-based sections.
