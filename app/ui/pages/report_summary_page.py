@@ -1,7 +1,19 @@
+import os
+import platform
+import subprocess
+import sys
 import tkinter as tk
+from pathlib import Path
 from tkinter import messagebox, ttk
 
-from app.report import build_report_snapshot, get_regulation_choices, get_regulation_definition
+from app.report import (
+    ExcelExportError,
+    build_report_snapshot,
+    export_summary_report_to_excel,
+    get_regulation_choices,
+    get_regulation_definition,
+)
+from app.report.excel_summary_mapping import SUMMARY_TEMPLATE_PATH
 
 
 class ReportSummaryPage(tk.Frame):
@@ -52,7 +64,7 @@ class ReportSummaryPage(tk.Frame):
 
         tk.Button(top, text="Valuation", command=self.run_valuation, width=12).pack(side=tk.LEFT, padx=(4, 0))
         tk.Button(top, text="Save", command=self.save_report, width=10).pack(side=tk.LEFT, padx=(8, 0))
-        tk.Button(top, text="Export", command=self.export_placeholder, width=10).pack(side=tk.LEFT, padx=(8, 0))
+        tk.Button(top, text="EXCEL EXPORT", command=self.export_excel, width=14).pack(side=tk.LEFT, padx=(8, 0))
 
         input_box = tk.LabelFrame(body, text="Report Inputs", bg="#ffffff")
         input_box.pack(fill=tk.X, pady=(0, 10))
@@ -397,8 +409,73 @@ class ReportSummaryPage(tk.Frame):
         self._loaded_dataset_identity = None
         messagebox.showinfo("REPORT", f"REPORT 데이터가 저장되었습니다.\n{saved_path}")
 
-    def export_placeholder(self):
-        messagebox.showinfo("REPORT", "Export는 placeholder만 준비되어 있습니다.")
+    def _default_export_filename(self):
+        test_id = self._sanitize_filename_part(self.test_id_var.get().strip() or "NO_TEST_ID")
+        template_path = Path(SUMMARY_TEMPLATE_PATH)
+        return f"{template_path.stem}_{test_id}{template_path.suffix}"
+
+    def _execution_folder(self):
+        if getattr(sys, "frozen", False):
+            return Path(sys.executable).resolve().parent
+        return Path.cwd()
+
+    def _sanitize_filename_part(self, text):
+        safe = "".join("_" if char in '\\/:*?"<>|' or ord(char) < 32 else char for char in str(text or "").strip())
+        safe = safe.strip(" .")
+        return safe or "NO_TEST_ID"
+
+    def _unique_export_path(self):
+        folder = self._execution_folder()
+        candidate = folder / self._default_export_filename()
+        if not candidate.exists():
+            return candidate
+        stem = candidate.stem
+        suffix = candidate.suffix
+        for index in range(1, 1000):
+            numbered = folder / f"{stem}_{index:02d}{suffix}"
+            if not numbered.exists():
+                return numbered
+        return candidate
+
+    def _open_export_file(self, path):
+        path = Path(path)
+        try:
+            system_name = platform.system().lower()
+            if system_name == "windows":
+                os.startfile(str(path))
+            elif system_name == "darwin":
+                subprocess.Popen(["open", str(path)])
+            else:
+                subprocess.Popen(["xdg-open", str(path)])
+        except Exception as exc:
+            messagebox.showwarning("REPORT", f"Excel export completed, but the file could not be opened.\nSaved to: {path}\n{exc}")
+
+    def export_excel(self):
+        if not self._valuation_ready:
+            self.run_valuation()
+        if not self._snapshot:
+            messagebox.showwarning("REPORT", "먼저 Valuation으로 SUMMARY REPORT 결과를 불러오세요.")
+            return
+        output_path = self._unique_export_path()
+        try:
+            result = export_summary_report_to_excel(
+                self._snapshot,
+                self._report_fields(),
+                output_path,
+            )
+        except ExcelExportError as exc:
+            messagebox.showwarning("REPORT", str(exc))
+            self.status_var.set(f"Excel export failed: {exc}")
+            return
+        except Exception as exc:
+            messagebox.showwarning("REPORT", f"Excel export failed.\n{exc}")
+            self.status_var.set(f"Excel export failed: {exc}")
+            return
+
+        detail = f"Excel export completed.\nSaved to: {result.get('output_path')}"
+        self.status_var.set(detail.replace("\n", " | "))
+        messagebox.showinfo("REPORT", detail)
+        self._open_export_file(result.get("output_path"))
 
     def reset_session_state(self):
         self._loaded_dataset_identity = None
