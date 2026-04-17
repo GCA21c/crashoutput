@@ -415,8 +415,8 @@ class InjuryPage(tk.Frame):
                 'chest_multiple_3ms_clip': self._safe_metric_float(metrics.get('multiple_peak_3ms_g')),
                 'resultant_peak_g': self._detail_value(metrics.get('resultant_peak')),
                 'displacement_peak_mm': self._detail_value(metrics.get('displacement_peak')),
-                'vc_sae_peak_mps': self._detail_value(metrics.get('vc_sae_peak')),
-                'vc_ece_peak_mps': self._detail_value(metrics.get('vc_ece_peak')),
+                'vc_sae_max_mps': self._detail_value(metrics.get('vc_sae_max')),
+                'vc_ece_max_mps': self._detail_value(metrics.get('vc_ece_max')),
             }
         if self.initial_mode == 'pelvis':
             return {

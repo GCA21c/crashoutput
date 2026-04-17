@@ -62,10 +62,7 @@ EXCEL_IARV_EXPORT_RULES = {
 
 EXCEL_VALUE_EXPORT_RULES = {
     "FMVSS 208": {
-        "abs_result": {
-            ("CHEST", "V*C SAE J1727_CFC600"),
-            ("CHEST", "V*C ECE94_CFC180"),
-        },
+        "abs_result": set(),
     },
 }
 

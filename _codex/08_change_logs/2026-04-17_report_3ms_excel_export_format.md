@@ -3,7 +3,9 @@
 ## What changed
 - Added HEAD and CHEST `One Peak 3ms` / `Multiple Peak 3ms` rows to the FMVSS 208 SUMMARY REPORT item order.
 - Kept the existing HEAD/CHEST acceleration 3ms criteria after the new one/multiple rows.
-- Added Excel-only value transform rules for CHEST V*C RESULT export.
+- Removed the Excel-only positive transform for CHEST V*C RESULT export.
+- SUMMARY REPORT and Excel export now read CHEST V*C values from each V*C MAX metric,
+  not from the absolute max/min peak helper.
 - Excel injury values are now written with exactly two decimal digits after `ROUND_HALF_UP` rounding.
 - Added Excel-only RESULT source overrides so HEAD `Resultant Acc. 3ms Clip` and CHEST
   `Chest Acc. 3ms Clip` template rows export the `Multiple Peak 3ms` values.

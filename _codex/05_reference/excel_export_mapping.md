@@ -50,14 +50,8 @@ The RESULT cells for the same rows are still exported when values are available.
 Maintain export-only value transforms in `app/report/excel_summary_mapping.py`
 `EXCEL_VALUE_EXPORT_RULES`.
 
-For `FMVSS 208`, these RESULT cells are written as positive values only in Excel export:
-
-| Region | SUMMARY REPORT criteria |
-|---|---|
-| `CHEST` | `V*C SAE J1727_CFC600` |
-| `CHEST` | `V*C ECE94_CFC180` |
-
-The SUMMARY REPORT screen value and underlying injury calculation payload are not changed.
+FMVSS 208 currently does not force CHEST V*C RESULT values positive. V*C rows export
+the same MAX value selected by SUMMARY REPORT.
 
 ## Excel RESULT source overrides
 Maintain template-row-specific RESULT source overrides in `app/report/excel_summary_mapping.py`

@@ -201,9 +201,9 @@ FMVSS_208_ITEMS = (
         "V*C SAE J1727_CFC600",
         "chest",
         "chest",
-        "vc_sae_peak_mps",
+        "vc_sae_max_mps",
         unit="m/s",
-        payload_aliases=("vc_sae_peak.value",),
+        payload_aliases=("vc_sae_max.value",),
         limit_key="vc_limit_mps",
     ),
     _item(
@@ -211,9 +211,9 @@ FMVSS_208_ITEMS = (
         "V*C ECE94_CFC180",
         "chest",
         "chest",
-        "vc_ece_peak_mps",
+        "vc_ece_max_mps",
         unit="m/s",
-        payload_aliases=("vc_ece_peak.value",),
+        payload_aliases=("vc_ece_max.value",),
         limit_key="vc_limit_mps",
     ),
     _item(

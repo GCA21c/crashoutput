@@ -57,8 +57,8 @@ saved files.
 
 Examples:
 - CHEST `V*C SAE J1727_CFC600`
-  - `value_key`: `vc_sae_peak_mps`
-  - fallback: `vc_sae_peak.value`
+  - `value_key`: `vc_sae_max_mps`
+  - fallback: `vc_sae_max.value`
 - PELVIS `Multiple Peak 3ms_Clip`
   - `value_key`: `pelvis_multiple_3ms_clip`
   - fallback: `multiple_peak_3ms.value`
@@ -99,8 +99,8 @@ The export flow is:
 8. FMVSS 208 IARV exclusions are applied by `EXCEL_IARV_EXPORT_RULES`; excluded IARV
    cells are left blank while RESULT is still exported.
 9. Excel-only value transforms are applied by `EXCEL_VALUE_EXPORT_RULES`. FMVSS 208
-   exports CHEST `V*C SAE J1727_CFC600` and `V*C ECE94_CFC180` RESULT values as
-   positive values without changing SUMMARY REPORT screen values or calculation payloads.
+   currently does not force CHEST V*C RESULT values positive; V*C rows export the same
+   MAX value selected by SUMMARY REPORT.
 10. Excel RESULT source overrides are applied by `EXCEL_RESULT_SOURCE_OVERRIDES`.
    FMVSS 208 template rows `HEAD / Resultant Acc. 3ms Clip` and
    `CHEST / Chest Acc. 3ms Clip` export the SUMMARY REPORT `Multiple Peak 3ms`
