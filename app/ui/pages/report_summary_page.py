@@ -119,12 +119,13 @@ class ReportSummaryPage(tk.Frame):
             wraplength=980,
         ).pack(fill=tk.X)
 
-        columns = ("slot", "dummy", "criterion", "value", "unit", "limit", "status", "uid", "source")
+        columns = ("slot", "dummy", "region", "criterion", "value", "unit", "limit", "status", "uid", "source")
         self.tree = ttk.Treeview(table_box, columns=columns, show="headings", height=16)
         for column, heading, width in (
             ("slot", "Slot", 60),
             ("dummy", "Dummy", 160),
-            ("criterion", "Criteria", 250),
+            ("region", "Injury/Region", 105),
+            ("criterion", "Criteria", 230),
             ("value", "Value", 90),
             ("unit", "Unit", 70),
             ("limit", "Limit", 90),
@@ -195,10 +196,19 @@ class ReportSummaryPage(tk.Frame):
             slot_key = info.get("slot")
             if slot_key:
                 slot_map[slot_key] = info
+        slot_order = {slot: index for index, slot in enumerate(slot_map.keys())}
+        item_order = {item.get("result_key"): index for index, item in enumerate((definition or {}).get("items", ()))}
 
         rows = []
         value_count = 0
-        for saved_row in saved_rows:
+        sorted_saved_rows = sorted(
+            saved_rows,
+            key=lambda row: (
+                slot_order.get(dict(row or {}).get("slot"), len(slot_order)),
+                item_order.get(dict(row or {}).get("result_key"), len(item_order)),
+            ),
+        )
+        for saved_row in sorted_saved_rows:
             row = dict(saved_row or {})
             item = item_map.get(row.get("result_key"), {})
             slot_info = dict(slot_map.get(row.get("slot")) or {})
@@ -211,6 +221,7 @@ class ReportSummaryPage(tk.Frame):
                 "dummy_name": row.get("dummy_name") or slot_info.get("dummy_name") or "",
                 "dummy_profile": row.get("dummy_profile") or slot_info.get("dummy_profile") or "",
                 "section_key": row.get("section_key") or item.get("section_key"),
+                "region": row.get("region") or str(row.get("section_key") or item.get("section_key") or "-").upper(),
                 "result_key": row.get("result_key"),
                 "label": row.get("label") or item.get("label") or "-",
                 "unit": row.get("unit") or item.get("unit") or "",
@@ -255,6 +266,7 @@ class ReportSummaryPage(tk.Frame):
                 values=(
                     row.get("slot_label") or row.get("slot") or "-",
                     dummy_label,
+                    row.get("region") or str(row.get("section_key") or "-").upper(),
                     row.get("label") or "-",
                     value_text,
                     row.get("unit") or "-",
@@ -285,6 +297,7 @@ class ReportSummaryPage(tk.Frame):
                 "dummy_name": row.get("dummy_name"),
                 "dummy_profile": row.get("dummy_profile"),
                 "section_key": row.get("section_key"),
+                "region": row.get("region"),
                 "result_key": row.get("result_key"),
                 "label": row.get("label"),
                 "result_uid": row.get("result_uid"),

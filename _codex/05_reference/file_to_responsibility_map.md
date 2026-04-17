@@ -31,8 +31,16 @@
 | `app/ui/pages/test_setup_page.py` | test mode / dummy configuration page |
 | `app/ui/pages/dummy_set_page.py` | compatibility import shim for old DummySetPage references |
 | `app/ui/pages/injury_page.py` | injury workflow page |
+| `app/ui/pages/report_summary_page.py` | summary report UI / save-restore table |
 | `app/ui/pages/offset_page.py` | offset page |
 | `app/ui/pages/trimming_page.py` | trimming page |
+
+## Report
+| Path | Responsibility |
+|---|---|
+| `app/report/mapping.py` | summary report snapshot / value extraction |
+| `app/report/regulations/*.py` | regulation-specific report row order and labels |
+| `_codex/04_modules/report.md` | report module maintenance workflow |
 
 ## UI components
 | Path | Responsibility |

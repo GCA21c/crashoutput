@@ -1,0 +1,65 @@
+# Report module
+
+## SUMMARY REPORT code paths
+- UI table and save/restore: `app/ui/pages/report_summary_page.py`
+- Snapshot builder and payload extraction: `app/report/mapping.py`
+- Regulation item order and labels: `app/report/regulations/fmvss208.py`
+- Injury payload source: `app/ui/pages/injury_page.py` `_build_report_values()` and `_enrich_payload_with_structured_results()`
+
+## Row definition model
+SUMMARY REPORT rows are driven by ordered item specs in the selected regulation module.
+For FMVSS 208, edit `FMVSS_208_ITEMS` in `app/report/regulations/fmvss208.py`.
+
+Each item defines:
+- `result_key`: stable report row id, e.g. `chest.vc_sae_j1727_cfc600`
+- `label`: user-facing Criteria text
+- `module_key`: dummy factor module used for limits
+- `section_key`: injury saved-results section, e.g. `head`, `neck`, `chest`, `pelvis`
+- `value_key`: first payload key to read
+- `payload_aliases`: fallback nested keys, e.g. `vc_sae_peak.value`
+- `unit`: display unit
+- `limit_key` or `limit_value`: optional PASS/FAIL reference
+- `value_transform`: optional display/evaluation transform such as `abs`
+
+`app/report/mapping.py` adds `region` to each row. If an item does not provide an explicit
+`region`, the report uses `section_key.upper()`, so `head` becomes `HEAD` and `pelvis`
+becomes `PELVIS`.
+
+## Output order
+SUMMARY REPORT is grouped by dummy slot first, then by the selected regulation item tuple.
+For FMVSS 208, `FMVSS_208_ITEMS` is currently organized by injury region:
+HEAD, NECK, CHEST, PELVIS, FEMUR, KNEE.
+
+To place a new criteria row at a specific visual position inside each dummy group, insert
+the `_item(...)` at that position in the tuple. For example, the CHEST V*C rows are placed
+immediately after `Chest Deflection Peak`.
+
+## Payload key mapping
+SUMMARY REPORT reads values through `app/report/mapping.py` `_extract_metric_value()`.
+The lookup order is:
+1. `report_values`
+2. `structured_metrics`
+3. top-level slot payload
+
+For new injury values, prefer adding a stable scalar in `injury_page.py`
+`_build_report_values()` and then use that scalar as the regulation item's `value_key`.
+Use `payload_aliases` for existing nested structured metrics or backwards-compatible
+saved files.
+
+Examples:
+- CHEST `V*C SAE J1727_CFC600`
+  - `value_key`: `vc_sae_peak_mps`
+  - fallback: `vc_sae_peak.value`
+- PELVIS `Multiple Peak 3ms_Clip`
+  - `value_key`: `pelvis_multiple_3ms_clip`
+  - fallback: `multiple_peak_3ms.value`
+
+## Adding a SUMMARY REPORT item
+1. Confirm the injury calculation already stores the value in `injury_saved_results`.
+2. If needed, add only a report scalar in `injury_page.py` `_build_report_values()`.
+   Do not change the calculation engine for report-only additions.
+3. Add an `_item(...)` entry to the regulation module in the desired output order.
+4. Set `payload_aliases` for nested or legacy payload keys.
+5. Run a snapshot check against representative metadata and verify the table row source
+   is not `missing`.
+6. Update this document or the related change log when the report structure changes.

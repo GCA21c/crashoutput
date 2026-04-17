@@ -18,6 +18,14 @@ def _candidate_paths(item):
     return tuple(path for path in (value_key, *aliases) if path)
 
 
+def _region_label(item):
+    explicit = str(item.get("region") or "").strip()
+    if explicit:
+        return explicit
+    section_key = str(item.get("section_key") or "").strip()
+    return section_key.upper() if section_key else "-"
+
+
 def _apply_transform(value, transform_name):
     numeric = _as_float(value)
     if numeric is None:
@@ -159,8 +167,8 @@ def build_report_snapshot(metadata, regulation_name):
 
     rows = []
     value_count = 0
-    for item in definition.get("items", ()):
-        for slot in slots:
+    for slot in slots:
+        for item in definition.get("items", ()):
             slot_payload = _slot_payload(injury_saved, item.get("section_key"), slot)
             value, value_source, value_path = _extract_metric_value(item, slot_payload)
             limit, limit_source = _resolve_limit_value(item, slot_payload, test_mode)
@@ -174,6 +182,7 @@ def build_report_snapshot(metadata, regulation_name):
                 "dummy_name": identity["dummy_name"],
                 "dummy_profile": identity["dummy_profile"],
                 "section_key": item.get("section_key"),
+                "region": _region_label(item),
                 "result_key": item.get("result_key"),
                 "label": item.get("label"),
                 "unit": item.get("unit") or "",
