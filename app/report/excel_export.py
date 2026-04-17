@@ -1,7 +1,9 @@
 import re
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
 
 from .excel_summary_mapping import (
+    EXCEL_IARV_EXPORT_RULES,
     SUMMARY_CRITERIA_ALIASES,
     SUMMARY_META_FIELDS,
     SUMMARY_TEMPLATE_PATH,
@@ -36,6 +38,16 @@ def _display_value(value):
     except Exception:
         return str(value)
     return numeric
+
+
+def round_for_excel_export(value, decimals=2):
+    if value is None:
+        return None
+    try:
+        quantized = Decimal(str(value)).quantize(Decimal("1").scaleb(-int(decimals)), rounding=ROUND_HALF_UP)
+    except (InvalidOperation, ValueError, TypeError):
+        return str(value)
+    return float(quantized)
 
 
 def _worksheet_cells(ws):
@@ -149,6 +161,15 @@ def _template_alias_candidates(region, template_label):
     return tuple(_normalize_text(candidate) for candidate in candidates if str(candidate or "").strip())
 
 
+def should_export_iarv(regulation_name, region, criteria_label):
+    rule = EXCEL_IARV_EXPORT_RULES.get(str(regulation_name or "").strip(), {})
+    excluded = {
+        (str(item_region).strip().upper(), _normalize_text(item_label))
+        for item_region, item_label in rule.get("exclude", set())
+    }
+    return (str(region or "").strip().upper(), _normalize_text(criteria_label)) not in excluded
+
+
 def _copy_cell_value(ws, target_cell, value):
     if target_cell is None:
         return False
@@ -181,6 +202,7 @@ def export_summary_report_to_excel(snapshot, report_fields, output_path, templat
     occupant_columns = _detect_occupant_columns(worksheet)
     template_rows = _criteria_rows(worksheet)
     slots, rows_by_slot = _summary_rows_by_slot(snapshot or {})
+    regulation_name = (snapshot or {}).get("regulation_name") or dict(report_fields or {}).get("regulation") or ""
 
     written_results = 0
     missing = []
@@ -199,8 +221,11 @@ def export_summary_report_to_excel(snapshot, report_fields, output_path, templat
                 continue
             iarv_cell = worksheet.cell(row=template_row, column=column_group["iarv_column"])
             result_cell = worksheet.cell(row=template_row, column=column_group["result_column"])
-            _copy_cell_value(worksheet, iarv_cell, _display_value(matched.get("limit")))
-            _copy_cell_value(worksheet, result_cell, _display_value(matched.get("value")))
+            if should_export_iarv(regulation_name, region, matched.get("label")):
+                _copy_cell_value(worksheet, iarv_cell, round_for_excel_export(matched.get("limit")))
+            else:
+                _copy_cell_value(worksheet, iarv_cell, None)
+            _copy_cell_value(worksheet, result_cell, round_for_excel_export(matched.get("value")))
             written_results += 1
 
     workbook.save(output)

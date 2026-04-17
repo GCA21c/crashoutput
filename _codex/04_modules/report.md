@@ -75,7 +75,7 @@ into `resources/templates/FMVSS208 Sumy_temp.xlsx`.
 
 The export flow is:
 1. `report_summary_page.py` ensures `Valuation` has populated `_snapshot`.
-2. The user selects an output `.xlsx` path.
+2. The export file is saved to the application execution folder.
 3. `app/report/excel_export.py` opens the template workbook with `openpyxl`.
 4. Metadata fields are found by anchor labels and written to the merged cell immediately
    to the right of the label:
@@ -87,7 +87,11 @@ The export flow is:
 5. The injury table header row is detected by `IARV` and `RESULT` labels.
 6. Each template criteria row is matched by `region + criteria label`; aliases live in
    `app/report/excel_summary_mapping.py`.
-7. Only the IARV and RESULT cells are assigned values. Fonts, fills, borders, alignment,
+7. Only the IARV and RESULT cells are assigned values. Injury numeric values are rounded
+   to two decimal places at export time with `ROUND_HALF_UP`.
+8. FMVSS 208 IARV exclusions are applied by `EXCEL_IARV_EXPORT_RULES`; excluded IARV
+   cells are left blank while RESULT is still exported.
+9. Fonts, fills, borders, alignment,
    row heights, column widths, merges, and formulas are not modified by the exporter.
 
 The current template has two occupant column groups:
@@ -96,3 +100,15 @@ The current template has two occupant column groups:
 
 If a SUMMARY REPORT has more slots than the template has occupant groups, extra slots are
 skipped and reported in the export result message.
+
+Export filename rule:
+- base name: template stem
+- suffix: sanitized `Test ID`
+- extension: template extension
+- example: `FMVSS208 Sumy_temp_ABC123.xlsx`
+- empty Test ID: `NO_TEST_ID`
+- duplicate filenames: append `_01`, `_02`, etc.
+
+After the completion dialog is acknowledged, the UI opens the saved workbook with the OS
+default file association. Windows uses `os.startfile`; macOS and Linux use `open` and
+`xdg-open` fallbacks.

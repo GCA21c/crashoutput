@@ -26,6 +26,24 @@ to the right of the label range.
 - IARV receives the SUMMARY REPORT `limit` value.
 - RESULT receives the SUMMARY REPORT `value`.
 - Missing values are written as blank cells.
+- Injury numeric values are rounded at export time to two decimal places with
+  `Decimal(..., ROUND_HALF_UP)`.
+
+## FMVSS 208 IARV exclusions
+Maintain regulation-aware IARV exclusions in `app/report/excel_summary_mapping.py`
+`EXCEL_IARV_EXPORT_RULES`.
+
+For `FMVSS 208`, these IARV cells are intentionally left blank because the current FMVSS
+summary template has no applicable IARV basis for them:
+
+| Region | SUMMARY REPORT criteria |
+|---|---|
+| `HEAD` | `HIC36ms` |
+| `HEAD` | `Resultant Acc. 3ms Clip` |
+| `NECK` | `Peak Extension MOCy` |
+| `NECK` | `Peak Flexion MOCy` |
+
+The RESULT cells for the same rows are still exported when values are available.
 
 ## Criteria aliases
 Template labels do not always match SUMMARY REPORT labels exactly. Maintain aliases in
@@ -49,3 +67,14 @@ The exporter opens the template workbook and assigns values only. It must not:
 
 When the template changes, re-run the workbook anchor inspection and update only the alias
 or detection helpers needed for the new labels.
+
+## Save and open rule
+- Output folder: application execution folder.
+- Filename: `{template_stem}_{sanitized_test_id}{template_suffix}`.
+- Empty Test ID fallback: `NO_TEST_ID`.
+- Duplicate names are auto-incremented with `_01`, `_02`, etc.
+- Completion popup contains only:
+  - `Excel export completed.`
+  - `Saved to: <path>`
+- After the user confirms the popup, the UI opens the saved workbook with the OS default
+  application. Open failure does not invalidate the export.

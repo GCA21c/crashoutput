@@ -29,6 +29,18 @@ SUMMARY_META_FIELDS = (
 )
 
 
+EXCEL_IARV_EXPORT_RULES = {
+    "FMVSS 208": {
+        "exclude": {
+            ("HEAD", "HIC36ms"),
+            ("HEAD", "Resultant Acc. 3ms Clip"),
+            ("NECK", "Peak Extension MOCy"),
+            ("NECK", "Peak Flexion MOCy"),
+        },
+    },
+}
+
+
 SUMMARY_CRITERIA_ALIASES = {
     "CHEST": {
         "Chest Acc. 3ms Clip": ("Chest Acc. 3ms Clip",),
