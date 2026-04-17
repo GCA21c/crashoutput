@@ -2,16 +2,17 @@
 
 ## SUMMARY REPORT code paths
 - UI table and save/restore: `app/ui/pages/report_summary_page.py`
-- Snapshot builder and payload extraction: `app/report/mapping.py`
-- Regulation item order and labels: `app/report/regulations/fmvss208.py`
+- Snapshot builder and payload extraction: `app/report/engine.py`
+- Rule registry and choices: `app/report/registry.py`
+- Regulation item order and labels: `app/report/rules/fmvss208.py`
 - Injury payload source: `app/ui/pages/injury_page.py` `_build_report_values()` and `_enrich_payload_with_structured_results()`
-- Excel export writer: `app/report/excel_export.py`
-- Excel export aliases/template constants: `app/report/excel_summary_mapping.py`
+- Excel export writer: `app/report/exporters/excel.py`
+- Excel export aliases/template constants: `app/report/templates/fmvss208_summary.py`
 - Excel template: `resources/templates/FMVSS208 Sumy_temp.xlsx`
 
 ## Row definition model
 SUMMARY REPORT rows are driven by ordered item specs in the selected regulation module.
-For FMVSS 208, edit `FMVSS_208_ITEMS` in `app/report/regulations/fmvss208.py`.
+For FMVSS 208, edit `FMVSS_208_ITEMS` in `app/report/rules/fmvss208.py`.
 
 Each item defines:
 - `result_key`: stable report row id, e.g. `chest.vc_sae_j1727_cfc600`
@@ -24,7 +25,7 @@ Each item defines:
 - `limit_key` or `limit_value`: optional PASS/FAIL reference
 - `value_transform`: optional display/evaluation transform such as `abs`
 
-`app/report/mapping.py` adds `region` to each row. If an item does not provide an explicit
+`app/report/engine.py` adds `region` to each row. If an item does not provide an explicit
 `region`, the report uses `section_key.upper()`, so `head` becomes `HEAD` and `pelvis`
 becomes `PELVIS`.
 
@@ -44,7 +45,7 @@ Acceleration-based 3ms rows should keep this order when all values are available
    or `Chest Acc. 3ms Clip`
 
 ## Payload key mapping
-SUMMARY REPORT reads values through `app/report/mapping.py` `_extract_metric_value()`.
+SUMMARY REPORT reads values through `app/report/engine.py` `_extract_metric_value()`.
 The lookup order is:
 1. `report_values`
 2. `structured_metrics`
@@ -70,7 +71,7 @@ Examples:
 3. Add an `_item(...)` entry to the regulation module in the desired output order.
 4. Set `payload_aliases` for nested or legacy payload keys.
 5. If the Excel template uses a different text label, add the template label alias in
-   `app/report/excel_summary_mapping.py` `SUMMARY_CRITERIA_ALIASES`.
+   `app/report/templates/fmvss208_summary.py` `SUMMARY_CRITERIA_ALIASES`.
 6. Run a snapshot check against representative metadata and verify the table row source
    is not `missing`.
 7. Update this document or the related change log when the report structure changes.
@@ -82,7 +83,7 @@ into `resources/templates/FMVSS208 Sumy_temp.xlsx`.
 The export flow is:
 1. `report_summary_page.py` ensures `Valuation` has populated `_snapshot`.
 2. The export file is saved to the application execution folder.
-3. `app/report/excel_export.py` uses `openpyxl` to inspect anchors, write values to
+3. `app/report/exporters/excel.py` uses `openpyxl` to inspect anchors, write values to
    existing template cells, and save the workbook. The exporter does not patch worksheet
    XML directly because that can leave stale workbook internals such as `calcChain.xml`.
 4. Metadata fields are found by anchor labels and written to the merged cell immediately
@@ -98,7 +99,7 @@ The export flow is:
    - format: `{dummy_name} - {dummy_profile}`, e.g. `DRV - H3_5%F`
 6. The injury table header row is detected by `IARV` and `RESULT` labels.
 7. Each template criteria row is matched by `region + criteria label`; aliases live in
-   `app/report/excel_summary_mapping.py`.
+   `app/report/templates/fmvss208_summary.py`.
 8. Only target cells are assigned values. Injury numeric values are rounded
    to two decimal places at export time with `ROUND_HALF_UP`, then written with exactly
    two decimal digits such as `0.10` or `1.00`.

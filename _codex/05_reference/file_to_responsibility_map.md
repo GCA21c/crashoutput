@@ -38,10 +38,11 @@
 ## Report
 | Path | Responsibility |
 |---|---|
-| `app/report/excel_export.py` | summary report Excel template export |
-| `app/report/excel_summary_mapping.py` | Excel template anchors and criteria aliases |
-| `app/report/mapping.py` | summary report snapshot / value extraction |
-| `app/report/regulations/*.py` | regulation-specific report row order and labels |
+| `app/report/engine.py` | summary report snapshot / value extraction |
+| `app/report/registry.py` | report rule/template registry |
+| `app/report/rules/*.py` | regulation-specific report row order and labels |
+| `app/report/templates/*.py` | Excel template anchors, aliases, and export rules |
+| `app/report/exporters/*.py` | report export writers |
 | `_codex/04_modules/report.md` | report module maintenance workflow |
 | `_codex/05_reference/excel_export_mapping.md` | Excel export mapping reference |
 
