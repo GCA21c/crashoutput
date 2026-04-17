@@ -92,6 +92,17 @@ def _next_input_cell(ws, label_cell):
     return None
 
 
+def _next_input_cell_after(ws, value_cell):
+    value_range = _cell_range_for(ws, value_cell)
+    start_column = (value_range.max_col + 1) if value_range is not None else (value_cell.column + 1)
+    for column in range(start_column, ws.max_column + 1):
+        target = _top_left_cell(ws, value_cell.row, column)
+        if target.column < column:
+            continue
+        return target
+    return None
+
+
 def _find_anchor_cell(ws, anchor_text):
     target = _normalize_text(anchor_text)
     for cell in _worksheet_cells(ws):
@@ -240,6 +251,16 @@ def _occupant_slot_infos(snapshot, report_fields):
     return _merge_occupant_slot_sources(field_slots, snapshot_slots, row_slots)
 
 
+def _occupant_input_cells(ws):
+    anchor_cell = _find_anchor_cell(ws, "occupant")
+    first_cell = _next_input_cell(ws, anchor_cell) if anchor_cell is not None else None
+    second_cell = _next_input_cell_after(ws, first_cell) if first_cell is not None else None
+    cells = [cell for cell in (first_cell, second_cell) if cell is not None]
+    if cells:
+        return cells
+    return [ws[cell_ref] for cell_ref in SUMMARY_OCCUPANT_LABEL_CELLS]
+
+
 def _template_alias_candidates(region, template_label):
     mapping = SUMMARY_CRITERIA_ALIASES.get(region, {})
     candidates = [template_label]
@@ -385,8 +406,8 @@ def export_summary_report_to_excel(snapshot, report_fields, output_path, templat
             written_meta += 1
 
     written_occupants = 0
-    for cell_ref, slot_info in zip(SUMMARY_OCCUPANT_LABEL_CELLS, _occupant_slot_infos(snapshot or {}, report_fields or {})):
-        if safe_set_cell_value(worksheet, worksheet[cell_ref], _occupant_label(slot_info), cell_values=cell_values):
+    for target_cell, slot_info in zip(_occupant_input_cells(worksheet), _occupant_slot_infos(snapshot or {}, report_fields or {})):
+        if safe_set_cell_value(worksheet, target_cell, _occupant_label(slot_info), cell_values=cell_values):
             written_occupants += 1
 
     occupant_columns = _detect_occupant_columns(worksheet)
