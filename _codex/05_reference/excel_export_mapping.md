@@ -103,6 +103,10 @@ or detection helpers needed for the new labels.
 - Example: `FMVSS208 Sumy_ABC123.xlsx` from template `FMVSS208 Sumy_temp.xlsx`.
 - Empty Test ID fallback: `NO_TEST_ID`.
 - Duplicate names are auto-incremented with `_01`, `_02`, etc.
+- The exporter does not use `Path.cwd()` for the output folder. Windows shortcuts can
+  launch the process with `C:\Windows\System32` as the current working directory, which
+  causes permission errors. Packaged runs use the executable folder; source runs use the
+  repository root; non-writable folders fall back to the user's Documents folder.
 - Completion popup contains only:
   - `Excel export completed.`
   - `Saved to: <path>`

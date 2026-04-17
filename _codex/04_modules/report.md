@@ -122,6 +122,10 @@ Export filename rule:
 - example: `FMVSS208 Sumy_ABC123.xlsx`
 - empty Test ID: `NO_TEST_ID`
 - duplicate filenames: append `_01`, `_02`, etc.
+- export folder: executable folder for packaged runs, repository root for source runs.
+  If that folder is not writable, the exporter falls back to the user's Documents folder.
+  It must not use the process current working directory because Windows shortcuts may set
+  it to `C:\Windows\System32`.
 
 After the completion dialog is acknowledged, the UI opens the saved workbook with the OS
 default file association. Windows uses `os.startfile`; macOS and Linux use `open` and

@@ -419,8 +419,26 @@ class ReportSummaryPage(tk.Frame):
 
     def _execution_folder(self):
         if getattr(sys, "frozen", False):
-            return Path(sys.executable).resolve().parent
-        return Path.cwd()
+            folder = Path(sys.executable).resolve().parent
+        else:
+            folder = Path(__file__).resolve().parents[3]
+        if self._folder_is_writable(folder):
+            return folder
+        documents = Path.home() / "Documents"
+        if documents.exists() and self._folder_is_writable(documents):
+            return documents
+        return folder
+
+    def _folder_is_writable(self, folder):
+        try:
+            folder.mkdir(parents=True, exist_ok=True)
+            probe = folder / ".crashoutput_write_test"
+            with probe.open("w", encoding="utf-8") as handle:
+                handle.write("")
+            probe.unlink(missing_ok=True)
+            return True
+        except Exception:
+            return False
 
     def _sanitize_filename_part(self, text):
         safe = "".join("_" if char in '\\/:*?"<>|' or ord(char) < 32 else char for char in str(text or "").strip())

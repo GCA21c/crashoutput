@@ -1,8 +1,27 @@
+import sys
 from pathlib import Path
 
 
 SUMMARY_TEMPLATE_FILENAME = "FMVSS208 Sumy_temp.xlsx"
-SUMMARY_TEMPLATE_PATH = Path(__file__).resolve().parents[2] / "resources" / "templates" / SUMMARY_TEMPLATE_FILENAME
+
+
+def _resolve_summary_template_path():
+    candidates = []
+    if getattr(sys, "frozen", False):
+        bundle_root = getattr(sys, "_MEIPASS", None)
+        if bundle_root:
+            candidates.append(Path(bundle_root))
+        candidates.append(Path(sys.executable).resolve().parent)
+    candidates.append(Path(__file__).resolve().parents[2])
+
+    for root in candidates:
+        path = root / "resources" / "templates" / SUMMARY_TEMPLATE_FILENAME
+        if path.exists():
+            return path
+    return candidates[0] / "resources" / "templates" / SUMMARY_TEMPLATE_FILENAME
+
+
+SUMMARY_TEMPLATE_PATH = _resolve_summary_template_path()
 
 
 SUMMARY_META_FIELDS = (

@@ -9,6 +9,10 @@
   `Chest Acc. 3ms Clip` template rows export the `Multiple Peak 3ms` values.
 - Excel export filenames now remove a trailing `_temp` from the template stem before
   appending the sanitized Test ID.
+- Excel template resolution now checks packaged resource folders before the source-tree
+  template path.
+- Excel export output no longer uses `Path.cwd()`, avoiding Windows shortcut launches
+  that point to `C:\Windows\System32`.
 
 ## Why
 - SUMMARY REPORT needs to expose the existing one-peak and multiple-peak 3ms values for acceleration-based sections.
