@@ -180,9 +180,9 @@ def _occupant_slot_infos(snapshot, report_fields):
         snap = dict(snapshot_slots[index] or {}) if index < len(snapshot_slots) else {}
         field = dict(field_slots[index] or {}) if index < len(field_slots) else {}
         result.append({
-            "slot": snap.get("slot") or field.get("slot") or "",
-            "dummy_name": snap.get("dummy_name") or field.get("dummy_name") or "",
-            "dummy_profile": snap.get("dummy_profile") or field.get("dummy_profile") or "",
+            "slot": field.get("slot") or snap.get("slot") or "",
+            "dummy_name": field.get("dummy_name") or snap.get("dummy_name") or "",
+            "dummy_profile": field.get("dummy_profile") or snap.get("dummy_profile") or "",
         })
     return result
 

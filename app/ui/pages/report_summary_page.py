@@ -290,20 +290,65 @@ class ReportSummaryPage(tk.Frame):
                 tags=(tag,),
             )
 
-    def _report_fields(self):
-        config = self.workbench.get_shared_dummy_config() if hasattr(self.workbench, "get_shared_dummy_config") else {}
-        slot_meta = dict((config or {}).get("slot_meta") or {})
-        occupant_slots = []
-        for slot in list((config or {}).get("active_positions") or []):
+    def _occupant_slots_from_config(self, config):
+        config = dict(config or {})
+        slot_meta = dict(config.get("slot_meta") or {})
+        ordered_slots = []
+        for slot in list(config.get("active_positions") or []) + list(config.get("row_positions") or []):
             slot_key = str(slot or "").strip().upper()
-            if not slot_key:
+            if slot_key and slot_key not in ordered_slots:
+                ordered_slots.append(slot_key)
+        for slot, meta in slot_meta.items():
+            slot_key = str(slot or "").strip().upper()
+            if not slot_key or slot_key in ordered_slots:
                 continue
+            meta = dict(meta or {})
+            if str(meta.get("dummy_name") or "").strip() or str(meta.get("dummy_profile") or "").strip():
+                ordered_slots.append(slot_key)
+        result = []
+        for slot_key in ordered_slots:
             meta = dict(slot_meta.get(slot_key) or {})
-            occupant_slots.append({
+            result.append({
                 "slot": slot_key,
                 "dummy_name": str(meta.get("dummy_name") or "").strip(),
                 "dummy_profile": str(meta.get("dummy_profile") or "").strip(),
             })
+        return result
+
+    def _merge_occupant_slots(self, *slot_groups):
+        merged = {}
+        order = []
+        for group in slot_groups:
+            for info in list(group or []):
+                info = dict(info or {})
+                slot_key = str(info.get("slot") or "").strip().upper()
+                if not slot_key:
+                    continue
+                if slot_key not in merged:
+                    merged[slot_key] = {"slot": slot_key, "dummy_name": "", "dummy_profile": ""}
+                    order.append(slot_key)
+                current = merged[slot_key]
+                dummy_name = str(info.get("dummy_name") or "").strip()
+                dummy_profile = str(info.get("dummy_profile") or "").strip()
+                if dummy_name and not current["dummy_name"]:
+                    current["dummy_name"] = dummy_name
+                if dummy_profile and not current["dummy_profile"]:
+                    current["dummy_profile"] = dummy_profile
+        return [merged[slot] for slot in order]
+
+    def _report_fields(self):
+        metadata = dict(getattr(self.workbench, "dataset_metadata", {}) or {})
+        saved_summary = dict((dict(metadata.get("report_saved_results") or {}).get("summary_report") or {}))
+        saved_fields = dict(saved_summary.get("report_fields") or {})
+        current_config = self.workbench.get_shared_dummy_config() if hasattr(self.workbench, "get_shared_dummy_config") else {}
+        metadata_config = dict(metadata.get("shared_dummy_config") or {})
+        occupant_slots = self._merge_occupant_slots(
+            self._occupant_slots_from_config(current_config),
+            self._occupant_slots_from_config(metadata_config),
+            saved_fields.get("occupant_slots"),
+            (self._snapshot or {}).get("slots"),
+            saved_summary.get("slots"),
+        )
         return {
             "manufacturer": self.manufacturer_var.get().strip(),
             "vehicle": self.vehicle_var.get().strip(),
