@@ -13,8 +13,18 @@ RAW reference 정의와 baseline 규칙은 반드시 `raw_reference_policy.md`�
 - 이미 필터링된 채널의 의도적 재필터링 금지
 - target CFC가 없을 때 raw reference 기준으로만 재구축
 - 원채널 직접 사용이 가능하면 파생 채널 최소화
+- 모든 CFC filtering edge extension은 `End Points`로 고정한다.
+  - 시작부 extension은 첫 sample 값을 반복한다.
+  - 종료부 extension은 마지막 sample 값을 반복한다.
+  - Zero Magnitude extension mode는 사용하지 않는다.
 - AUTO SET은 확정 저장이 아니라 기존 `선택 채널에 적용`과 같은 pending preset helper로 유지한다.
 - 최종 저장은 사용자가 `FILTERING!`을 눌렀을 때만 수행한다.
+
+## CFC edge extension entry point
+- 공통 CFC segment filtering entry point는 `app/services/preprocessing/service.py`의 `_apply_cfc_filter_segment()`이다.
+- `_apply_cfc_filter_segment()`는 `_end_points_extend()`를 통해 padding 구간을 만든 뒤 기존 SAE J211 coefficient와 `filtfilt` 기반 phaseless filtering을 수행한다.
+- manual DATA FILTERING, preprocessing-derived CFC channel, injury 계산 전 target CFC 재구축, neck injury용 CFC600/1000 준비 경로는 모두 이 entry point를 공유해야 한다.
+- CFC 수학, coefficient 산출, CFC class handling은 이 문서의 extension mode 규칙과 분리해서 관리한다.
 
 ## 점검 포인트
 - 입력 채널 lineage가 명확한가

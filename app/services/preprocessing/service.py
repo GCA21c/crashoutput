@@ -18,6 +18,7 @@ from app.services.injury.common_engines import compute_3ms_bundle, compute_vc_en
 
 FILTER_OPTIONS = ("Raw", "CFC 60", "CFC 180", "CFC 600", "CFC 1000")
 OFFSET_SAMPLE_OPTIONS = (100, 300, 1000, 2000)
+FILTER_EXTENSION_MODE = "End Points"
 
 
 CHEST_CRITERIA_PRESETS = CHEST_DUMMY_PROFILES
@@ -129,14 +130,8 @@ def _cfc_coefficients_sae_j211(fs, cfc_value):
     return b, a
 
 
-def _diadem_zero_magnitude_extend(y_segment, fs):
-    """Extend a signal with zero-magnitude mirrored end padding.
-
-    The extension copies a short portion of the original signal at each end,
-    applies a zero-centered sign-inverted mirror, and later discards the added
-    regions after filtering. In amplitude terms this is a sign-inverted
-    reversed copy of the edge data.
-    """
+def _end_points_extend(y_segment, fs):
+    """Extend a signal using constant end-point values before CFC filtering."""
     y = np.asarray(y_segment, dtype=float)
     if fs is None or fs <= 0 or y.size < 3:
         return y, 0
@@ -146,8 +141,8 @@ def _diadem_zero_magnitude_extend(y_segment, fs):
     if ext_pts <= 0:
         return y, 0
 
-    pre = -y[:ext_pts][::-1]
-    post = -y[-ext_pts:][::-1]
+    pre = np.full(ext_pts, y[0], dtype=float)
+    post = np.full(ext_pts, y[-1], dtype=float)
     extended = np.concatenate([pre, y, post])
     return extended, ext_pts
 
@@ -160,7 +155,7 @@ def _apply_cfc_filter_segment(y_segment, fs, cfc_value):
     if coeffs is None:
         return y_segment.copy()
     b, a = coeffs
-    extended, ext_pts = _diadem_zero_magnitude_extend(y_segment, fs)
+    extended, ext_pts = _end_points_extend(y_segment, fs)
     try:
         filtered = filtfilt(b, a, extended, method="pad", padtype=None, padlen=0)
         if ext_pts > 0:
@@ -565,6 +560,7 @@ def apply_filtering_with_derivatives(
                     "from_filter_label": "Raw",
                     "to_filter_label": f"CFC {int(cfc_value)}",
                     "raw_based": created_from_raw,
+                    "extension_mode": FILTER_EXTENSION_MODE,
                     "purpose": purpose,
                     "role": role,
                     "source_mode": source_mode or None,
