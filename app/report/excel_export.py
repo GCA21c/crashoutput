@@ -248,7 +248,11 @@ def _occupant_slot_infos(snapshot, report_fields):
     snapshot_slots = list((snapshot or {}).get("slots") or [])
     field_slots = list(dict(report_fields or {}).get("occupant_slots") or [])
     row_slots = _occupant_slots_from_rows(snapshot)
-    return _merge_occupant_slot_sources(field_slots, snapshot_slots, row_slots)
+    return [
+        slot_info
+        for slot_info in _merge_occupant_slot_sources(field_slots, snapshot_slots, row_slots)
+        if _occupant_label(slot_info)
+    ]
 
 
 def _occupant_input_cells(ws):
