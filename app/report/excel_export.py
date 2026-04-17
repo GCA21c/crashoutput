@@ -171,20 +171,73 @@ def _occupant_label(slot_info):
     return name or profile or None
 
 
+def _normalize_slot_key(slot):
+    return str(slot or "").strip().upper()
+
+
+def _dummy_name_from_slot_label(slot_label, slot):
+    text = str(slot_label or "").strip()
+    slot_key = _normalize_slot_key(slot)
+    if not text:
+        return ""
+    prefix = f"{slot_key} - "
+    if slot_key and text.upper().startswith(prefix.upper()):
+        return text[len(prefix):].strip()
+    if " - " in text:
+        left, right = text.split(" - ", 1)
+        if _normalize_slot_key(left) == slot_key:
+            return right.strip()
+    return ""
+
+
+def _occupant_slots_from_rows(snapshot):
+    result = []
+    by_slot = {}
+    for row in list((snapshot or {}).get("rows") or []):
+        row = dict(row or {})
+        slot_key = _normalize_slot_key(row.get("slot"))
+        if not slot_key:
+            continue
+        if slot_key not in by_slot:
+            by_slot[slot_key] = {"slot": slot_key, "dummy_name": "", "dummy_profile": ""}
+            result.append(by_slot[slot_key])
+        current = by_slot[slot_key]
+        dummy_name = str(row.get("dummy_name") or "").strip() or _dummy_name_from_slot_label(row.get("slot_label"), slot_key)
+        dummy_profile = str(row.get("dummy_profile") or row.get("criterion_key") or "").strip()
+        if dummy_name and not current["dummy_name"]:
+            current["dummy_name"] = dummy_name
+        if dummy_profile and not current["dummy_profile"]:
+            current["dummy_profile"] = dummy_profile
+    return result
+
+
+def _merge_occupant_slot_sources(*slot_groups):
+    result = []
+    by_slot = {}
+    for group in slot_groups:
+        for info in list(group or []):
+            info = dict(info or {})
+            slot_key = _normalize_slot_key(info.get("slot"))
+            if not slot_key:
+                continue
+            if slot_key not in by_slot:
+                by_slot[slot_key] = {"slot": slot_key, "dummy_name": "", "dummy_profile": ""}
+                result.append(by_slot[slot_key])
+            current = by_slot[slot_key]
+            dummy_name = str(info.get("dummy_name") or "").strip()
+            dummy_profile = str(info.get("dummy_profile") or "").strip()
+            if dummy_name and not current["dummy_name"]:
+                current["dummy_name"] = dummy_name
+            if dummy_profile and not current["dummy_profile"]:
+                current["dummy_profile"] = dummy_profile
+    return result
+
+
 def _occupant_slot_infos(snapshot, report_fields):
     snapshot_slots = list((snapshot or {}).get("slots") or [])
     field_slots = list(dict(report_fields or {}).get("occupant_slots") or [])
-    result = []
-    max_len = max(len(snapshot_slots), len(field_slots))
-    for index in range(max_len):
-        snap = dict(snapshot_slots[index] or {}) if index < len(snapshot_slots) else {}
-        field = dict(field_slots[index] or {}) if index < len(field_slots) else {}
-        result.append({
-            "slot": field.get("slot") or snap.get("slot") or "",
-            "dummy_name": field.get("dummy_name") or snap.get("dummy_name") or "",
-            "dummy_profile": field.get("dummy_profile") or snap.get("dummy_profile") or "",
-        })
-    return result
+    row_slots = _occupant_slots_from_rows(snapshot)
+    return _merge_occupant_slot_sources(field_slots, snapshot_slots, row_slots)
 
 
 def _template_alias_candidates(region, template_label):
