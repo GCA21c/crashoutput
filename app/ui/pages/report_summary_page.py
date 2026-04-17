@@ -412,7 +412,10 @@ class ReportSummaryPage(tk.Frame):
     def _default_export_filename(self):
         test_id = self._sanitize_filename_part(self.test_id_var.get().strip() or "NO_TEST_ID")
         template_path = Path(SUMMARY_TEMPLATE_PATH)
-        return f"{template_path.stem}_{test_id}{template_path.suffix}"
+        stem = template_path.stem
+        if stem.lower().endswith("_temp"):
+            stem = stem[:-5]
+        return f"{stem}_{test_id}{template_path.suffix}"
 
     def _execution_folder(self):
         if getattr(sys, "frozen", False):

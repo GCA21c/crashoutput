@@ -37,6 +37,12 @@ To place a new criteria row at a specific visual position inside each dummy grou
 the `_item(...)` at that position in the tuple. For example, the CHEST V*C rows are placed
 immediately after `Chest Deflection Peak`.
 
+Acceleration-based 3ms rows should keep this order when all values are available:
+1. `One Peak 3ms`
+2. `Multiple Peak 3ms`
+3. existing resultant/acceleration 3ms criteria, such as `Resultant Acc. 3ms Clip`
+   or `Chest Acc. 3ms Clip`
+
 ## Payload key mapping
 SUMMARY REPORT reads values through `app/report/mapping.py` `_extract_metric_value()`.
 The lookup order is:
@@ -88,10 +94,18 @@ The export flow is:
 6. Each template criteria row is matched by `region + criteria label`; aliases live in
    `app/report/excel_summary_mapping.py`.
 7. Only the IARV and RESULT cells are assigned values. Injury numeric values are rounded
-   to two decimal places at export time with `ROUND_HALF_UP`.
+   to two decimal places at export time with `ROUND_HALF_UP`, then written with exactly
+   two decimal digits such as `0.10` or `1.00`.
 8. FMVSS 208 IARV exclusions are applied by `EXCEL_IARV_EXPORT_RULES`; excluded IARV
    cells are left blank while RESULT is still exported.
-9. Fonts, fills, borders, alignment,
+9. Excel-only value transforms are applied by `EXCEL_VALUE_EXPORT_RULES`. FMVSS 208
+   exports CHEST `V*C SAE J1727_CFC600` and `V*C ECE94_CFC180` RESULT values as
+   positive values without changing SUMMARY REPORT screen values or calculation payloads.
+10. Excel RESULT source overrides are applied by `EXCEL_RESULT_SOURCE_OVERRIDES`.
+   FMVSS 208 template rows `HEAD / Resultant Acc. 3ms Clip` and
+   `CHEST / Chest Acc. 3ms Clip` export the SUMMARY REPORT `Multiple Peak 3ms`
+   value while keeping the template row label unchanged.
+11. Fonts, fills, borders, alignment,
    row heights, column widths, merges, and formulas are not modified by the exporter.
 
 The current template has two occupant column groups:
@@ -102,10 +116,10 @@ If a SUMMARY REPORT has more slots than the template has occupant groups, extra 
 skipped and reported in the export result message.
 
 Export filename rule:
-- base name: template stem
+- base name: template stem with a trailing `_temp` removed
 - suffix: sanitized `Test ID`
 - extension: template extension
-- example: `FMVSS208 Sumy_temp_ABC123.xlsx`
+- example: `FMVSS208 Sumy_ABC123.xlsx`
 - empty Test ID: `NO_TEST_ID`
 - duplicate filenames: append `_01`, `_02`, etc.
 

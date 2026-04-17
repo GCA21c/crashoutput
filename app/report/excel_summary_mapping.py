@@ -41,8 +41,28 @@ EXCEL_IARV_EXPORT_RULES = {
 }
 
 
+EXCEL_VALUE_EXPORT_RULES = {
+    "FMVSS 208": {
+        "abs_result": {
+            ("CHEST", "V*C SAE J1727_CFC600"),
+            ("CHEST", "V*C ECE94_CFC180"),
+        },
+    },
+}
+
+
+EXCEL_RESULT_SOURCE_OVERRIDES = {
+    "FMVSS 208": {
+        ("HEAD", "Resultant Acc. 3ms Clip"): ("Multiple Peak 3ms",),
+        ("CHEST", "Chest Acc. 3ms Clip"): ("Multiple Peak 3ms",),
+    },
+}
+
+
 SUMMARY_CRITERIA_ALIASES = {
     "CHEST": {
+        "One Peak 3ms": ("One Peak 3ms",),
+        "Multiple Peak 3ms": ("Multiple Peak 3ms",),
         "Chest Acc. 3ms Clip": ("Chest Acc. 3ms Clip",),
         "Chest Def.": ("Chest Deflection Peak",),
         "Chest V*C - ECE 94": ("V*C ECE94_CFC180",),
@@ -55,6 +75,8 @@ SUMMARY_CRITERIA_ALIASES = {
     "HEAD": {
         "HIC 15ms": ("HIC15ms",),
         "HIC 36ms": ("HIC36ms",),
+        "One Peak 3ms": ("One Peak 3ms",),
+        "Multiple Peak 3ms": ("Multiple Peak 3ms",),
         "Resultant Acc. 3ms Clip": ("Resultant Acc. 3ms Clip",),
     },
     "KNEE": {

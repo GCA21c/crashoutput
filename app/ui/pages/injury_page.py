@@ -383,6 +383,8 @@ class InjuryPage(tk.Frame):
             return {
                 'hic15': self._safe_metric_float(metrics.get('hic15_value')),
                 'hic36': self._safe_metric_float(metrics.get('hic36_value')),
+                'head_one_peak_3ms': self._safe_metric_float(metrics.get('one_peak_3ms_value') or metrics.get('clip3_value')),
+                'head_multiple_3ms_clip': self._safe_metric_float(metrics.get('multiple_peak_3ms_value')),
                 'head_3ms_clip': self._safe_metric_float(metrics.get('one_peak_3ms_value') or metrics.get('clip3_value')),
                 'resultant_peak_g': self._safe_metric_float(metrics.get('resultant_peak_value')),
                 'head_x_max': self._safe_metric_float(metrics.get('head_x_max_value')),
@@ -408,6 +410,7 @@ class InjuryPage(tk.Frame):
             }
         if self.initial_mode == 'chest':
             return {
+                'chest_one_peak_3ms': self._safe_metric_float(metrics.get('one_peak_3ms_g')),
                 'chest_3ms_clip': self._safe_metric_float(metrics.get('one_peak_3ms_g')),
                 'chest_multiple_3ms_clip': self._safe_metric_float(metrics.get('multiple_peak_3ms_g')),
                 'resultant_peak_g': self._detail_value(metrics.get('resultant_peak')),

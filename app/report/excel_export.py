@@ -4,6 +4,8 @@ from pathlib import Path
 
 from .excel_summary_mapping import (
     EXCEL_IARV_EXPORT_RULES,
+    EXCEL_RESULT_SOURCE_OVERRIDES,
+    EXCEL_VALUE_EXPORT_RULES,
     SUMMARY_CRITERIA_ALIASES,
     SUMMARY_META_FIELDS,
     SUMMARY_TEMPLATE_PATH,
@@ -40,14 +42,18 @@ def _display_value(value):
     return numeric
 
 
-def round_for_excel_export(value, decimals=2):
+def format_excel_numeric_value(value, decimals=2):
     if value is None:
         return None
     try:
         quantized = Decimal(str(value)).quantize(Decimal("1").scaleb(-int(decimals)), rounding=ROUND_HALF_UP)
     except (InvalidOperation, ValueError, TypeError):
         return str(value)
-    return float(quantized)
+    return f"{quantized:.{int(decimals)}f}"
+
+
+def round_for_excel_export(value, decimals=2):
+    return format_excel_numeric_value(value, decimals=decimals)
 
 
 def _worksheet_cells(ws):
@@ -170,6 +176,33 @@ def should_export_iarv(regulation_name, region, criteria_label):
     return (str(region or "").strip().upper(), _normalize_text(criteria_label)) not in excluded
 
 
+def transform_excel_export_value(regulation_name, region, criteria_label, value, value_kind):
+    if value is None:
+        return None
+    rule = EXCEL_VALUE_EXPORT_RULES.get(str(regulation_name or "").strip(), {})
+    key = (str(region or "").strip().upper(), _normalize_text(criteria_label))
+    abs_result = {
+        (str(item_region).strip().upper(), _normalize_text(item_label))
+        for item_region, item_label in rule.get("abs_result", set())
+    }
+    if str(value_kind or "").strip().lower() == "result" and key in abs_result:
+        try:
+            return abs(float(value))
+        except Exception:
+            return value
+    return value
+
+
+def _result_source_row(regulation_name, slot_rows, region, template_label, default_row):
+    rule = EXCEL_RESULT_SOURCE_OVERRIDES.get(str(regulation_name or "").strip(), {})
+    source_labels = rule.get((str(region or "").strip().upper(), str(template_label or "").strip()), ())
+    for label in source_labels:
+        row = slot_rows.get((str(region or "").strip().upper(), _normalize_text(label)))
+        if row:
+            return row
+    return default_row
+
+
 def _copy_cell_value(ws, target_cell, value):
     if target_cell is None:
         return False
@@ -222,10 +255,13 @@ def export_summary_report_to_excel(snapshot, report_fields, output_path, templat
             iarv_cell = worksheet.cell(row=template_row, column=column_group["iarv_column"])
             result_cell = worksheet.cell(row=template_row, column=column_group["result_column"])
             if should_export_iarv(regulation_name, region, matched.get("label")):
-                _copy_cell_value(worksheet, iarv_cell, round_for_excel_export(matched.get("limit")))
+                iarv_value = transform_excel_export_value(regulation_name, region, matched.get("label"), matched.get("limit"), "iarv")
+                _copy_cell_value(worksheet, iarv_cell, format_excel_numeric_value(iarv_value))
             else:
                 _copy_cell_value(worksheet, iarv_cell, None)
-            _copy_cell_value(worksheet, result_cell, round_for_excel_export(matched.get("value")))
+            result_source = _result_source_row(regulation_name, slot_rows, region, template_label, matched)
+            result_value = transform_excel_export_value(regulation_name, region, matched.get("label"), result_source.get("value"), "result")
+            _copy_cell_value(worksheet, result_cell, format_excel_numeric_value(result_value))
             written_results += 1
 
     workbook.save(output)

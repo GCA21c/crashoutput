@@ -27,7 +27,8 @@ to the right of the label range.
 - RESULT receives the SUMMARY REPORT `value`.
 - Missing values are written as blank cells.
 - Injury numeric values are rounded at export time to two decimal places with
-  `Decimal(..., ROUND_HALF_UP)`.
+  `Decimal(..., ROUND_HALF_UP)` and then written with exactly two decimal digits.
+  Examples: `0.1` -> `0.10`, `1` -> `1.00`.
 
 ## FMVSS 208 IARV exclusions
 Maintain regulation-aware IARV exclusions in `app/report/excel_summary_mapping.py`
@@ -44,6 +45,34 @@ summary template has no applicable IARV basis for them:
 | `NECK` | `Peak Flexion MOCy` |
 
 The RESULT cells for the same rows are still exported when values are available.
+
+## Excel-only value transforms
+Maintain export-only value transforms in `app/report/excel_summary_mapping.py`
+`EXCEL_VALUE_EXPORT_RULES`.
+
+For `FMVSS 208`, these RESULT cells are written as positive values only in Excel export:
+
+| Region | SUMMARY REPORT criteria |
+|---|---|
+| `CHEST` | `V*C SAE J1727_CFC600` |
+| `CHEST` | `V*C ECE94_CFC180` |
+
+The SUMMARY REPORT screen value and underlying injury calculation payload are not changed.
+
+## Excel RESULT source overrides
+Maintain template-row-specific RESULT source overrides in `app/report/excel_summary_mapping.py`
+`EXCEL_RESULT_SOURCE_OVERRIDES`.
+
+For `FMVSS 208`, these Excel template rows keep their template label but export the
+SUMMARY REPORT `Multiple Peak 3ms` value:
+
+| Region | Excel template row | Export RESULT source |
+|---|---|---|
+| `HEAD` | `Resultant Acc. 3ms Clip` | `Multiple Peak 3ms` |
+| `CHEST` | `Chest Acc. 3ms Clip` | `Multiple Peak 3ms` |
+
+This is an Excel export rule only. SUMMARY REPORT screen rows and 3ms calculations are
+not changed.
 
 ## Criteria aliases
 Template labels do not always match SUMMARY REPORT labels exactly. Maintain aliases in
@@ -70,7 +99,8 @@ or detection helpers needed for the new labels.
 
 ## Save and open rule
 - Output folder: application execution folder.
-- Filename: `{template_stem}_{sanitized_test_id}{template_suffix}`.
+- Filename: `{template_stem_without_trailing_temp}_{sanitized_test_id}{template_suffix}`.
+- Example: `FMVSS208 Sumy_ABC123.xlsx` from template `FMVSS208 Sumy_temp.xlsx`.
 - Empty Test ID fallback: `NO_TEST_ID`.
 - Duplicate names are auto-incremented with `_01`, `_02`, etc.
 - Completion popup contains only:
