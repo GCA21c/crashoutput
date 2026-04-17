@@ -64,12 +64,21 @@ def _cell_range_for(ws, cell):
     return None
 
 
-def _top_left_cell(ws, row, column):
-    cell = ws.cell(row=row, column=column)
+def resolve_merged_top_left(ws, cell_ref_or_rowcol):
+    if isinstance(cell_ref_or_rowcol, tuple):
+        cell = ws.cell(row=int(cell_ref_or_rowcol[0]), column=int(cell_ref_or_rowcol[1]))
+    elif hasattr(cell_ref_or_rowcol, "row") and hasattr(cell_ref_or_rowcol, "column"):
+        cell = cell_ref_or_rowcol
+    else:
+        cell = ws[str(cell_ref_or_rowcol)]
     merged_range = _cell_range_for(ws, cell)
     if merged_range is not None:
         return ws.cell(row=merged_range.min_row, column=merged_range.min_col)
     return cell
+
+
+def _top_left_cell(ws, row, column):
+    return resolve_merged_top_left(ws, (row, column))
 
 
 def _next_input_cell(ws, label_cell):
@@ -224,15 +233,18 @@ def _result_source_row(regulation_name, slot_rows, region, template_label, defau
 def _target_coordinate(ws, target_cell):
     if target_cell is None:
         return None
-    target = _top_left_cell(ws, target_cell.row, target_cell.column)
+    target = resolve_merged_top_left(ws, target_cell)
     return target.coordinate
 
 
-def _record_cell_value(cell_values, ws, target_cell, value):
+def safe_set_cell_value(ws, target_cell, value, cell_values=None):
     coordinate = _target_coordinate(ws, target_cell)
     if not coordinate:
         return False
-    cell_values[coordinate] = value
+    if cell_values is not None:
+        cell_values[coordinate] = value
+    else:
+        ws[coordinate].value = value
     return True
 
 
@@ -316,12 +328,12 @@ def export_summary_report_to_excel(snapshot, report_fields, output_path, templat
     for spec in SUMMARY_META_FIELDS:
         label_cell = _find_anchor_cell(worksheet, spec["template_anchor"])
         target_cell = _next_input_cell(worksheet, label_cell) if label_cell is not None else None
-        if _record_cell_value(cell_values, worksheet, target_cell, dict(report_fields or {}).get(spec["field_key"]) or None):
+        if safe_set_cell_value(worksheet, target_cell, dict(report_fields or {}).get(spec["field_key"]) or None, cell_values=cell_values):
             written_meta += 1
 
     written_occupants = 0
     for cell_ref, slot_info in zip(SUMMARY_OCCUPANT_LABEL_CELLS, _occupant_slot_infos(snapshot or {}, report_fields or {})):
-        if _record_cell_value(cell_values, worksheet, worksheet[cell_ref], _occupant_label(slot_info)):
+        if safe_set_cell_value(worksheet, worksheet[cell_ref], _occupant_label(slot_info), cell_values=cell_values):
             written_occupants += 1
 
     occupant_columns = _detect_occupant_columns(worksheet)
@@ -348,12 +360,12 @@ def export_summary_report_to_excel(snapshot, report_fields, output_path, templat
             result_cell = worksheet.cell(row=template_row, column=column_group["result_column"])
             if should_export_iarv(regulation_name, region, matched.get("label")):
                 iarv_value = transform_excel_export_value(regulation_name, region, matched.get("label"), matched.get("limit"), "iarv")
-                _record_cell_value(cell_values, worksheet, iarv_cell, format_excel_numeric_value(iarv_value))
+                safe_set_cell_value(worksheet, iarv_cell, format_excel_numeric_value(iarv_value), cell_values=cell_values)
             else:
-                _record_cell_value(cell_values, worksheet, iarv_cell, None)
+                safe_set_cell_value(worksheet, iarv_cell, None, cell_values=cell_values)
             result_source = _result_source_row(regulation_name, slot_rows, region, template_label, matched)
             result_value = transform_excel_export_value(regulation_name, region, matched.get("label"), result_source.get("value"), "result")
-            _record_cell_value(cell_values, worksheet, result_cell, format_excel_numeric_value(result_value))
+            safe_set_cell_value(worksheet, result_cell, format_excel_numeric_value(result_value), cell_values=cell_values)
             written_results += 1
 
     _patch_sheet_values_only(template, output, _worksheet_archive_name(workbook, worksheet), cell_values)
