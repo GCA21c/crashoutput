@@ -48,6 +48,9 @@ SUMMARY_META_FIELDS = (
 )
 
 
+SUMMARY_OCCUPANT_LABEL_CELLS = ("C9", "G9")
+
+
 EXCEL_IARV_EXPORT_RULES = {
     "FMVSS 208": {
         "exclude": {

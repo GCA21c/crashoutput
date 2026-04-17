@@ -90,22 +90,26 @@ The export flow is:
    - `speed` -> `test speed`
    - `test_date` -> `test date`
    - `test_id` -> `test id`
-5. The injury table header row is detected by `IARV` and `RESULT` labels.
-6. Each template criteria row is matched by `region + criteria label`; aliases live in
+5. Occupant labels are written from TEST SETUP slot metadata:
+   - first slot -> `C9`
+   - second slot -> `G9`
+   - format: `{dummy_name} - {dummy_profile}`, e.g. `DRV - H3_5%F`
+6. The injury table header row is detected by `IARV` and `RESULT` labels.
+7. Each template criteria row is matched by `region + criteria label`; aliases live in
    `app/report/excel_summary_mapping.py`.
-7. Only the IARV and RESULT cells are assigned values. Injury numeric values are rounded
+8. Only target cells are assigned values. Injury numeric values are rounded
    to two decimal places at export time with `ROUND_HALF_UP`, then written with exactly
    two decimal digits such as `0.10` or `1.00`.
-8. FMVSS 208 IARV exclusions are applied by `EXCEL_IARV_EXPORT_RULES`; excluded IARV
+9. FMVSS 208 IARV exclusions are applied by `EXCEL_IARV_EXPORT_RULES`; excluded IARV
    cells are left blank while RESULT is still exported.
-9. Excel-only value transforms are applied by `EXCEL_VALUE_EXPORT_RULES`. FMVSS 208
+10. Excel-only value transforms are applied by `EXCEL_VALUE_EXPORT_RULES`. FMVSS 208
    currently does not force CHEST V*C RESULT values positive; V*C rows export the same
    MAX value selected by SUMMARY REPORT.
-10. Excel RESULT source overrides are applied by `EXCEL_RESULT_SOURCE_OVERRIDES`.
+11. Excel RESULT source overrides are applied by `EXCEL_RESULT_SOURCE_OVERRIDES`.
    FMVSS 208 template rows `HEAD / Resultant Acc. 3ms Clip` and
    `CHEST / Chest Acc. 3ms Clip` export the SUMMARY REPORT `Multiple Peak 3ms`
    value while keeping the template row label unchanged.
-11. Fonts, fills, borders, alignment,
+12. Fonts, fills, borders, alignment,
    row heights, column widths, merges, and formulas are not modified by the exporter.
 
 The current template has two occupant column groups:

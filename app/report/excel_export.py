@@ -8,6 +8,7 @@ from .excel_summary_mapping import (
     EXCEL_VALUE_EXPORT_RULES,
     SUMMARY_CRITERIA_ALIASES,
     SUMMARY_META_FIELDS,
+    SUMMARY_OCCUPANT_LABEL_CELLS,
     SUMMARY_TEMPLATE_PATH,
 )
 
@@ -160,6 +161,23 @@ def _summary_rows_by_slot(snapshot):
     return slots, grouped
 
 
+def _occupant_label(slot_info):
+    name = str((slot_info or {}).get("dummy_name") or "").strip()
+    profile = str((slot_info or {}).get("dummy_profile") or "").strip()
+    if name and profile:
+        return f"{name} - {profile}"
+    return name or profile or None
+
+
+def _write_occupant_labels(ws, snapshot):
+    written = 0
+    slots = list((snapshot or {}).get("slots") or [])
+    for cell_ref, slot_info in zip(SUMMARY_OCCUPANT_LABEL_CELLS, slots):
+        if _copy_cell_value(ws, ws[cell_ref], _occupant_label(slot_info)):
+            written += 1
+    return written
+
+
 def _template_alias_candidates(region, template_label):
     mapping = SUMMARY_CRITERIA_ALIASES.get(region, {})
     candidates = [template_label]
@@ -231,6 +249,7 @@ def export_summary_report_to_excel(snapshot, report_fields, output_path, templat
         target_cell = _next_input_cell(worksheet, label_cell) if label_cell is not None else None
         if _copy_cell_value(worksheet, target_cell, dict(report_fields or {}).get(spec["field_key"]) or None):
             written_meta += 1
+    written_occupants = _write_occupant_labels(worksheet, snapshot or {})
 
     occupant_columns = _detect_occupant_columns(worksheet)
     template_rows = _criteria_rows(worksheet)
@@ -270,6 +289,7 @@ def export_summary_report_to_excel(snapshot, report_fields, output_path, templat
         "output_path": str(output),
         "sheet": worksheet.title,
         "meta_fields_written": written_meta,
+        "occupant_labels_written": written_occupants,
         "result_rows_written": written_results,
         "slots_exported": min(len(slots), len(occupant_columns)),
         "slots_available": len(slots),

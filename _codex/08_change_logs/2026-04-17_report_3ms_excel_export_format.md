@@ -15,6 +15,8 @@
   template path.
 - Excel export output no longer uses `Path.cwd()`, avoiding Windows shortcut launches
   that point to `C:\Windows\System32`.
+- Excel export writes TEST SETUP occupant labels to `C9` and `G9` without touching cell
+  styles.
 
 ## Why
 - SUMMARY REPORT needs to expose the existing one-peak and multiple-peak 3ms values for acceleration-based sections.

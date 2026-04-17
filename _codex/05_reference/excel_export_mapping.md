@@ -18,6 +18,16 @@ to the right of the label range.
 | `test_date` | `test date` |
 | `test_id` | `test id` |
 
+## Occupant labels
+The exporter writes TEST SETUP slot labels without changing cell styles:
+
+| Slot order | Template cell | Value format |
+|---|---|---|
+| 1st active slot | `C9` | `{dummy_name} - {dummy_profile}` |
+| 2nd active slot | `G9` | `{dummy_name} - {dummy_profile}` |
+
+Example: `DRV - H3_5%F`.
+
 ## Injury table detection
 - Header row is detected by cells whose normalized text is `IARV` and `RESULT`.
 - Each occupant group is the nearest `RESULT` column to the right of an `IARV` column.
