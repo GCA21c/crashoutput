@@ -5,6 +5,9 @@
 - Snapshot builder and payload extraction: `app/report/mapping.py`
 - Regulation item order and labels: `app/report/regulations/fmvss208.py`
 - Injury payload source: `app/ui/pages/injury_page.py` `_build_report_values()` and `_enrich_payload_with_structured_results()`
+- Excel export writer: `app/report/excel_export.py`
+- Excel export aliases/template constants: `app/report/excel_summary_mapping.py`
+- Excel template: `resources/templates/FMVSS208 Sumy_temp.xlsx`
 
 ## Row definition model
 SUMMARY REPORT rows are driven by ordered item specs in the selected regulation module.
@@ -60,6 +63,36 @@ Examples:
    Do not change the calculation engine for report-only additions.
 3. Add an `_item(...)` entry to the regulation module in the desired output order.
 4. Set `payload_aliases` for nested or legacy payload keys.
-5. Run a snapshot check against representative metadata and verify the table row source
+5. If the Excel template uses a different text label, add the template label alias in
+   `app/report/excel_summary_mapping.py` `SUMMARY_CRITERIA_ALIASES`.
+6. Run a snapshot check against representative metadata and verify the table row source
    is not `missing`.
-6. Update this document or the related change log when the report structure changes.
+7. Update this document or the related change log when the report structure changes.
+
+## Excel export
+`REPORT - SUMMARY` uses the `EXCEL EXPORT` button to export the current summary snapshot
+into `resources/templates/FMVSS208 Sumy_temp.xlsx`.
+
+The export flow is:
+1. `report_summary_page.py` ensures `Valuation` has populated `_snapshot`.
+2. The user selects an output `.xlsx` path.
+3. `app/report/excel_export.py` opens the template workbook with `openpyxl`.
+4. Metadata fields are found by anchor labels and written to the merged cell immediately
+   to the right of the label:
+   - `manufacturer` -> `vehicle manufacture`
+   - `vehicle` -> `vehicle model`
+   - `speed` -> `test speed`
+   - `test_date` -> `test date`
+   - `test_id` -> `test id`
+5. The injury table header row is detected by `IARV` and `RESULT` labels.
+6. Each template criteria row is matched by `region + criteria label`; aliases live in
+   `app/report/excel_summary_mapping.py`.
+7. Only the IARV and RESULT cells are assigned values. Fonts, fills, borders, alignment,
+   row heights, column widths, merges, and formulas are not modified by the exporter.
+
+The current template has two occupant column groups:
+- first slot: `IARV` / `RESULT`
+- second slot: `IARV` / `RESULT`
+
+If a SUMMARY REPORT has more slots than the template has occupant groups, extra slots are
+skipped and reported in the export result message.
