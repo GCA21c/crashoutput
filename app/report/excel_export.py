@@ -1,7 +1,4 @@
 import re
-import shutil
-import xml.etree.ElementTree as ET
-import zipfile
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
 
@@ -315,76 +312,12 @@ def _target_coordinate(ws, target_cell):
     return target.coordinate
 
 
-def safe_set_cell_value(ws, target_cell, value, cell_values=None):
+def safe_set_cell_value(ws, target_cell, value):
     coordinate = _target_coordinate(ws, target_cell)
     if not coordinate:
         return False
-    if cell_values is not None:
-        cell_values[coordinate] = value
-    else:
-        ws[coordinate].value = value
+    ws[coordinate].value = value
     return True
-
-
-def _worksheet_archive_name(workbook, ws):
-    path = str(getattr(ws, "path", "") or "").lstrip("/")
-    if path and "None" not in path:
-        return path
-    try:
-        index = list(workbook.worksheets).index(ws) + 1
-    except Exception:
-        index = 1
-    return f"xl/worksheets/sheet{index}.xml"
-
-
-def _set_cell_xml_value(cell, value):
-    ns = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
-    for child_name in ("v", "is"):
-        child = cell.find(f"{ns}{child_name}")
-        if child is not None:
-            cell.remove(child)
-    if value is None:
-        cell.attrib.pop("t", None)
-        return
-    cell.set("t", "inlineStr")
-    inline = ET.SubElement(cell, f"{ns}is")
-    text = ET.SubElement(inline, f"{ns}t")
-    text.text = str(value)
-    if text.text != text.text.strip():
-        text.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
-
-
-def _patch_sheet_values_only(template_path, output_path, worksheet_archive_name, cell_values):
-    cell_values = {str(coord): value for coord, value in dict(cell_values or {}).items()}
-    shutil.copyfile(template_path, output_path)
-    if not cell_values:
-        return
-
-    ns = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
-    ET.register_namespace("", "http://schemas.openxmlformats.org/spreadsheetml/2006/main")
-    ET.register_namespace("r", "http://schemas.openxmlformats.org/officeDocument/2006/relationships")
-
-    with zipfile.ZipFile(output_path, "r") as archive:
-        try:
-            sheet_xml = archive.read(worksheet_archive_name)
-        except KeyError as exc:
-            raise ExcelExportError(f"Worksheet XML not found in template: {worksheet_archive_name}") from exc
-
-    root = ET.fromstring(sheet_xml)
-    cells = {cell.get("r"): cell for cell in root.findall(f".//{ns}c") if cell.get("r")}
-    missing = [coord for coord in cell_values if coord not in cells]
-    if missing:
-        raise ExcelExportError(f"Excel template is missing expected input cells: {', '.join(missing)}")
-    for coord, value in cell_values.items():
-        _set_cell_xml_value(cells[coord], value)
-    patched_xml = ET.tostring(root, encoding="utf-8", xml_declaration=True)
-
-    temp_path = output_path.with_suffix(f"{output_path.suffix}.tmp")
-    with zipfile.ZipFile(output_path, "r") as source, zipfile.ZipFile(temp_path, "w") as target:
-        for item in source.infolist():
-            data = patched_xml if item.filename == worksheet_archive_name else source.read(item.filename)
-            target.writestr(item, data)
-    temp_path.replace(output_path)
 
 
 def export_summary_report_to_excel(snapshot, report_fields, output_path, template_path=None):
@@ -401,17 +334,16 @@ def export_summary_report_to_excel(snapshot, report_fields, output_path, templat
     workbook = load_workbook(template)
     worksheet = workbook.active
 
-    cell_values = {}
     written_meta = 0
     for spec in SUMMARY_META_FIELDS:
         label_cell = _find_anchor_cell(worksheet, spec["template_anchor"])
         target_cell = _next_input_cell(worksheet, label_cell) if label_cell is not None else None
-        if safe_set_cell_value(worksheet, target_cell, dict(report_fields or {}).get(spec["field_key"]) or None, cell_values=cell_values):
+        if safe_set_cell_value(worksheet, target_cell, dict(report_fields or {}).get(spec["field_key"]) or None):
             written_meta += 1
 
     written_occupants = 0
     for target_cell, slot_info in zip(_occupant_input_cells(worksheet), _occupant_slot_infos(snapshot or {}, report_fields or {})):
-        if safe_set_cell_value(worksheet, target_cell, _occupant_label(slot_info), cell_values=cell_values):
+        if safe_set_cell_value(worksheet, target_cell, _occupant_label(slot_info)):
             written_occupants += 1
 
     occupant_columns = _detect_occupant_columns(worksheet)
@@ -438,15 +370,15 @@ def export_summary_report_to_excel(snapshot, report_fields, output_path, templat
             result_cell = worksheet.cell(row=template_row, column=column_group["result_column"])
             if should_export_iarv(regulation_name, region, matched.get("label")):
                 iarv_value = transform_excel_export_value(regulation_name, region, matched.get("label"), matched.get("limit"), "iarv")
-                safe_set_cell_value(worksheet, iarv_cell, format_excel_numeric_value(iarv_value), cell_values=cell_values)
+                safe_set_cell_value(worksheet, iarv_cell, format_excel_numeric_value(iarv_value))
             else:
-                safe_set_cell_value(worksheet, iarv_cell, None, cell_values=cell_values)
+                safe_set_cell_value(worksheet, iarv_cell, None)
             result_source = _result_source_row(regulation_name, slot_rows, region, template_label, matched)
             result_value = transform_excel_export_value(regulation_name, region, matched.get("label"), result_source.get("value"), "result")
-            safe_set_cell_value(worksheet, result_cell, format_excel_numeric_value(result_value), cell_values=cell_values)
+            safe_set_cell_value(worksheet, result_cell, format_excel_numeric_value(result_value))
             written_results += 1
 
-    _patch_sheet_values_only(template, output, _worksheet_archive_name(workbook, worksheet), cell_values)
+    workbook.save(output)
     return {
         "template_path": str(template),
         "output_path": str(output),

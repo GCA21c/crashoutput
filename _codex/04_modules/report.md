@@ -82,9 +82,9 @@ into `resources/templates/FMVSS208 Sumy_temp.xlsx`.
 The export flow is:
 1. `report_summary_page.py` ensures `Valuation` has populated `_snapshot`.
 2. The export file is saved to the application execution folder.
-3. `app/report/excel_export.py` uses `openpyxl` only to inspect anchors and cell
-   coordinates. The exported workbook is produced by copying the template and patching
-   worksheet XML cell values only; `workbook.save()` is not used for export.
+3. `app/report/excel_export.py` uses `openpyxl` to inspect anchors, write values to
+   existing template cells, and save the workbook. The exporter does not patch worksheet
+   XML directly because that can leave stale workbook internals such as `calcChain.xml`.
 4. Metadata fields are found by anchor labels and written to the merged cell immediately
    to the right of the label:
    - `manufacturer` -> `vehicle manufacture`
@@ -112,7 +112,8 @@ The export flow is:
    `CHEST / Chest Acc. 3ms Clip` export the SUMMARY REPORT `Multiple Peak 3ms`
    value while keeping the template row label unchanged.
 12. Fonts, fills, borders, alignment, row heights, column widths, merges, number formats,
-   and formulas are not modified by the exporter.
+   and formulas are not intentionally modified by the exporter. `openpyxl` may remove
+   stale calculation-chain metadata during save so Excel can recalculate cleanly.
 
 The current template has two occupant column groups:
 - first slot: `IARV` / `RESULT`
