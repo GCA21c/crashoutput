@@ -28,7 +28,8 @@
 |---|---|
 | `app/ui/pages/viewer_page.py` | viewer page |
 | `app/ui/pages/filtering_page.py` | filtering page |
-| `app/ui/pages/dummy_set_page.py` | dummy configuration page |
+| `app/ui/pages/test_setup_page.py` | test mode / dummy configuration page |
+| `app/ui/pages/dummy_set_page.py` | compatibility import shim for old DummySetPage references |
 | `app/ui/pages/injury_page.py` | injury workflow page |
 | `app/ui/pages/offset_page.py` | offset page |
 | `app/ui/pages/trimming_page.py` | trimming page |

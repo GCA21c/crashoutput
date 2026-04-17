@@ -13,7 +13,7 @@
 
 ## Review checklist
 - Does module navigation preserve result state?
-- Does dummy context propagate correctly from Dummy Set to injury tabs?
+- Does dummy context propagate correctly from TEST SETUP to injury tabs?
 - Do result summaries survive page switches?
 - Are viewer labels aligned with the intended generated/result channels?
 

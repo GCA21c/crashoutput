@@ -8,6 +8,7 @@ from .engine import (
     infer_dummy_profile_from_codes,
     resolve_dummy_profile_key,
 )
+from .filter_presets import FILTER_PRESET_DB, get_filter_preset_profile
 from .neck_dummy_profiles import NECK_DUMMY_PROFILES, get_neck_dummy_profile
 from .chest_dummy_profiles import CHEST_DUMMY_PROFILES, get_chest_dummy_profile
 from .femur_dummy_profiles import FEMUR_DUMMY_PROFILES, get_femur_dummy_profile
@@ -20,4 +21,5 @@ __all__ = [
     'NECK_DUMMY_PROFILES', 'get_neck_dummy_profile', 'CHEST_DUMMY_PROFILES', 'get_chest_dummy_profile',
     'FEMUR_DUMMY_PROFILES', 'get_femur_dummy_profile', 'ILIAC_DUMMY_PROFILES', 'get_iliac_dummy_profile',
     'TIBIA_DUMMY_PROFILES', 'get_tibia_dummy_profile',
+    'FILTER_PRESET_DB', 'get_filter_preset_profile',
 ]

@@ -18,7 +18,7 @@
 ## Architectural hotspots
 ### A. Multi-dummy hotspot
 - ISO prefix B1~B6가 channel routing의 기준이다.
-- dummy-set UI/state와 injury routing이 어긋나면 결과가 틀어진다.
+- TEST SETUP UI/state와 injury/filtering routing이 어긋나면 결과가 틀어진다.
 
 ### B. Filtering hotspot
 - preprocessing service는 전체 결과에 영향을 주는 핵심 경계다.
@@ -35,6 +35,6 @@
 - `app/services/preprocessing/service.py`
 - `app/services/injury/common_engines.py`
 - `app/ui/pages/injury_page.py`
-- `app/ui/pages/dummy_set_page.py`
+- `app/ui/pages/test_setup_page.py`
 - `app/core/dummy/engine.py`
 - `app/core/isocode/engine.py`

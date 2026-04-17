@@ -13,7 +13,7 @@ from app.ui.pages.offset_page import OffsetPage
 from app.ui.pages.filtering_page import FilteringPage
 from app.ui.pages.trimming_page import TrimmingPage
 from app.ui.pages.injury_page import InjuryPage
-from app.ui.pages.dummy_set_page import DummySetPage
+from app.ui.pages.test_setup_page import TestSetupPage
 from app.ui.pages.report_summary_page import ReportSummaryPage
 from app.ui.pages.report_ploting_page import ReportPlotingPage
 
@@ -146,8 +146,9 @@ class CrashAnalysisWorkbench(tk.Frame):
         title = tk.Label(self.sidebar, text="CRASH TOOLS", font=("Arial", 13, "bold"), bg="#f4f6fb", anchor="w", padx=14, pady=14)
         title.pack(fill=tk.X)
 
-        self._add_nav_button("viewer", "VIEWER")
+        self._add_nav_button("viewer", "DATA VIEWER")
         self._add_nav_section("PRE-PROCESSING")
+        self._add_nav_button("test_setup", "TEST SETUP", indent=18)
         self._add_nav_button("offset", "DATA OFFSET", indent=18)
         self._add_nav_button("filtering", "DATA FILTERING", indent=18)
         self._add_nav_button("trimming", "DATA TRIMMING", indent=18)
@@ -191,7 +192,8 @@ class CrashAnalysisWorkbench(tk.Frame):
         self.pages["knee"] = InjuryPage(self.page_host, self, initial_mode="knee", show_internal_menu=False)
         self.pages["iliac"] = InjuryPage(self.page_host, self, initial_mode="iliac", show_internal_menu=False)
         self.pages["tibia"] = InjuryPage(self.page_host, self, initial_mode="tibia", show_internal_menu=False)
-        self.pages["dummyset"] = DummySetPage(self.page_host, self)
+        self.pages["test_setup"] = TestSetupPage(self.page_host, self)
+        self.pages["dummyset"] = self.pages["test_setup"]
         self.pages["report_summary"] = ReportSummaryPage(self.page_host, self)
         self.pages["report_ploting"] = ReportPlotingPage(self.page_host, self)
         self._apply_injury_mode_nav()
@@ -234,8 +236,6 @@ class CrashAnalysisWorkbench(tk.Frame):
             padx=32,
             pady=6,
         ).pack(side=tk.LEFT)
-
-        self._add_nav_button("dummyset", "DUMMY SET", indent=34, parent=group)
 
         self._injury_nav_frame = tk.Frame(group, bg="#f4f6fb")
         self._injury_nav_frame.pack(fill=tk.X)
@@ -291,6 +291,8 @@ class CrashAnalysisWorkbench(tk.Frame):
         self._apply_injury_mode_nav()
 
     def show_page(self, key):
+        if key == "dummyset":
+            key = "test_setup"
         if key not in self.pages:
             return
         if key in self.injury_page_keys and key not in self._available_injury_pages():
