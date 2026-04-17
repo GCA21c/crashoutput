@@ -291,12 +291,26 @@ class ReportSummaryPage(tk.Frame):
             )
 
     def _report_fields(self):
+        config = self.workbench.get_shared_dummy_config() if hasattr(self.workbench, "get_shared_dummy_config") else {}
+        slot_meta = dict((config or {}).get("slot_meta") or {})
+        occupant_slots = []
+        for slot in list((config or {}).get("active_positions") or []):
+            slot_key = str(slot or "").strip().upper()
+            if not slot_key:
+                continue
+            meta = dict(slot_meta.get(slot_key) or {})
+            occupant_slots.append({
+                "slot": slot_key,
+                "dummy_name": str(meta.get("dummy_name") or "").strip(),
+                "dummy_profile": str(meta.get("dummy_profile") or "").strip(),
+            })
         return {
             "manufacturer": self.manufacturer_var.get().strip(),
             "vehicle": self.vehicle_var.get().strip(),
             "speed": self.speed_var.get().strip(),
             "test_date": self.test_date_var.get().strip(),
             "test_id": self.test_id_var.get().strip(),
+            "occupant_slots": occupant_slots,
         }
 
     def _build_report_payload(self):

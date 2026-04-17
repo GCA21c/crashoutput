@@ -162,6 +162,22 @@ def _occupant_label(slot_info):
     return name or profile or None
 
 
+def _occupant_slot_infos(snapshot, report_fields):
+    snapshot_slots = list((snapshot or {}).get("slots") or [])
+    field_slots = list(dict(report_fields or {}).get("occupant_slots") or [])
+    result = []
+    max_len = max(len(snapshot_slots), len(field_slots))
+    for index in range(max_len):
+        snap = dict(snapshot_slots[index] or {}) if index < len(snapshot_slots) else {}
+        field = dict(field_slots[index] or {}) if index < len(field_slots) else {}
+        result.append({
+            "slot": snap.get("slot") or field.get("slot") or "",
+            "dummy_name": snap.get("dummy_name") or field.get("dummy_name") or "",
+            "dummy_profile": snap.get("dummy_profile") or field.get("dummy_profile") or "",
+        })
+    return result
+
+
 def _template_alias_candidates(region, template_label):
     mapping = SUMMARY_CRITERIA_ALIASES.get(region, {})
     candidates = [template_label]
@@ -304,7 +320,7 @@ def export_summary_report_to_excel(snapshot, report_fields, output_path, templat
             written_meta += 1
 
     written_occupants = 0
-    for cell_ref, slot_info in zip(SUMMARY_OCCUPANT_LABEL_CELLS, list((snapshot or {}).get("slots") or [])):
+    for cell_ref, slot_info in zip(SUMMARY_OCCUPANT_LABEL_CELLS, _occupant_slot_infos(snapshot or {}, report_fields or {})):
         if _record_cell_value(cell_values, worksheet, worksheet[cell_ref], _occupant_label(slot_info)):
             written_occupants += 1
 
