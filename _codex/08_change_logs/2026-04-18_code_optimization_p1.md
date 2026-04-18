@@ -21,6 +21,9 @@
 - Updated the file responsibility map for the new runtime export helper.
 - Started Phase 2-A by adding shared UI style constants and applying them only to
   `app/shell.py` and `app/ui/pages/report_ploting_page.py`.
+- Closed Phase 2-A after user confirmed normal program behavior.
+- Started Phase 2-B by moving REPORT SUMMARY presentation constants out of
+  `app/ui/pages/report_summary_page.py` into `app/ui/pages/report_summary_constants.py`.
 
 ## Why
 - Keep REPORT page code focused on UI flow while moving export runtime concerns into
@@ -38,3 +41,5 @@
   still depends on the OS file association and may need direct user verification.
 - Phase 2-A is a UI constant split only. It should not affect calculation, report payload,
   filtering, or export contracts.
+- Phase 2-B is also presentation-only. Summary payload keys, Excel export behavior,
+  save/load metadata, filtering, and injury calculations are unchanged.

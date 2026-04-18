@@ -9,11 +9,39 @@ from app.report import (
     get_regulation_definition,
 )
 from app.report.exporters.runtime import open_export_file, unique_export_path
+from app.ui.pages.report_summary_constants import (
+    BUTTON_EXCEL_EXPORT,
+    BUTTON_SAVE,
+    BUTTON_VALUATION,
+    INFO_GROUP_TITLE,
+    INPUT_GROUP_TITLE,
+    LOADED_GROUP_TITLE,
+    LOADED_VALUES_INITIAL,
+    LOADED_VALUES_WAITING,
+    PAGE_TITLE,
+    REGULATION_MODE_LABEL,
+    REPORT_INPUT_FIELDS,
+    SELECTED_REGULATION_FIELDS,
+    SOURCE_DISPLAY_NAMES,
+    STATUS_LOAD_DATASET_FIRST,
+    STATUS_LOADED_SAVED,
+    STATUS_NO_NUMERIC_VALUES,
+    STATUS_NO_ROWS,
+    STATUS_READY,
+    STATUS_VALUATION_REFRESHED,
+    STATUS_WAITING,
+    SUMMARY_GUIDE_TEXT,
+    SUMMARY_TABLE_COLUMNS,
+    SUMMARY_TABLE_COLUMN_SPECS,
+    TABLE_GROUP_TITLE,
+    TREE_STATUS_TAG_COLORS,
+)
+from app.ui.styles import HEADER_FONT, MUTED_FG, PAGE_BG, TEXT_FG
 
 
 class ReportSummaryPage(tk.Frame):
     def __init__(self, parent, workbench):
-        super().__init__(parent, bg="#ffffff")
+        super().__init__(parent, bg=PAGE_BG)
         self.workbench = workbench
         choices = get_regulation_choices()
         self.regulation_var = tk.StringVar(value=(choices[0] if choices else ""))
@@ -22,8 +50,8 @@ class ReportSummaryPage(tk.Frame):
         self.speed_var = tk.StringVar()
         self.test_date_var = tk.StringVar()
         self.test_id_var = tk.StringVar()
-        self.status_var = tk.StringVar(value="Summary report is ready.")
-        self.loaded_values_var = tk.StringVar(value="Loaded injury values: 0")
+        self.status_var = tk.StringVar(value=STATUS_READY)
+        self.loaded_values_var = tk.StringVar(value=LOADED_VALUES_INITIAL)
         self._loaded_dataset_identity = None
         self._snapshot = None
         self._valuation_ready = False
@@ -32,20 +60,20 @@ class ReportSummaryPage(tk.Frame):
             var.trace_add("write", lambda *_: self._cache_report_state_in_memory())
 
     def _build_ui(self):
-        outer = tk.Frame(self, bg="#ffffff")
+        outer = tk.Frame(self, bg=PAGE_BG)
         outer.pack(fill=tk.BOTH, expand=True, anchor="nw")
 
-        body = tk.Frame(outer, bg="#ffffff")
+        body = tk.Frame(outer, bg=PAGE_BG)
         body.pack(fill=tk.BOTH, expand=True, anchor="nw", padx=16, pady=(16, 8))
 
-        header = tk.Frame(body, bg="#ffffff")
+        header = tk.Frame(body, bg=PAGE_BG)
         header.pack(fill=tk.X, pady=(0, 10))
-        tk.Label(header, text="REPORT - SUMMARY", font=("Arial", 15, "bold"), bg="#ffffff").pack(side=tk.LEFT)
+        tk.Label(header, text=PAGE_TITLE, font=HEADER_FONT, bg=PAGE_BG).pack(side=tk.LEFT)
 
-        top = tk.Frame(body, bg="#ffffff")
+        top = tk.Frame(body, bg=PAGE_BG)
         top.pack(fill=tk.X, pady=(0, 12))
 
-        tk.Label(top, text="평가모드", bg="#ffffff", anchor="w").pack(side=tk.LEFT, padx=(2, 10))
+        tk.Label(top, text=REGULATION_MODE_LABEL, bg=PAGE_BG, anchor="w").pack(side=tk.LEFT, padx=(2, 10))
 
         self.regulation_combo = ttk.Combobox(
             top,
@@ -57,43 +85,36 @@ class ReportSummaryPage(tk.Frame):
         self.regulation_combo.pack(side=tk.LEFT, padx=(0, 12))
         self.regulation_combo.bind("<<ComboboxSelected>>", self._on_regulation_changed)
 
-        tk.Button(top, text="Valuation", command=self.run_valuation, width=12).pack(side=tk.LEFT, padx=(4, 0))
-        tk.Button(top, text="Save", command=self.save_report, width=10).pack(side=tk.LEFT, padx=(8, 0))
-        tk.Button(top, text="EXCEL EXPORT", command=self.export_excel, width=14).pack(side=tk.LEFT, padx=(8, 0))
+        tk.Button(top, text=BUTTON_VALUATION, command=self.run_valuation, width=12).pack(side=tk.LEFT, padx=(4, 0))
+        tk.Button(top, text=BUTTON_SAVE, command=self.save_report, width=10).pack(side=tk.LEFT, padx=(8, 0))
+        tk.Button(top, text=BUTTON_EXCEL_EXPORT, command=self.export_excel, width=14).pack(side=tk.LEFT, padx=(8, 0))
 
-        input_box = tk.LabelFrame(body, text="Report Inputs", bg="#ffffff")
+        input_box = tk.LabelFrame(body, text=INPUT_GROUP_TITLE, bg=PAGE_BG)
         input_box.pack(fill=tk.X, pady=(0, 10))
-        inputs_row = tk.Frame(input_box, bg="#ffffff")
+        inputs_row = tk.Frame(input_box, bg=PAGE_BG)
         inputs_row.pack(fill=tk.X, padx=10, pady=8)
-        self._inline_entry(inputs_row, "Manufacturer", self.manufacturer_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 6))
-        self._inline_entry(inputs_row, "Vehicle", self.vehicle_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=6)
-        self._inline_entry(inputs_row, "Speed", self.speed_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=6)
-        self._inline_entry(inputs_row, "Test DATE", self.test_date_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=6)
-        self._inline_entry(inputs_row, "Test ID", self.test_id_var).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(6, 0))
+        input_vars = self._report_input_variables()
+        for index, (label, field_key) in enumerate(REPORT_INPUT_FIELDS):
+            padx = (0, 6) if index == 0 else ((6, 0) if index == len(REPORT_INPUT_FIELDS) - 1 else 6)
+            self._inline_entry(inputs_row, label, input_vars[field_key]).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=padx)
 
-        info_row = tk.Frame(body, bg="#ffffff")
+        info_row = tk.Frame(body, bg=PAGE_BG)
         info_row.pack(fill=tk.X, pady=(0, 10))
 
-        selected_box = tk.LabelFrame(info_row, text="Selected Regulation", bg="#ffffff")
+        selected_box = tk.LabelFrame(info_row, text=INFO_GROUP_TITLE, bg=PAGE_BG)
         selected_box.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 6))
-        for idx, (label_text, variable) in enumerate((
-            ("Regulation", self.regulation_var),
-            ("Manufacturer", self.manufacturer_var),
-            ("Vehicle", self.vehicle_var),
-            ("Speed", self.speed_var),
-            ("Test DATE", self.test_date_var),
-            ("Test ID", self.test_id_var),
-        )):
-            pady = (8, 2) if idx == 0 else ((2, 8) if idx == 5 else 2)
-            tk.Label(selected_box, text=label_text, bg="#ffffff", width=12, anchor="w").grid(row=idx, column=0, padx=10, pady=pady, sticky="w")
-            tk.Label(selected_box, textvariable=variable, bg="#ffffff", anchor="w").grid(row=idx, column=1, padx=(0, 10), pady=pady, sticky="w")
+        selected_vars = self._selected_regulation_variables()
+        for idx, (label_text, field_key) in enumerate(SELECTED_REGULATION_FIELDS):
+            pady = (8, 2) if idx == 0 else ((2, 8) if idx == len(SELECTED_REGULATION_FIELDS) - 1 else 2)
+            tk.Label(selected_box, text=label_text, bg=PAGE_BG, width=12, anchor="w").grid(row=idx, column=0, padx=10, pady=pady, sticky="w")
+            tk.Label(selected_box, textvariable=selected_vars[field_key], bg=PAGE_BG, anchor="w").grid(row=idx, column=1, padx=(0, 10), pady=pady, sticky="w")
 
-        loaded_box = tk.LabelFrame(info_row, text="Loaded Injury Values", bg="#ffffff")
+        loaded_box = tk.LabelFrame(info_row, text=LOADED_GROUP_TITLE, bg=PAGE_BG)
         loaded_box.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(6, 0))
         tk.Label(
             loaded_box,
             textvariable=self.loaded_values_var,
-            bg="#ffffff",
+            bg=PAGE_BG,
             justify="left",
             anchor="w",
             wraplength=360,
@@ -101,51 +122,34 @@ class ReportSummaryPage(tk.Frame):
         tk.Label(
             loaded_box,
             textvariable=self.status_var,
-            bg="#ffffff",
-            fg="#374151",
+            bg=PAGE_BG,
+            fg=TEXT_FG,
             justify="left",
             anchor="w",
             wraplength=360,
         ).pack(fill=tk.X, padx=10, pady=(0, 8))
 
-        table_box = tk.LabelFrame(body, text="SUMMARY REPORT", bg="#ffffff")
+        table_box = tk.LabelFrame(body, text=TABLE_GROUP_TITLE, bg=PAGE_BG)
         table_box.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
 
-        guide = tk.Frame(table_box, bg="#ffffff")
+        guide = tk.Frame(table_box, bg=PAGE_BG)
         guide.pack(fill=tk.X, padx=8, pady=(8, 0))
         tk.Label(
             guide,
-            text=(
-                "Status: PASS=limit 만족, FAIL=limit 초과, MISSING=저장된 결과값 없음, N/A=비교 limit 없음 | "
-                "Source: Saved value=uid 결과 payload에 구조화된 수치가 저장되어 그 값을 직접 읽음"
-            ),
-            bg="#ffffff",
-            fg="#4b5563",
+            text=SUMMARY_GUIDE_TEXT,
+            bg=PAGE_BG,
+            fg=MUTED_FG,
             justify="left",
             anchor="w",
             wraplength=980,
         ).pack(fill=tk.X)
 
-        columns = ("slot", "dummy", "region", "criterion", "value", "unit", "limit", "status", "uid", "source")
-        self.tree = ttk.Treeview(table_box, columns=columns, show="headings", height=16)
-        for column, heading, width in (
-            ("slot", "Slot", 60),
-            ("dummy", "Dummy", 160),
-            ("region", "Injury/Region", 105),
-            ("criterion", "Criteria", 230),
-            ("value", "Value", 90),
-            ("unit", "Unit", 70),
-            ("limit", "Limit", 90),
-            ("status", "Status", 80),
-            ("uid", "Result UID", 290),
-            ("source", "Source", 90),
-        ):
+        self.tree = ttk.Treeview(table_box, columns=SUMMARY_TABLE_COLUMNS, show="headings", height=16)
+        for column, heading, width in SUMMARY_TABLE_COLUMN_SPECS:
             self.tree.heading(column, text=heading)
             self.tree.column(column, width=width, anchor="w")
-        self.tree.tag_configure("PASS", foreground="#166534")
-        self.tree.tag_configure("FAIL", foreground="#b91c1c")
-        self.tree.tag_configure("MISSING", foreground="#6b7280")
-        self.tree.tag_configure("N/A", foreground="#1f2937")
+        for tag, color in TREE_STATUS_TAG_COLORS.items():
+            self.tree.tag_configure(tag, foreground=color)
 
         y_scroll = ttk.Scrollbar(table_box, orient=tk.VERTICAL, command=self.tree.yview)
         self.tree.configure(yscrollcommand=y_scroll.set)
@@ -153,10 +157,24 @@ class ReportSummaryPage(tk.Frame):
         y_scroll.pack(side=tk.RIGHT, fill=tk.Y, padx=(0, 8), pady=8)
 
     def _inline_entry(self, parent, label, variable):
-        frame = tk.Frame(parent, bg="#ffffff")
-        tk.Label(frame, text=label, bg="#ffffff", anchor="w").pack(anchor="w")
+        frame = tk.Frame(parent, bg=PAGE_BG)
+        tk.Label(frame, text=label, bg=PAGE_BG, anchor="w").pack(anchor="w")
         tk.Entry(frame, textvariable=variable, width=18).pack(fill=tk.X, pady=(3, 0))
         return frame
+
+    def _report_input_variables(self):
+        return {
+            "manufacturer": self.manufacturer_var,
+            "vehicle": self.vehicle_var,
+            "speed": self.speed_var,
+            "test_date": self.test_date_var,
+            "test_id": self.test_id_var,
+        }
+
+    def _selected_regulation_variables(self):
+        variables = self._report_input_variables()
+        variables["regulation"] = self.regulation_var
+        return variables
 
     def _dataset_identity(self):
         current = getattr(self.workbench, "current_file_path", None) or ""
@@ -184,7 +202,7 @@ class ReportSummaryPage(tk.Frame):
             total_rows = len(restored_snapshot.get("rows") or [])
             loaded_rows = int(restored_snapshot.get("value_count") or 0)
             self.loaded_values_var.set(f"Loaded injury values: {loaded_rows} / {total_rows}")
-            self.status_var.set("Loaded saved summary report results.")
+            self.status_var.set(STATUS_LOADED_SAVED)
         else:
             self._snapshot = None
             self._valuation_ready = False
@@ -261,11 +279,7 @@ class ReportSummaryPage(tk.Frame):
             value_text = self._tree_value_text(row.get("value"))
             limit_text = self._tree_value_text(row.get("limit"))
             source_name = row.get("value_source")
-            source_text = {
-                "report_values": "Saved value (report_values)",
-                "structured_metrics": "Saved value (structured_metrics)",
-                "top_level": "Saved value (top-level payload)",
-            }.get(source_name, "-")
+            source_text = SOURCE_DISPLAY_NAMES.get(source_name, "-")
             tag = row.get("status") or "N/A"
             self.tree.insert(
                 "",
@@ -409,11 +423,11 @@ class ReportSummaryPage(tk.Frame):
         self._valuation_ready = False
         if hasattr(self, "tree"):
             self.tree.delete(*self.tree.get_children())
-        self.loaded_values_var.set("Loaded injury values: waiting for Valuation")
+        self.loaded_values_var.set(LOADED_VALUES_WAITING)
         if getattr(self.workbench, "working_df", None) is None:
-            self.status_var.set("Load a dataset first.")
+            self.status_var.set(STATUS_LOAD_DATASET_FIRST)
         else:
-            self.status_var.set("SUMMARY REPORT is waiting. Click Valuation to load uid-based results.")
+            self.status_var.set(STATUS_WAITING)
 
     def run_valuation(self):
         snapshot = build_report_snapshot(getattr(self.workbench, "dataset_metadata", {}) or {}, self.regulation_var.get())
@@ -424,13 +438,13 @@ class ReportSummaryPage(tk.Frame):
         loaded_rows = int(snapshot.get("value_count") or 0)
         self.loaded_values_var.set(f"Loaded injury values: {loaded_rows} / {total_rows}")
         if getattr(self.workbench, "working_df", None) is None:
-            self.status_var.set("Load a dataset first.")
+            self.status_var.set(STATUS_LOAD_DATASET_FIRST)
         elif not snapshot.get("rows"):
-            self.status_var.set("No summary rows are available for the selected regulation.")
+            self.status_var.set(STATUS_NO_ROWS)
         elif loaded_rows == 0:
-            self.status_var.set("Stored uid results were found, but no numeric values are currently extractable for the selected regulation.")
+            self.status_var.set(STATUS_NO_NUMERIC_VALUES)
         else:
-            self.status_var.set("Valuation refreshed from existing uid-based saved results.")
+            self.status_var.set(STATUS_VALUATION_REFRESHED)
         self._cache_report_state_in_memory()
 
     def save_report(self):
@@ -508,8 +522,8 @@ class ReportSummaryPage(tk.Frame):
         self.speed_var.set("")
         self.test_date_var.set("")
         self.test_id_var.set("")
-        self.status_var.set("Summary report is ready.")
-        self.loaded_values_var.set("Loaded injury values: waiting for Valuation")
+        self.status_var.set(STATUS_READY)
+        self.loaded_values_var.set(LOADED_VALUES_WAITING)
         self._snapshot = None
         self._valuation_ready = False
         if hasattr(self, "tree"):

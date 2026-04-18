@@ -22,7 +22,8 @@
 | Phase 1-D | Done | rename candidate list documented; no code rename |
 | Phase 1-E | Done | user accepted deferring actual internal key/class/file renames |
 | Phase 1 | Closed | user tested overall program as normal after Phase 1 |
-| Phase 2-A | Ready for user test | shared UI style constants added; applied only to shell/report plotting page |
+| Phase 2-A | Done | user tested normal startup/navigation after shared UI style constants split |
+| Phase 2-B | Ready for user test | report summary presentation constants split; report/export contracts unchanged |
 | Phase 2 | In Progress | low-risk split started; calculation logic remains off-limits |
 | Phase 3 | Blocked | Requires snapshot comparison criteria |
 | Phase 4 | Blocked | Requires Phase 1-3 completion |
@@ -38,7 +39,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-User test for Phase 2-A.
+User test for Phase 2-B.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.
@@ -55,6 +56,7 @@ Phase 1-C decisions:
 - Program starts and overall behavior is normal after Quick Win and Phase 1-B/C partial changes.
 - Phase 1-C final alias/comment contract changes were user-tested as normal overall startup/navigation.
 - Phase 1-E deferral decision was accepted, and the overall program was user-tested as normal.
+- Phase 2-A shared UI style constants split was user-tested as normal.
 
 ## Phase 1-D candidate decisions
 - Keep `report_ploting` as registered internal page key.
@@ -88,4 +90,16 @@ Phase 1-C decisions:
   - `app/shell.py`
   - `app/ui/pages/report_ploting_page.py`
 - This is a UI style constant split only.
-- User should test startup, sidebar navigation, resize overlay, and REPORT > PLOTTING before the next Phase 2 slice.
+- User tested startup/navigation as normal before the next Phase 2 slice.
+
+## Phase 2-B candidate scope
+- Continue only with another low-risk separation.
+- Recommended next unit: move report summary UI label/order constants that are purely presentation-level.
+- Do not touch Excel writer behavior, summary payload keys, metric extraction, filtering, or injury calculation.
+
+## Phase 2-B scope
+- Added `app/ui/pages/report_summary_constants.py` for report summary presentation constants.
+- Moved only UI labels, table headings, table status colors, source display names, and status strings.
+- Kept `app/ui/pages/report_summary_page.py` responsible for page behavior.
+- Did not change summary payload keys, report snapshot building, save/load metadata, Excel writer behavior, filtering, or injury calculation.
+- User should test REPORT - SUMMARY screen rendering, Valuation button, Save button visibility, Excel Export button visibility, and saved summary reload display before the next Phase 2 slice.
