@@ -45,6 +45,11 @@
   - removed unused `ReportSummaryPage._occupant_slots_from_config()`
   - removed unused `ReportSummaryPage._merge_occupant_slots()`
   - kept `ReportSummaryPage._report_fields()` as the page entry point
+- Closed Phase 3-I after user testing passed.
+- Closed Phase 3 at the occupant helper boundary:
+  - kept report engine slot identity unchanged
+  - deferred calculation-adjacent helper commonization until stronger numeric regression coverage exists
+  - left Phase 4 as the next explicitly approved orchestration-split phase
 
 ## Why
 - Phase 3 helper commonization can indirectly change report values, occupant labels,
@@ -63,5 +68,6 @@
 - Phase 3-G changes only helper location behind the existing REPORT SUMMARY `_report_fields()` entry point.
 - Phase 3-H removes unused Excel private wrapper code only.
 - Phase 3-I removes unused REPORT SUMMARY wrapper methods after user testing confirmed the helper path.
+- Phase 3-J is documentation-only closure and does not change runtime code.
 - Filtering, injury calculation, report extraction, payload keys, metadata keys, and
   Excel writer behavior remain untouched.

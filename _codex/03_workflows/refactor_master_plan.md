@@ -314,6 +314,16 @@ Phase 3-I implementation record:
 - Occupant helper commonization remains limited to report metadata/display assembly and does not touch
   report engine slot identity.
 
+Phase 3-J closure decision:
+- Phase 3 is closed at the occupant helper boundary.
+- This branch does not continue into time/value valid mask, peak helper, force/moment unit conversion,
+  or `_gradient_contiguous` commonization because those helpers are calculation-adjacent and require
+  stronger numeric regression fixtures.
+- Phase 4 may start only after explicit user approval and should begin with orchestration splitting,
+  not filtering math or injury formula changes.
+- Keep `ReportSummaryPage._report_fields()` as a page-state boundary until Phase 4 report orchestration
+  work starts.
+
 Early Phase 3 must not touch:
 - peak helpers
 - force/moment unit conversion

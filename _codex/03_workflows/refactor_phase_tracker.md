@@ -40,9 +40,10 @@
 | Phase 3-F | Done | user tested Excel occupant slot info wrapper |
 | Phase 3-G | Done | user tested REPORT SUMMARY report field assembly helper |
 | Phase 3-H | Done | user tested unused Excel occupant wrapper cleanup |
-| Phase 3-I | Ready for user test | removed unused REPORT SUMMARY occupant wrapper methods |
-| Phase 3 | In Progress | first helper commonization started with occupant helper only |
-| Phase 4 | Blocked | Requires Phase 1-3 completion |
+| Phase 3-I | Done | user tested REPORT SUMMARY occupant wrapper closure |
+| Phase 3-J | Done | Phase 3 closure boundary documented; calculation-adjacent helpers deferred |
+| Phase 3 | Closed | occupant helper commonization complete and user-tested |
+| Phase 4 | Ready | Requires explicit user approval before starting orchestration split |
 | Phase 5 | Blocked | Requires regression coverage and explicit approval |
 
 ## Completed work on this branch
@@ -55,7 +56,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-User test for Phase 3-I REPORT SUMMARY occupant wrapper closure.
+Wait for explicit user approval before starting Phase 4 orchestration split.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.
@@ -393,3 +394,26 @@ Deferred occupant-related moves:
   `report_fields_from_sources()`.
 - REPORT SUMMARY occupant source precedence, save/load metadata keys, report payload keys,
   filtering, and injury calculation remain unchanged.
+- User tested the Phase 3-I wrapper closure as normal.
+
+## Phase 3-J closure boundary
+- Phase 3 is closed after occupant helper commonization only.
+- Completed common helper scope:
+  - `normalize_slot_key()`
+  - `occupant_slots_from_config()`
+  - `merge_occupant_slots()`
+  - `occupant_label()`
+  - `dummy_name_from_slot_label()`
+  - `occupant_slot_infos_from_snapshot()`
+  - `report_fields_from_sources()`
+- Kept intentionally unchanged:
+  - `ReportSummaryPage._report_fields()` page entry point
+  - Excel `_occupant_label()` and `_occupant_slot_infos()` active wrappers
+  - Excel `_occupant_input_cells()` and C9/G9 target selection
+  - `app/report/engine.py` `_slot_identity()`
+- Deferred out of Phase 3 because they can affect numeric results:
+  - time/value valid mask helpers
+  - peak helpers
+  - force/moment unit conversion helpers
+  - `_gradient_contiguous`
+  - filtering math and derived channel generation

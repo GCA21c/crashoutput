@@ -317,3 +317,12 @@ Phase 3-I implementation status:
 - `ReportSummaryPage._report_fields()` remains in the page because it still owns page state access:
   Tk variables, workbench metadata, current snapshot, and saved summary payload.
 - `app/report/engine.py` slot identity remains unchanged.
+
+Phase 3-J closure status:
+- Occupant helper commonization is complete for this phase.
+- `app/report/occupants.py` is the shared location for occupant slot normalization, merge, label,
+  Excel slot info, and REPORT SUMMARY report-field assembly helper logic.
+- The report engine slot identity path remains unchanged and should be treated as a snapshot contract
+  boundary until a later explicitly approved phase.
+- Calculation-adjacent helpers such as peak, unit conversion, time/value masks, and gradients are not
+  part of this Phase 3 closure.
