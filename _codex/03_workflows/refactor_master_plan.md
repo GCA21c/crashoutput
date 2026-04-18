@@ -152,6 +152,31 @@ Rollback:
 - 이동한 helper를 page local method로 되돌린다.
 - style constants 적용은 import 제거 후 literal 복원 가능해야 한다.
 
+### Phase 2 closure decision for `코드최적화p1`
+Phase 2 is limited to low-risk UI/presentation/runtime helper cleanup.
+
+Completed scope:
+- Shared Tk color/font constants in `app/ui/styles.py`.
+- REPORT PLOTTING and shell style constant adoption.
+- REPORT SUMMARY presentation constants in `app/ui/pages/report_summary_constants.py`.
+- REPORT SUMMARY local helper wrappers for dialogs, loaded-count display, input variable handling,
+  Valuation status selection, and Excel export success UI follow-up.
+
+Explicitly deferred from Phase 2:
+- `report_summary_page.py` `_build_report_payload()`
+- `report_summary_page.py` `_cache_report_state_in_memory()`
+- `report_summary_page.py` `_snapshot_from_saved_report()`
+- `report_summary_page.py` `_report_fields()` occupant slot merge behavior
+- Excel writer internals and template mapping rules
+- report snapshot extraction contract
+- filtering / trimming / injury calculations
+
+Phase 2 exit condition:
+1. Final whole-program user test passes.
+2. Phase 2 tracker is marked closed.
+3. The branch is committed and merged/pushed as requested.
+4. Phase 3 starts from a new branch, not directly inside the Phase 2 branch.
+
 ## Phase 3 - Helper commonization
 목표:
 - 중복 helper를 공통화하되 결과 동일성 검증을 먼저 둔다.

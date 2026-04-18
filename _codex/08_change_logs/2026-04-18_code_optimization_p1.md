@@ -39,6 +39,8 @@
 - Started Phase 2-G by moving REPORT SUMMARY Valuation status selection into a small helper.
 - Closed Phase 2-G after user confirmed normal behavior.
 - Started Phase 2-H by moving REPORT SUMMARY Excel export success UI follow-up into a helper.
+- Closed Phase 2-H after user confirmed normal behavior.
+- Added the Phase 2-I closure boundary and final-test checklist before Phase 3.
 
 ## Why
 - Keep REPORT page code focused on UI flow while moving export runtime concerns into
@@ -70,3 +72,5 @@
   into a helper.
 - Phase 2-H keeps Excel export behavior unchanged and only moves the success UI follow-up
   into a helper.
+- Phase 2-I is documentation-only. Phase 3 remains blocked until final Phase 2 testing,
+  commit/merge decision, and a new branch.
