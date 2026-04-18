@@ -36,7 +36,8 @@
 | Phase 3-B | Done | occupant helper usage analysis reviewed; no code changes |
 | Phase 3-C | Done | user tested first occupant helper extraction |
 | Phase 3-D | Done | user tested Excel occupant label helper reuse |
-| Phase 3-E | Ready for user test | Excel occupant slot merge reuses shared helper |
+| Phase 3-E | Done | user tested Excel occupant slot merge helper reuse |
+| Phase 3-F | Ready for user test | Excel occupant slot info body moved behind wrapper |
 | Phase 3 | In Progress | first helper commonization started with occupant helper only |
 | Phase 4 | Blocked | Requires Phase 1-3 completion |
 | Phase 5 | Blocked | Requires regression coverage and explicit approval |
@@ -51,7 +52,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-User test for Phase 3-E Excel occupant slot merge helper reuse.
+User test for Phase 3-F Excel occupant slot info wrapper.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.
@@ -344,6 +345,19 @@ Deferred occupant-related moves:
 ## Phase 3-E Excel occupant slot merge helper reuse
 - Excel `_occupant_slot_infos()` now delegates the final slot merge to `merge_occupant_slots()`.
 - The input precedence remains:
+  1. `report_fields.occupant_slots`
+  2. snapshot `slots`
+  3. snapshot `rows`
+- Excel row fallback still extracts dummy name from `slot_label` when needed.
+- `_occupant_input_cells()` and C9/G9 target selection remain unchanged.
+- Report engine slot identity remains unchanged.
+- Save/load metadata keys, report payload keys, filtering, and injury calculation remain unchanged.
+- User tested Excel C9/G9 occupant labels and REPORT SUMMARY Save / `_R` reload before further occupant refactor.
+
+## Phase 3-F Excel occupant slot info wrapper
+- Added `occupant_slot_infos_from_snapshot()` to `app/report/occupants.py`.
+- Excel `_occupant_slot_infos()` remains as a wrapper and delegates to the shared helper.
+- The source precedence remains:
   1. `report_fields.occupant_slots`
   2. snapshot `slots`
   3. snapshot `rows`

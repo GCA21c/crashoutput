@@ -74,3 +74,24 @@ def merge_occupant_slots(*slot_groups):
             if dummy_profile and not current["dummy_profile"]:
                 current["dummy_profile"] = dummy_profile
     return [merged[slot] for slot in order]
+
+
+def occupant_slot_infos_from_snapshot(snapshot, report_fields):
+    report_slots = list(dict(report_fields or {}).get("occupant_slots") or [])
+    snapshot_slots = list((snapshot or {}).get("slots") or [])
+    row_slots = []
+    for row in list((snapshot or {}).get("rows") or []):
+        row = dict(row or {})
+        slot_key = normalize_slot_key(row.get("slot"))
+        dummy_name = str(row.get("dummy_name") or "").strip() or dummy_name_from_slot_label(row.get("slot_label"), slot_key)
+        dummy_profile = str(row.get("dummy_profile") or row.get("criterion_key") or "").strip()
+        row_slots.append({
+            "slot": slot_key,
+            "dummy_name": dummy_name,
+            "dummy_profile": dummy_profile,
+        })
+    return [
+        slot_info
+        for slot_info in merge_occupant_slots(report_slots, snapshot_slots, row_slots)
+        if occupant_label(slot_info)
+    ]

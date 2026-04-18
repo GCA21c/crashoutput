@@ -296,3 +296,8 @@ Phase 3-E implementation status:
 - Its final merge now uses `merge_occupant_slots()`.
 - The source order stays `report_fields.occupant_slots`, snapshot `slots`, then snapshot `rows`.
 - `_occupant_input_cells()` and C9/G9 target selection remain unchanged.
+
+Phase 3-F implementation status:
+- `occupant_slot_infos_from_snapshot()` now lives in `app/report/occupants.py`.
+- Excel `_occupant_slot_infos()` remains as a wrapper for rollback and delegates to that helper.
+- `_occupant_input_cells()` and C9/G9 target selection remain unchanged.

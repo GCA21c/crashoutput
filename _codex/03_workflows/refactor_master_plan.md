@@ -291,6 +291,11 @@ Phase 3-E implementation record:
 - Excel occupant precedence remains report fields, snapshot slots, then snapshot rows.
 - Excel C9/G9 input cell detection remains unchanged.
 
+Phase 3-F implementation record:
+- `occupant_slot_infos_from_snapshot()` was added to `app/report/occupants.py`.
+- Excel `_occupant_slot_infos()` remains as a wrapper for rollback and delegates to the shared helper.
+- Excel C9/G9 input cell detection remains unchanged.
+
 Early Phase 3 must not touch:
 - peak helpers
 - force/moment unit conversion

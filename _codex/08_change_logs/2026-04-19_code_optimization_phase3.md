@@ -27,6 +27,11 @@
   - `_occupant_slot_infos()` remains in the Excel exporter
   - final merge delegates to `merge_occupant_slots()`
   - source precedence and C9/G9 cell selection remain unchanged
+- Closed Phase 3-E after user testing passed.
+- Implemented Phase 3-F Excel occupant slot info wrapper:
+  - added `occupant_slot_infos_from_snapshot()` to `app/report/occupants.py`
+  - kept Excel `_occupant_slot_infos()` as a wrapper
+  - source precedence and C9/G9 cell selection remain unchanged
 
 ## Why
 - Phase 3 helper commonization can indirectly change report values, occupant labels,
@@ -41,5 +46,6 @@
 - Phase 3-C changed helper location but preserved wrapper methods.
 - Phase 3-D changes only wrapper helper delegation for Excel occupant labels.
 - Phase 3-E changes only the internal merge helper used by Excel occupant slot resolution.
+- Phase 3-F changes only helper location behind the existing Excel wrapper.
 - Filtering, injury calculation, report extraction, payload keys, metadata keys, and
   Excel writer behavior remain untouched.
