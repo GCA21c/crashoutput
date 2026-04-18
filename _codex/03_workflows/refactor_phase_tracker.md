@@ -35,7 +35,8 @@
 | Phase 3-A | Done | snapshot comparison criteria reviewed; no code changes |
 | Phase 3-B | Done | occupant helper usage analysis reviewed; no code changes |
 | Phase 3-C | Done | user tested first occupant helper extraction |
-| Phase 3-D | Ready for user test | Excel occupant label wrappers reuse shared helpers |
+| Phase 3-D | Done | user tested Excel occupant label helper reuse |
+| Phase 3-E | Ready for user test | Excel occupant slot merge reuses shared helper |
 | Phase 3 | In Progress | first helper commonization started with occupant helper only |
 | Phase 4 | Blocked | Requires Phase 1-3 completion |
 | Phase 5 | Blocked | Requires regression coverage and explicit approval |
@@ -50,7 +51,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-User test for Phase 3-D Excel occupant label helper reuse.
+User test for Phase 3-E Excel occupant slot merge helper reuse.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.
@@ -338,4 +339,16 @@ Deferred occupant-related moves:
 - Did not change `_occupant_slot_infos()` merge/fallback flow.
 - Did not change `_occupant_input_cells()` or C9/G9 target selection.
 - Did not change Excel writer value/cell behavior, report payload, metadata keys, filtering, or injury calculation.
+- User tested Excel C9/G9 occupant labels and REPORT SUMMARY Save / `_R` reload before further occupant refactor.
+
+## Phase 3-E Excel occupant slot merge helper reuse
+- Excel `_occupant_slot_infos()` now delegates the final slot merge to `merge_occupant_slots()`.
+- The input precedence remains:
+  1. `report_fields.occupant_slots`
+  2. snapshot `slots`
+  3. snapshot `rows`
+- Excel row fallback still extracts dummy name from `slot_label` when needed.
+- `_occupant_input_cells()` and C9/G9 target selection remain unchanged.
+- Report engine slot identity remains unchanged.
+- Save/load metadata keys, report payload keys, filtering, and injury calculation remain unchanged.
 - User should test Excel C9/G9 occupant labels and REPORT SUMMARY Save / `_R` reload before further occupant refactor.

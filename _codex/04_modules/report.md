@@ -290,3 +290,9 @@ Phase 3-D implementation status:
 - `app/report/exporters/excel.py` keeps wrapper functions and delegates to shared helpers.
 - `_occupant_slot_infos()` remains in the Excel exporter and is not refactored yet.
 - `_occupant_input_cells()` and C9/G9 target selection remain unchanged.
+
+Phase 3-E implementation status:
+- `_occupant_slot_infos()` remains in the Excel exporter.
+- Its final merge now uses `merge_occupant_slots()`.
+- The source order stays `report_fields.occupant_slots`, snapshot `slots`, then snapshot `rows`.
+- `_occupant_input_cells()` and C9/G9 target selection remain unchanged.

@@ -285,6 +285,12 @@ Phase 3-D implementation record:
 - `_occupant_slot_infos()` remains local to the Excel exporter.
 - C9/G9 input cell detection remains unchanged.
 
+Phase 3-E implementation record:
+- `_occupant_slot_infos()` remains local to the Excel exporter but now uses
+  `merge_occupant_slots()` for the final merge.
+- Excel occupant precedence remains report fields, snapshot slots, then snapshot rows.
+- Excel C9/G9 input cell detection remains unchanged.
+
 Early Phase 3 must not touch:
 - peak helpers
 - force/moment unit conversion

@@ -4,6 +4,7 @@ from pathlib import Path
 
 from app.report.occupants import (
     dummy_name_from_slot_label,
+    merge_occupant_slots,
     normalize_slot_key,
     occupant_label,
 )
@@ -177,37 +178,24 @@ def _dummy_name_from_slot_label(slot_label, slot):
 
 
 def _occupant_slot_infos(snapshot, report_fields):
-    result = []
-    by_slot = {}
-
-    def merge_slot(slot, dummy_name="", dummy_profile=""):
-        slot_key = _normalize_slot_key(slot)
-        if not slot_key:
-            return
-        if slot_key not in by_slot:
-            by_slot[slot_key] = {"slot": slot_key, "dummy_name": "", "dummy_profile": ""}
-            result.append(by_slot[slot_key])
-        current = by_slot[slot_key]
-        dummy_name = str(dummy_name or "").strip()
-        dummy_profile = str(dummy_profile or "").strip()
-        if dummy_name and not current["dummy_name"]:
-            current["dummy_name"] = dummy_name
-        if dummy_profile and not current["dummy_profile"]:
-            current["dummy_profile"] = dummy_profile
-
-    for info in list(dict(report_fields or {}).get("occupant_slots") or []):
-        info = dict(info or {})
-        merge_slot(info.get("slot"), info.get("dummy_name"), info.get("dummy_profile"))
-    for info in list((snapshot or {}).get("slots") or []):
-        info = dict(info or {})
-        merge_slot(info.get("slot"), info.get("dummy_name"), info.get("dummy_profile"))
+    report_slots = list(dict(report_fields or {}).get("occupant_slots") or [])
+    snapshot_slots = list((snapshot or {}).get("slots") or [])
+    row_slots = []
     for row in list((snapshot or {}).get("rows") or []):
         row = dict(row or {})
         slot_key = _normalize_slot_key(row.get("slot"))
         dummy_name = str(row.get("dummy_name") or "").strip() or _dummy_name_from_slot_label(row.get("slot_label"), slot_key)
         dummy_profile = str(row.get("dummy_profile") or row.get("criterion_key") or "").strip()
-        merge_slot(slot_key, dummy_name, dummy_profile)
-    return [slot_info for slot_info in result if _occupant_label(slot_info)]
+        row_slots.append({
+            "slot": slot_key,
+            "dummy_name": dummy_name,
+            "dummy_profile": dummy_profile,
+        })
+    return [
+        slot_info
+        for slot_info in merge_occupant_slots(report_slots, snapshot_slots, row_slots)
+        if _occupant_label(slot_info)
+    ]
 
 
 def _occupant_input_cells(ws, template_spec):
