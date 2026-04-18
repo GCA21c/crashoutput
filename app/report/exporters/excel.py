@@ -2,6 +2,10 @@ import re
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
 
+from app.report.occupants import (
+    occupant_label,
+    occupant_slot_infos_from_snapshot,
+)
 from app.report.templates import get_report_template_spec
 
 
@@ -160,64 +164,11 @@ def _summary_rows_by_slot(snapshot):
 
 
 def _occupant_label(slot_info):
-    name = str((slot_info or {}).get("dummy_name") or "").strip()
-    profile = str((slot_info or {}).get("dummy_profile") or "").strip()
-    if name and profile:
-        return f"{name} - {profile}"
-    return name or profile or None
-
-
-def _normalize_slot_key(slot):
-    return str(slot or "").strip().upper()
-
-
-def _dummy_name_from_slot_label(slot_label, slot):
-    text = str(slot_label or "").strip()
-    slot_key = _normalize_slot_key(slot)
-    if not text:
-        return ""
-    prefix = f"{slot_key} - "
-    if slot_key and text.upper().startswith(prefix.upper()):
-        return text[len(prefix):].strip()
-    if " - " in text:
-        left, right = text.split(" - ", 1)
-        if _normalize_slot_key(left) == slot_key:
-            return right.strip()
-    return ""
+    return occupant_label(slot_info)
 
 
 def _occupant_slot_infos(snapshot, report_fields):
-    result = []
-    by_slot = {}
-
-    def merge_slot(slot, dummy_name="", dummy_profile=""):
-        slot_key = _normalize_slot_key(slot)
-        if not slot_key:
-            return
-        if slot_key not in by_slot:
-            by_slot[slot_key] = {"slot": slot_key, "dummy_name": "", "dummy_profile": ""}
-            result.append(by_slot[slot_key])
-        current = by_slot[slot_key]
-        dummy_name = str(dummy_name or "").strip()
-        dummy_profile = str(dummy_profile or "").strip()
-        if dummy_name and not current["dummy_name"]:
-            current["dummy_name"] = dummy_name
-        if dummy_profile and not current["dummy_profile"]:
-            current["dummy_profile"] = dummy_profile
-
-    for info in list(dict(report_fields or {}).get("occupant_slots") or []):
-        info = dict(info or {})
-        merge_slot(info.get("slot"), info.get("dummy_name"), info.get("dummy_profile"))
-    for info in list((snapshot or {}).get("slots") or []):
-        info = dict(info or {})
-        merge_slot(info.get("slot"), info.get("dummy_name"), info.get("dummy_profile"))
-    for row in list((snapshot or {}).get("rows") or []):
-        row = dict(row or {})
-        slot_key = _normalize_slot_key(row.get("slot"))
-        dummy_name = str(row.get("dummy_name") or "").strip() or _dummy_name_from_slot_label(row.get("slot_label"), slot_key)
-        dummy_profile = str(row.get("dummy_profile") or row.get("criterion_key") or "").strip()
-        merge_slot(slot_key, dummy_name, dummy_profile)
-    return [slot_info for slot_info in result if _occupant_label(slot_info)]
+    return occupant_slot_infos_from_snapshot(snapshot, report_fields)
 
 
 def _occupant_input_cells(ws, template_spec):

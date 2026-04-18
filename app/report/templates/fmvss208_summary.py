@@ -119,6 +119,7 @@ SUMMARY_CRITERIA_ALIASES = {
 
 
 FMVSS208_SUMMARY_TEMPLATE = {
+    # Keep this key stable; report/export compatibility docs use "fmvss208_summary".
     "key": "fmvss208_summary",
     "label": "FMVSS 208 Summary Excel",
     "regulation": "FMVSS 208",

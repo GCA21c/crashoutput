@@ -18,6 +18,8 @@
 - Keep the dedicated `TEST SETUP` page visually denser than the injury workbench so it does not consume unnecessary horizontal space.
 - When adjusting this page, preserve the existing field set and save flow while preferring tighter row widths and reduced empty side margins.
 - Keep `shared_dummy_config` as the persistence key for backward compatibility with older pickle files.
+- Keep `app/ui/pages/dummy_set_page.py` as a compatibility shim while older imports or saved references may still request `DummySetPage`.
+- Keep the `dummyset` page key alias routed to `test_setup` in `app/shell.py`; do not remove it during UI-label-only cleanup.
 
 ## Review checklist when changing this area
 - Does dummy count update the visible input controls correctly?

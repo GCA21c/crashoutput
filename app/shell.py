@@ -16,6 +16,21 @@ from app.ui.pages.injury_page import InjuryPage
 from app.ui.pages.test_setup_page import TestSetupPage
 from app.ui.pages.report_summary_page import ReportSummaryPage
 from app.ui.pages.report_ploting_page import ReportPlotingPage
+from app.ui.styles import (
+    APP_BG,
+    APP_TITLE_FONT,
+    MUTED_FG,
+    NAV_ACTIVE_BG,
+    NAV_FONT,
+    NAV_FONT_BOLD,
+    OVERLAY_BG,
+    PAGE_BG,
+    SECTION_FG,
+    SIDEBAR_BG,
+    STATUS_BG,
+    TEXT_FG,
+    TITLE_FG,
+)
 
 
 INJURY_NAV_ORDER = ("hic", "nij", "chest", "pelvis", "femur", "knee", "iliac", "tibia")
@@ -35,10 +50,17 @@ INJURY_TEST_MODE_MODULES = {
     "SIDE": ("hic", "chest", "pelvis", "iliac"),
 }
 
+# Compatibility aliases for legacy page keys and forward spelling fixes.
+# Keep these aliases until saved references/imports are explicitly migrated.
+PAGE_KEY_ALIASES = {
+    "dummyset": "test_setup",
+    "report_plotting": "report_ploting",
+}
+
 
 class CrashAnalysisWorkbench(tk.Frame):
     def __init__(self, master):
-        super().__init__(master, bg="#d9d9d9")
+        super().__init__(master, bg=APP_BG)
         self.master = master
         self.page_buttons = {}
         self.pages = {}
@@ -120,30 +142,30 @@ class CrashAnalysisWorkbench(tk.Frame):
         return self.pages["viewer"].viewer
 
     def _build_ui(self):
-        main_pane = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashrelief=tk.RAISED, bg="#d9d9d9", bd=0)
+        main_pane = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashrelief=tk.RAISED, bg=APP_BG, bd=0)
         main_pane.pack(fill=tk.BOTH, expand=True)
 
-        self.sidebar = tk.Frame(main_pane, width=300, bg="#f4f6fb", bd=1, relief=tk.SOLID)
+        self.sidebar = tk.Frame(main_pane, width=300, bg=SIDEBAR_BG, bd=1, relief=tk.SOLID)
         self.sidebar.pack_propagate(False)
         main_pane.add(self.sidebar, minsize=260)
 
-        right_area = tk.Frame(main_pane, bg="#ffffff")
+        right_area = tk.Frame(main_pane, bg=PAGE_BG)
         main_pane.add(right_area, stretch="always", minsize=720)
 
-        top_status = tk.Frame(right_area, bg="#eef4ff", bd=1, relief=tk.SOLID)
+        top_status = tk.Frame(right_area, bg=STATUS_BG, bd=1, relief=tk.SOLID)
         top_status.pack(side=tk.TOP, fill=tk.X, padx=8, pady=(8, 0))
-        tk.Label(top_status, textvariable=self.dataset_info_var, bg="#eef4ff", anchor="w", fg="#1f2937").pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10, pady=6)
-        tk.Label(top_status, textvariable=self.history_info_var, bg="#eef4ff", anchor="e", fg="#374151").pack(side=tk.RIGHT, padx=10)
+        tk.Label(top_status, textvariable=self.dataset_info_var, bg=STATUS_BG, anchor="w", fg=TITLE_FG).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10, pady=6)
+        tk.Label(top_status, textvariable=self.history_info_var, bg=STATUS_BG, anchor="e", fg=TEXT_FG).pack(side=tk.RIGHT, padx=10)
 
-        self.content = tk.Frame(right_area, bg="#ffffff")
+        self.content = tk.Frame(right_area, bg=PAGE_BG)
         self.content.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-        history_frame = tk.LabelFrame(right_area, text="Processing History", bg="#ffffff")
+        history_frame = tk.LabelFrame(right_area, text="Processing History", bg=PAGE_BG)
         history_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=8, pady=8)
         self.history_text = ScrolledText(history_frame, height=6, wrap=tk.WORD, state=tk.DISABLED)
         self.history_text.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
 
-        title = tk.Label(self.sidebar, text="CRASH TOOLS", font=("Arial", 13, "bold"), bg="#f4f6fb", anchor="w", padx=14, pady=14)
+        title = tk.Label(self.sidebar, text="CRASH TOOLS", font=APP_TITLE_FONT, bg=SIDEBAR_BG, anchor="w", padx=14, pady=14)
         title.pack(fill=tk.X)
 
         self._add_nav_button("viewer", "DATA VIEWER")
@@ -156,28 +178,28 @@ class CrashAnalysisWorkbench(tk.Frame):
         self._build_injury_nav_group()
         self._build_report_nav_group()
 
-        quick = tk.LabelFrame(self.sidebar, text="Quick Guide", bg="#f4f6fb")
+        quick = tk.LabelFrame(self.sidebar, text="Quick Guide", bg=SIDEBAR_BG)
         quick.pack(fill=tk.X, padx=12, pady=(16, 8))
-        tk.Label(quick, text="1) DAT 로드\n2) Offset\n3) Filtering\n4) Trimming\n5) Injury 계산", justify="left", bg="#f4f6fb", fg="#374151").pack(anchor="w", padx=10, pady=10)
+        tk.Label(quick, text="1) DAT 로드\n2) Offset\n3) Filtering\n4) Trimming\n5) Injury 계산", justify="left", bg=SIDEBAR_BG, fg=TEXT_FG).pack(anchor="w", padx=10, pady=10)
 
-        self.page_host = tk.Frame(self.content, bg="#ffffff")
+        self.page_host = tk.Frame(self.content, bg=PAGE_BG)
         self.page_host.pack(fill=tk.BOTH, expand=True)
-        self.resize_overlay = tk.Frame(self.page_host, bg="#f5f7fb", bd=1, relief=tk.SOLID)
-        overlay_panel = tk.Frame(self.resize_overlay, bg="#f5f7fb")
+        self.resize_overlay = tk.Frame(self.page_host, bg=OVERLAY_BG, bd=1, relief=tk.SOLID)
+        overlay_panel = tk.Frame(self.resize_overlay, bg=OVERLAY_BG)
         overlay_panel.place(relx=0.5, rely=0.5, anchor="center")
         tk.Label(
             overlay_panel,
             text="Resizing window...",
-            font=("Arial", 13, "bold"),
-            bg="#f5f7fb",
-            fg="#1f2937",
+            font=APP_TITLE_FONT,
+            bg=OVERLAY_BG,
+            fg=TITLE_FG,
         ).pack()
         tk.Label(
             overlay_panel,
             text="Rendering will resume when resizing stops.",
-            font=("Arial", 10),
-            bg="#f5f7fb",
-            fg="#4b5563",
+            font=NAV_FONT,
+            bg=OVERLAY_BG,
+            fg=MUTED_FG,
         ).pack(pady=(6, 0))
 
         self.pages["viewer"] = ViewerPage(self.page_host, self.master, self)
@@ -193,16 +215,18 @@ class CrashAnalysisWorkbench(tk.Frame):
         self.pages["iliac"] = InjuryPage(self.page_host, self, initial_mode="iliac", show_internal_menu=False)
         self.pages["tibia"] = InjuryPage(self.page_host, self, initial_mode="tibia", show_internal_menu=False)
         self.pages["test_setup"] = TestSetupPage(self.page_host, self)
+        # Keep the old key registered because older saved/UI references may still request it.
         self.pages["dummyset"] = self.pages["test_setup"]
         self.pages["report_summary"] = ReportSummaryPage(self.page_host, self)
+        # Internal key/class spelling is kept for compatibility; user-facing text says PLOTTING.
         self.pages["report_ploting"] = ReportPlotingPage(self.page_host, self)
         self._apply_injury_mode_nav()
 
     def _add_nav_section(self, text):
-        tk.Label(self.sidebar, text=text, font=("Arial", 10, "bold"), bg="#f4f6fb", fg="#333333", anchor="w", padx=14, pady=8).pack(fill=tk.X, pady=(10, 2))
+        tk.Label(self.sidebar, text=text, font=NAV_FONT_BOLD, bg=SIDEBAR_BG, fg=SECTION_FG, anchor="w", padx=14, pady=8).pack(fill=tk.X, pady=(10, 2))
 
     def _add_nav_label(self, text, indent=0):
-        tk.Label(self.sidebar, text=text, font=("Arial", 10, "bold"), bg="#f4f6fb", fg="#374151", anchor="w", padx=14 + indent, pady=6).pack(fill=tk.X)
+        tk.Label(self.sidebar, text=text, font=NAV_FONT_BOLD, bg=SIDEBAR_BG, fg=TEXT_FG, anchor="w", padx=14 + indent, pady=6).pack(fill=tk.X)
 
     def _add_nav_button(self, key, text, indent=0, parent=None):
         host = parent or self.sidebar
@@ -214,51 +238,51 @@ class CrashAnalysisWorkbench(tk.Frame):
             bd=0,
             padx=14 + indent,
             pady=10,
-            bg="#f4f6fb",
-            activebackground="#dce8ff",
+            bg=SIDEBAR_BG,
+            activebackground=NAV_ACTIVE_BG,
             command=lambda k=key: self.show_page(k),
         )
         button.pack(fill=tk.X)
         self.page_buttons[key] = button
 
     def _build_injury_nav_group(self):
-        group = tk.Frame(self.sidebar, bg="#f4f6fb")
+        group = tk.Frame(self.sidebar, bg=SIDEBAR_BG)
         group.pack(fill=tk.X)
-        header = tk.Frame(group, bg="#f4f6fb")
+        header = tk.Frame(group, bg=SIDEBAR_BG)
         header.pack(fill=tk.X)
         tk.Label(
             header,
             text="INJURY",
-            font=("Arial", 10, "bold"),
-            bg="#f4f6fb",
-            fg="#374151",
+            font=NAV_FONT_BOLD,
+            bg=SIDEBAR_BG,
+            fg=TEXT_FG,
             anchor="w",
             padx=32,
             pady=6,
         ).pack(side=tk.LEFT)
 
-        self._injury_nav_frame = tk.Frame(group, bg="#f4f6fb")
+        self._injury_nav_frame = tk.Frame(group, bg=SIDEBAR_BG)
         self._injury_nav_frame.pack(fill=tk.X)
         for key in self.injury_page_keys:
             self._add_nav_button(key, INJURY_PAGE_LABELS[key], indent=34, parent=self._injury_nav_frame)
 
     def _build_report_nav_group(self):
-        group = tk.Frame(self.sidebar, bg="#f4f6fb")
+        group = tk.Frame(self.sidebar, bg=SIDEBAR_BG)
         group.pack(fill=tk.X)
-        header = tk.Frame(group, bg="#f4f6fb")
+        header = tk.Frame(group, bg=SIDEBAR_BG)
         header.pack(fill=tk.X)
         tk.Label(
             header,
             text="REPORT",
-            font=("Arial", 10, "bold"),
-            bg="#f4f6fb",
-            fg="#374151",
+            font=NAV_FONT_BOLD,
+            bg=SIDEBAR_BG,
+            fg=TEXT_FG,
             anchor="w",
             padx=32,
             pady=6,
         ).pack(side=tk.LEFT)
         self._add_nav_button("report_summary", "L SUMMARY REPORT", indent=34, parent=group)
-        self._add_nav_button("report_ploting", "L PLOTING", indent=34, parent=group)
+        self._add_nav_button("report_ploting", "L PLOTTING", indent=34, parent=group)
 
     def _available_injury_pages(self):
         if not bool((self.shared_dummy_config or {}).get("setup_complete")):
@@ -291,8 +315,7 @@ class CrashAnalysisWorkbench(tk.Frame):
         self._apply_injury_mode_nav()
 
     def show_page(self, key):
-        if key == "dummyset":
-            key = "test_setup"
+        key = PAGE_KEY_ALIASES.get(key, key)
         if key not in self.pages:
             return
         if key in self.injury_page_keys and key not in self._available_injury_pages():
@@ -365,9 +388,9 @@ class CrashAnalysisWorkbench(tk.Frame):
     def _refresh_nav_styles(self):
         for key, button in self.page_buttons.items():
             if key == self.current_page_key:
-                button.configure(bg="#dce8ff", activebackground="#dce8ff", font=("Arial", 10, "bold"))
+                button.configure(bg=NAV_ACTIVE_BG, activebackground=NAV_ACTIVE_BG, font=NAV_FONT_BOLD)
             else:
-                button.configure(bg="#f4f6fb", activebackground="#dce8ff", font=("Arial", 10))
+                button.configure(bg=SIDEBAR_BG, activebackground=NAV_ACTIVE_BG, font=NAV_FONT)
 
 
 
