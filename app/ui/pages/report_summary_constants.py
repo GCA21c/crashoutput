@@ -64,6 +64,7 @@ SOURCE_DISPLAY_NAMES = {
 STATUS_READY = "Summary report is ready."
 LOADED_VALUES_INITIAL = "Loaded injury values: 0"
 LOADED_VALUES_WAITING = "Loaded injury values: waiting for Valuation"
+LOADED_VALUES_COUNT = "Loaded injury values: {loaded_rows} / {total_rows}"
 STATUS_LOADED_SAVED = "Loaded saved summary report results."
 STATUS_LOAD_DATASET_FIRST = "Load a dataset first."
 STATUS_WAITING = "SUMMARY REPORT is waiting. Click Valuation to load uid-based results."

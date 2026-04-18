@@ -30,6 +30,8 @@
 - Closed Phase 2-C after user confirmed normal behavior.
 - Started Phase 2-D by adding small REPORT dialog helper wrappers in
   `app/ui/pages/report_summary_page.py`.
+- Closed Phase 2-D after user confirmed normal behavior.
+- Started Phase 2-E by centralizing REPORT SUMMARY loaded-count display formatting.
 
 ## Why
 - Keep REPORT page code focused on UI flow while moving export runtime concerns into
@@ -53,3 +55,5 @@
   messages are defined.
 - Phase 2-D keeps the same save/export call flow and only centralizes REPORT messagebox
   title usage.
+- Phase 2-E keeps the same restore/valuation flow and only centralizes loaded-count
+  display formatting.

@@ -16,6 +16,7 @@ from app.ui.pages.report_summary_constants import (
     INFO_GROUP_TITLE,
     INPUT_GROUP_TITLE,
     LOADED_GROUP_TITLE,
+    LOADED_VALUES_COUNT,
     LOADED_VALUES_INITIAL,
     LOADED_VALUES_WAITING,
     PAGE_TITLE,
@@ -214,7 +215,7 @@ class ReportSummaryPage(tk.Frame):
             self._populate_tree(restored_snapshot)
             total_rows = len(restored_snapshot.get("rows") or [])
             loaded_rows = int(restored_snapshot.get("value_count") or 0)
-            self.loaded_values_var.set(f"Loaded injury values: {loaded_rows} / {total_rows}")
+            self._set_loaded_values_count(loaded_rows, total_rows)
             self.status_var.set(STATUS_LOADED_SAVED)
         else:
             self._snapshot = None
@@ -437,6 +438,11 @@ class ReportSummaryPage(tk.Frame):
     def _show_report_info(self, message):
         messagebox.showinfo(DIALOG_TITLE_REPORT, message)
 
+    def _set_loaded_values_count(self, loaded_rows, total_rows):
+        self.loaded_values_var.set(
+            LOADED_VALUES_COUNT.format(loaded_rows=loaded_rows, total_rows=total_rows)
+        )
+
     def _set_waiting_state(self):
         self._snapshot = None
         self._valuation_ready = False
@@ -455,7 +461,7 @@ class ReportSummaryPage(tk.Frame):
         self._populate_tree(snapshot)
         total_rows = len(snapshot.get("rows") or [])
         loaded_rows = int(snapshot.get("value_count") or 0)
-        self.loaded_values_var.set(f"Loaded injury values: {loaded_rows} / {total_rows}")
+        self._set_loaded_values_count(loaded_rows, total_rows)
         if getattr(self.workbench, "working_df", None) is None:
             self.status_var.set(STATUS_LOAD_DATASET_FIRST)
         elif not snapshot.get("rows"):
