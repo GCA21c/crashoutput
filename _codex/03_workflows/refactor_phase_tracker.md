@@ -18,8 +18,8 @@
 | Quick Win | Done | report contract docs, Excel runtime helper, snapshot regression notes |
 | Phase 1-A | Done | naming reference search / contract check |
 | Phase 1-B | Partial | PLOTING user-facing label changed to PLOTTING; no key/class/file rename |
-| Phase 1-C | Ready for user test | aliases documented and kept; `report_plotting -> report_ploting` forward alias added; no key/class/file rename |
-| Phase 1-D | Not started | rename candidate list only; no code rename |
+| Phase 1-C | Done | user tested overall startup/navigation; aliases documented and kept; no key/class/file rename |
+| Phase 1-D | Ready for user review | rename candidate list documented; no code rename |
 | Phase 1-E | Not started | actual rename deferred |
 | Phase 2 | Blocked | Do not start until Phase 1 is explicitly closed by user |
 | Phase 3 | Blocked | Requires snapshot comparison criteria |
@@ -36,16 +36,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-User test for Phase 1-C.
-
-Test scope:
-- Program starts.
-- TEST SETUP opens.
-- REPORT SUMMARY opens.
-- PLOTTING page opens from the REPORT nav.
-- Existing saved dataset/pickle still opens.
-- SUMMARY REPORT Valuation still works.
-- Excel Export still opens or reports a clear open warning.
+User review for Phase 1-D rename candidate decisions.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.
@@ -60,7 +51,19 @@ Phase 1-C decisions:
 
 ## Last known user test result
 - Program starts and overall behavior is normal after Quick Win and Phase 1-B/C partial changes.
-- Phase 1-C final alias/comment contract changes are pending user test.
+- Phase 1-C final alias/comment contract changes were user-tested as normal overall startup/navigation.
+
+## Phase 1-D candidate decisions
+- Keep `report_ploting` as registered internal page key.
+- Keep `ReportPlotingPage` and `app/ui/pages/report_ploting_page.py` for now.
+- Use `report_plotting` only as a forward alias.
+- Keep `dummyset` as compatibility alias to `test_setup`.
+- Keep `DummySetPage` and `dummy_set_page.py` as import shim.
+- Do not rename metadata keys: `shared_dummy_config`, `injury_saved_results`, `report_saved_results.summary_report`.
+- Do not rename report contract fields: `result_key`, `value_key`, `payload_aliases`.
+- Do not rename report rule/template names: `fmvss208`, `FMVSS 208`, `fmvss208_summary`.
+- Do not rename injury slot payload keys such as `head_metadata` and `*_saved_payload`.
+- Treat `criterion_key` and `dummy_profile` as compatibility pair.
 
 ## Hard block
 Do not proceed to Phase 2 yet.

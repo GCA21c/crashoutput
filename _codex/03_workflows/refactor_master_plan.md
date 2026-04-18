@@ -66,6 +66,34 @@ Rollback:
 - alias 유지 상태에서 UI label 변경만 되돌린다.
 - internal key rename을 수행했다면 alias resolver를 먼저 확인하고 key를 기존 값으로 되돌린다.
 
+### Phase 1-D rename candidate decision list
+Phase 1-D is documentation only. Do not rename code, files, classes, or saved keys here.
+
+| Candidate | Current locations | Recommended action | Risk | Reason |
+|---|---|---|---|---|
+| `report_ploting` page key | `app/shell.py`, docs, old change logs | Keep as registered internal key for now; accept `report_plotting` as alias only | MEDIUM | It is a live page key and could be referenced by saved UI state or older code |
+| `ReportPlotingPage` class | `app/ui/pages/report_ploting_page.py`, `app/shell.py` import | Keep for now; rename only in a later explicit compatibility phase | MEDIUM | Class/file rename affects imports and packaging |
+| `app/ui/pages/report_ploting_page.py` file | shell import and docs | Keep for now | MEDIUM | File rename requires import migration and alias wrapper |
+| User-facing `PLOTING` text | nav/page label | Change to `PLOTTING` only | LOW | Display-only typo; already corrected without key rename |
+| `dummyset` page key | `app/shell.py`, docs | Keep as compatibility alias to `test_setup` | MEDIUM | Older saved references may still request it |
+| `DummySetPage` shim | `app/ui/pages/dummy_set_page.py` | Keep | LOW to MEDIUM | Import compatibility for older references |
+| `dummy_set_page.py` file | docs/import shim | Keep as shim | LOW to MEDIUM | Removing file can break old imports |
+| `shared_dummy_config` metadata key | `shell.py`, report/filtering/test setup/injury | Do not rename | HIGH | Existing pickle compatibility and multi-module data flow |
+| `injury_saved_results` metadata key | `injury_page.py`, `report/engine.py` | Do not rename | HIGH | REPORT reads this key for all summary values |
+| `report_saved_results.summary_report` key | `report_summary_page.py`, docs | Do not rename | HIGH | Saved REPORT reload depends on it |
+| `fmvss208` rule key | `app/report/rules/fmvss208.py`, generated mapping keys | Keep stable | HIGH | Report/excel mapping uses this machine key |
+| `FMVSS 208` rule label | report choices/template rules | Keep stable | MEDIUM | User-facing and template rule lookup label |
+| `fmvss208_summary` template key | `app/report/templates/fmvss208_summary.py` | Keep stable | MEDIUM | Template registry lookup key |
+| `head_metadata`, `*_saved_payload` slot-state keys | `injury_page.py` | Do not rename in Phase 1 | HIGH | Existing in-memory/save/restore paths and report extraction rely on these payload names |
+| `result_key`, `value_key`, `payload_aliases` report item fields | `app/report/rules/*.py`, `app/report/engine.py` | Keep stable | HIGH | Core report extraction contract |
+| `criterion_key` vs `dummy_profile` | injury/report payloads | Keep both; document as compatibility pair | HIGH | Limit lookup and display fallback depend on both |
+
+Phase 1-D conclusion:
+- Only user-facing typos may be corrected in Phase 1.
+- Internal key/class/file renames are deferred.
+- Metadata and payload keys are compatibility contracts and must not be renamed without a migration adapter.
+- Old change logs may mention obsolete paths such as `app/report/regulations/fmvss208.py`; do not edit historical logs for code cleanup.
+
 ## Phase 2 - Low-risk split
 목표:
 - 계산과 무관한 UI / export runtime / style helper부터 분리한다.

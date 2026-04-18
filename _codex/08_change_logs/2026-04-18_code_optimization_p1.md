@@ -14,6 +14,7 @@
   prevent accidental phase skipping.
 - Marked Phase 1-C as ready for user test after keeping all compatibility aliases and
   documenting stable report rule/template naming in code comments.
+- Documented Phase 1-D rename candidate decisions in the master plan and phase tracker.
 - Updated the file responsibility map for the new runtime export helper.
 
 ## Why
