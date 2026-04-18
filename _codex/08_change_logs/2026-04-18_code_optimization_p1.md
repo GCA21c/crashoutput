@@ -27,6 +27,9 @@
 - Closed Phase 2-B after user confirmed normal behavior.
 - Started Phase 2-C by moving remaining REPORT SUMMARY messagebox/history/status text
   templates into `app/ui/pages/report_summary_constants.py`.
+- Closed Phase 2-C after user confirmed normal behavior.
+- Started Phase 2-D by adding small REPORT dialog helper wrappers in
+  `app/ui/pages/report_summary_page.py`.
 
 ## Why
 - Keep REPORT page code focused on UI flow while moving export runtime concerns into
@@ -48,3 +51,5 @@
   save/load metadata, filtering, and injury calculations are unchanged.
 - Phase 2-C keeps the same save/export call flow and only changes where report summary
   messages are defined.
+- Phase 2-D keeps the same save/export call flow and only centralizes REPORT messagebox
+  title usage.

@@ -431,6 +431,12 @@ class ReportSummaryPage(tk.Frame):
         self._cache_report_state_in_memory()
         self._set_waiting_state()
 
+    def _show_report_warning(self, message):
+        messagebox.showwarning(DIALOG_TITLE_REPORT, message)
+
+    def _show_report_info(self, message):
+        messagebox.showinfo(DIALOG_TITLE_REPORT, message)
+
     def _set_waiting_state(self):
         self._snapshot = None
         self._valuation_ready = False
@@ -462,7 +468,7 @@ class ReportSummaryPage(tk.Frame):
 
     def save_report(self):
         if getattr(self.workbench, "working_df", None) is None:
-            messagebox.showwarning(DIALOG_TITLE_REPORT, WARNING_LOAD_DATA_FIRST_KO)
+            self._show_report_warning(WARNING_LOAD_DATA_FIRST_KO)
             return
         if not self._valuation_ready:
             self.run_valuation()
@@ -484,11 +490,11 @@ class ReportSummaryPage(tk.Frame):
             prefer_original_source=False,
         )
         if not saved_path:
-            messagebox.showwarning(DIALOG_TITLE_REPORT, WARNING_REPORT_SAVE_PATH_KO)
+            self._show_report_warning(WARNING_REPORT_SAVE_PATH_KO)
             return
         self.status_var.set(STATUS_REPORT_SAVED.format(saved_path=saved_path))
         self._loaded_dataset_identity = None
-        messagebox.showinfo(DIALOG_TITLE_REPORT, INFO_REPORT_SAVED_KO.format(saved_path=saved_path))
+        self._show_report_info(INFO_REPORT_SAVED_KO.format(saved_path=saved_path))
 
     def _unique_export_path(self):
         return unique_export_path(self.test_id_var.get().strip(), source_file=__file__)
@@ -497,16 +503,13 @@ class ReportSummaryPage(tk.Frame):
         try:
             open_export_file(path)
         except Exception as exc:
-            messagebox.showwarning(
-                DIALOG_TITLE_REPORT,
-                WARNING_EXCEL_OPEN_FAILED.format(path=path, error=exc),
-            )
+            self._show_report_warning(WARNING_EXCEL_OPEN_FAILED.format(path=path, error=exc))
 
     def export_excel(self):
         if not self._valuation_ready:
             self.run_valuation()
         if not self._snapshot:
-            messagebox.showwarning(DIALOG_TITLE_REPORT, WARNING_VALUATION_REQUIRED_KO)
+            self._show_report_warning(WARNING_VALUATION_REQUIRED_KO)
             return
         output_path = self._unique_export_path()
         try:
@@ -516,18 +519,18 @@ class ReportSummaryPage(tk.Frame):
                 output_path,
             )
         except ExcelExportError as exc:
-            messagebox.showwarning(DIALOG_TITLE_REPORT, str(exc))
+            self._show_report_warning(str(exc))
             self.status_var.set(STATUS_EXCEL_EXPORT_FAILED.format(error=exc))
             return
         except Exception as exc:
-            messagebox.showwarning(DIALOG_TITLE_REPORT, WARNING_EXCEL_EXPORT_FAILED.format(error=exc))
+            self._show_report_warning(WARNING_EXCEL_EXPORT_FAILED.format(error=exc))
             self.status_var.set(STATUS_EXCEL_EXPORT_FAILED.format(error=exc))
             return
 
         output_path = result.get("output_path")
         detail = INFO_EXCEL_EXPORT_COMPLETED.format(output_path=output_path)
         self.status_var.set(STATUS_EXCEL_EXPORT_COMPLETED.format(output_path=output_path))
-        messagebox.showinfo(DIALOG_TITLE_REPORT, detail)
+        self._show_report_info(detail)
         self._open_export_file(output_path)
 
     def reset_session_state(self):
