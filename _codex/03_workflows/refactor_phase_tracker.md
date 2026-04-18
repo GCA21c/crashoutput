@@ -20,8 +20,10 @@
 | Phase 1-B | Partial | PLOTING user-facing label changed to PLOTTING; no key/class/file rename |
 | Phase 1-C | Done | user tested overall startup/navigation; aliases documented and kept; no key/class/file rename |
 | Phase 1-D | Done | rename candidate list documented; no code rename |
-| Phase 1-E | Ready for user review | actual internal key/class/file rename deferred from this branch |
-| Phase 2 | Blocked | Do not start until Phase 1 is explicitly closed by user |
+| Phase 1-E | Done | user accepted deferring actual internal key/class/file renames |
+| Phase 1 | Closed | user tested overall program as normal after Phase 1 |
+| Phase 2-A | Ready for user test | shared UI style constants added; applied only to shell/report plotting page |
+| Phase 2 | In Progress | low-risk split started; calculation logic remains off-limits |
 | Phase 3 | Blocked | Requires snapshot comparison criteria |
 | Phase 4 | Blocked | Requires Phase 1-3 completion |
 | Phase 5 | Blocked | Requires regression coverage and explicit approval |
@@ -36,7 +38,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-User review for Phase 1-E rename deferral decision.
+User test for Phase 2-A.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.
@@ -52,6 +54,7 @@ Phase 1-C decisions:
 ## Last known user test result
 - Program starts and overall behavior is normal after Quick Win and Phase 1-B/C partial changes.
 - Phase 1-C final alias/comment contract changes were user-tested as normal overall startup/navigation.
+- Phase 1-E deferral decision was accepted, and the overall program was user-tested as normal.
 
 ## Phase 1-D candidate decisions
 - Keep `report_ploting` as registered internal page key.
@@ -70,7 +73,19 @@ Phase 1-C decisions:
 - Keep `report_ploting`, `ReportPlotingPage`, and `app/ui/pages/report_ploting_page.py`.
 - Keep `dummyset`, `DummySetPage`, and `dummy_set_page.py`.
 - Real rename work is deferred to a later, explicitly approved compatibility phase.
-- Phase 1 can be closed only after user accepts this deferral decision.
+- Phase 1 is closed after user acceptance and normal program test.
 
-## Hard block
-Do not proceed to Phase 2 yet.
+## Phase 2 guard
+- Phase 2 may start with low-risk split only.
+- Do not touch calculation logic.
+- Do not touch `apply_filtering_with_derivatives()`.
+- Do not touch `_resolve_standard_series_for_calc()`.
+- Do not rename metadata or payload keys.
+
+## Phase 2-A scope
+- Added `app/ui/styles.py` for shared Tk color/font constants.
+- Applied the constants only to:
+  - `app/shell.py`
+  - `app/ui/pages/report_ploting_page.py`
+- This is a UI style constant split only.
+- User should test startup, sidebar navigation, resize overlay, and REPORT > PLOTTING before the next Phase 2 slice.

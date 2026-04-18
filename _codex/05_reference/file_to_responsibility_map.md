@@ -26,6 +26,7 @@
 ## UI pages
 | Path | Responsibility |
 |---|---|
+| `app/ui/styles.py` | shared Tk color/font constants |
 | `app/ui/pages/viewer_page.py` | viewer page |
 | `app/ui/pages/filtering_page.py` | filtering page |
 | `app/ui/pages/test_setup_page.py` | test mode / dummy configuration page |

@@ -17,7 +17,10 @@
 - Documented Phase 1-D rename candidate decisions in the master plan and phase tracker.
 - Documented Phase 1-E decision to defer actual internal key/class/file renames from
   this branch.
+- Closed Phase 1 after user acceptance and normal whole-program testing.
 - Updated the file responsibility map for the new runtime export helper.
+- Started Phase 2-A by adding shared UI style constants and applying them only to
+  `app/shell.py` and `app/ui/pages/report_ploting_page.py`.
 
 ## Why
 - Keep REPORT page code focused on UI flow while moving export runtime concerns into
@@ -33,3 +36,5 @@
   internal key, with `report_plotting` only accepted as an alias.
 - Excel export path and open behavior should remain equivalent. Windows open behavior
   still depends on the OS file association and may need direct user verification.
+- Phase 2-A is a UI constant split only. It should not affect calculation, report payload,
+  filtering, or export contracts.
