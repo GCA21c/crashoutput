@@ -35,6 +35,8 @@
 - Closed Phase 2-E after user confirmed normal behavior.
 - Started Phase 2-F by reusing the REPORT SUMMARY input-variable helper for trace,
   restore, serialization, and reset paths.
+- Closed Phase 2-F after user confirmed normal behavior.
+- Started Phase 2-G by moving REPORT SUMMARY Valuation status selection into a small helper.
 
 ## Why
 - Keep REPORT page code focused on UI flow while moving export runtime concerns into
@@ -62,3 +64,5 @@
   display formatting.
 - Phase 2-F keeps report field keys and metadata structure unchanged while reducing
   repeated input-variable handling.
+- Phase 2-G keeps Valuation behavior unchanged and only moves existing status selection
+  into a helper.

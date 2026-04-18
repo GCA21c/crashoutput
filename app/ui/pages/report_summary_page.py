@@ -453,14 +453,7 @@ class ReportSummaryPage(tk.Frame):
         else:
             self.status_var.set(STATUS_WAITING)
 
-    def run_valuation(self):
-        snapshot = build_report_snapshot(getattr(self.workbench, "dataset_metadata", {}) or {}, self.regulation_var.get())
-        self._snapshot = snapshot
-        self._valuation_ready = True
-        self._populate_tree(snapshot)
-        total_rows = len(snapshot.get("rows") or [])
-        loaded_rows = int(snapshot.get("value_count") or 0)
-        self._set_loaded_values_count(loaded_rows, total_rows)
+    def _set_valuation_status(self, snapshot, loaded_rows):
         if getattr(self.workbench, "working_df", None) is None:
             self.status_var.set(STATUS_LOAD_DATASET_FIRST)
         elif not snapshot.get("rows"):
@@ -469,6 +462,16 @@ class ReportSummaryPage(tk.Frame):
             self.status_var.set(STATUS_NO_NUMERIC_VALUES)
         else:
             self.status_var.set(STATUS_VALUATION_REFRESHED)
+
+    def run_valuation(self):
+        snapshot = build_report_snapshot(getattr(self.workbench, "dataset_metadata", {}) or {}, self.regulation_var.get())
+        self._snapshot = snapshot
+        self._valuation_ready = True
+        self._populate_tree(snapshot)
+        total_rows = len(snapshot.get("rows") or [])
+        loaded_rows = int(snapshot.get("value_count") or 0)
+        self._set_loaded_values_count(loaded_rows, total_rows)
+        self._set_valuation_status(snapshot, loaded_rows)
         self._cache_report_state_in_memory()
 
     def save_report(self):
