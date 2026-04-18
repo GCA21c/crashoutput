@@ -32,6 +32,9 @@
   `app/ui/pages/report_summary_page.py`.
 - Closed Phase 2-D after user confirmed normal behavior.
 - Started Phase 2-E by centralizing REPORT SUMMARY loaded-count display formatting.
+- Closed Phase 2-E after user confirmed normal behavior.
+- Started Phase 2-F by reusing the REPORT SUMMARY input-variable helper for trace,
+  restore, serialization, and reset paths.
 
 ## Why
 - Keep REPORT page code focused on UI flow while moving export runtime concerns into
@@ -57,3 +60,5 @@
   title usage.
 - Phase 2-E keeps the same restore/valuation flow and only centralizes loaded-count
   display formatting.
+- Phase 2-F keeps report field keys and metadata structure unchanged while reducing
+  repeated input-variable handling.

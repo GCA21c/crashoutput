@@ -70,7 +70,7 @@ class ReportSummaryPage(tk.Frame):
         self._snapshot = None
         self._valuation_ready = False
         self._build_ui()
-        for var in (self.manufacturer_var, self.vehicle_var, self.speed_var, self.test_date_var, self.test_id_var):
+        for var in self._report_input_variables().values():
             var.trace_add("write", lambda *_: self._cache_report_state_in_memory())
 
     def _build_ui(self):
@@ -190,6 +190,11 @@ class ReportSummaryPage(tk.Frame):
         variables["regulation"] = self.regulation_var
         return variables
 
+    def _set_report_input_values(self, values):
+        values = dict(values or {})
+        for field_key, variable in self._report_input_variables().items():
+            variable.set(values.get(field_key) or "")
+
     def _dataset_identity(self):
         current = getattr(self.workbench, "current_file_path", None) or ""
         source = dict(getattr(self.workbench, "dataset_metadata", {}) or {}).get("source_file_path") or ""
@@ -203,11 +208,7 @@ class ReportSummaryPage(tk.Frame):
         saved = dict((dict(getattr(self.workbench, "dataset_metadata", {}) or {}).get("report_saved_results") or {}).get("summary_report") or {})
         self.regulation_var.set(saved.get("regulation") or (get_regulation_choices()[0] if get_regulation_choices() else ""))
         fields = dict(saved.get("report_fields") or {})
-        self.manufacturer_var.set(fields.get("manufacturer") or "")
-        self.vehicle_var.set(fields.get("vehicle") or "")
-        self.speed_var.set(fields.get("speed") or "")
-        self.test_date_var.set(fields.get("test_date") or "")
-        self.test_id_var.set(fields.get("test_id") or "")
+        self._set_report_input_values(fields)
         restored_snapshot = self._snapshot_from_saved_report(saved)
         if restored_snapshot:
             self._snapshot = restored_snapshot
@@ -372,14 +373,12 @@ class ReportSummaryPage(tk.Frame):
             (self._snapshot or {}).get("slots"),
             saved_summary.get("slots"),
         )
-        return {
-            "manufacturer": self.manufacturer_var.get().strip(),
-            "vehicle": self.vehicle_var.get().strip(),
-            "speed": self.speed_var.get().strip(),
-            "test_date": self.test_date_var.get().strip(),
-            "test_id": self.test_id_var.get().strip(),
-            "occupant_slots": occupant_slots,
+        report_fields = {
+            field_key: variable.get().strip()
+            for field_key, variable in self._report_input_variables().items()
         }
+        report_fields["occupant_slots"] = occupant_slots
+        return report_fields
 
     def _build_report_payload(self):
         snapshot = self._snapshot or build_report_snapshot(self.workbench.dataset_metadata, self.regulation_var.get())
@@ -543,11 +542,7 @@ class ReportSummaryPage(tk.Frame):
         self._loaded_dataset_identity = None
         choices = get_regulation_choices()
         self.regulation_var.set(choices[0] if choices else "")
-        self.manufacturer_var.set("")
-        self.vehicle_var.set("")
-        self.speed_var.set("")
-        self.test_date_var.set("")
-        self.test_id_var.set("")
+        self._set_report_input_values({})
         self.status_var.set(STATUS_READY)
         self.loaded_values_var.set(LOADED_VALUES_WAITING)
         self._snapshot = None

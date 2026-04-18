@@ -26,7 +26,8 @@
 | Phase 2-B | Done | user tested report summary presentation constants split |
 | Phase 2-C | Done | user tested report summary message/status constants split |
 | Phase 2-D | Done | user tested report summary dialog helper wrappers |
-| Phase 2-E | Ready for user test | report summary loaded-count display helper added; behavior unchanged |
+| Phase 2-E | Done | user tested report summary loaded-count display helper |
+| Phase 2-F | Ready for user test | report summary input variable helper reuse; behavior unchanged |
 | Phase 2 | In Progress | low-risk split started; calculation logic remains off-limits |
 | Phase 3 | Blocked | Requires snapshot comparison criteria |
 | Phase 4 | Blocked | Requires Phase 1-3 completion |
@@ -42,7 +43,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-User test for Phase 2-E.
+User test for Phase 2-F.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.
@@ -63,6 +64,7 @@ Phase 1-C decisions:
 - Phase 2-B report summary presentation constants split was user-tested as normal.
 - Phase 2-C report summary message/status constants split was user-tested as normal.
 - Phase 2-D report summary dialog helper wrappers were user-tested as normal.
+- Phase 2-E report summary loaded-count display helper was user-tested as normal.
 
 ## Phase 1-D candidate decisions
 - Keep `report_ploting` as registered internal page key.
@@ -126,4 +128,10 @@ Phase 1-C decisions:
 - Added `_set_loaded_values_count()` in `app/ui/pages/report_summary_page.py`.
 - Reused the helper for saved summary restore and Valuation loaded-count display.
 - Kept row building, value extraction, metadata writes, Excel writer behavior, filtering, and injury calculation unchanged.
-- User should test saved summary restore and Valuation loaded-count display before the next Phase 2 slice.
+- User tested saved summary restore and Valuation loaded-count display before the next Phase 2 slice.
+
+## Phase 2-F scope
+- Reused `_report_input_variables()` for input trace registration, saved report field restore, report field serialization, and reset.
+- Added `_set_report_input_values()` in `app/ui/pages/report_summary_page.py`.
+- Kept report field keys, metadata structure, save/export behavior, Excel writer behavior, filtering, and injury calculation unchanged.
+- User should test report input restore/reset, Save, and Excel Export before the next Phase 2 slice.
