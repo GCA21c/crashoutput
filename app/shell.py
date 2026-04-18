@@ -35,6 +35,11 @@ INJURY_TEST_MODE_MODULES = {
     "SIDE": ("hic", "chest", "pelvis", "iliac"),
 }
 
+PAGE_KEY_ALIASES = {
+    "dummyset": "test_setup",
+    "report_plotting": "report_ploting",
+}
+
 
 class CrashAnalysisWorkbench(tk.Frame):
     def __init__(self, master):
@@ -258,7 +263,7 @@ class CrashAnalysisWorkbench(tk.Frame):
             pady=6,
         ).pack(side=tk.LEFT)
         self._add_nav_button("report_summary", "L SUMMARY REPORT", indent=34, parent=group)
-        self._add_nav_button("report_ploting", "L PLOTING", indent=34, parent=group)
+        self._add_nav_button("report_ploting", "L PLOTTING", indent=34, parent=group)
 
     def _available_injury_pages(self):
         if not bool((self.shared_dummy_config or {}).get("setup_complete")):
@@ -291,8 +296,7 @@ class CrashAnalysisWorkbench(tk.Frame):
         self._apply_injury_mode_nav()
 
     def show_page(self, key):
-        if key == "dummyset":
-            key = "test_setup"
+        key = PAGE_KEY_ALIASES.get(key, key)
         if key not in self.pages:
             return
         if key in self.injury_page_keys and key not in self._available_injury_pages():

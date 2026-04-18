@@ -2,6 +2,8 @@ import tkinter as tk
 
 
 class ReportPlotingPage(tk.Frame):
+    """Legacy class name kept for the existing report_ploting page key."""
+
     def __init__(self, parent, workbench):
         super().__init__(parent, bg="#ffffff")
         self.workbench = workbench
@@ -13,13 +15,13 @@ class ReportPlotingPage(tk.Frame):
 
         header = tk.Frame(body, bg="#ffffff")
         header.pack(fill=tk.X, pady=(0, 12))
-        tk.Label(header, text="REPORT - PLOTING", font=("Arial", 15, "bold"), bg="#ffffff").pack(side=tk.LEFT)
+        tk.Label(header, text="REPORT - PLOTTING", font=("Arial", 15, "bold"), bg="#ffffff").pack(side=tk.LEFT)
 
         info = tk.LabelFrame(body, text="Status", bg="#ffffff")
         info.pack(fill=tk.X)
         tk.Label(
             info,
-            text="PLOTING 메뉴는 자리만 준비되어 있습니다.\nExcel/plot export logic는 아직 연결되지 않았습니다.",
+            text="PLOTTING 메뉴는 자리만 준비되어 있습니다.\nExcel/plot export logic는 아직 연결되지 않았습니다.",
             bg="#ffffff",
             justify="left",
             anchor="w",

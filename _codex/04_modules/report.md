@@ -29,6 +29,8 @@ migrated:
 - `DummySetPage` imports alias to `TestSetupPage` in `app/ui/pages/dummy_set_page.py`
 - `report_ploting` and `ReportPlotingPage` are legacy typo-compatible identifiers; do not
   remove or rename them without adding an alias layer first
+- `report_plotting` may be accepted as a forward alias, but `report_ploting` remains the
+  registered page key until saved references and imports are migrated
 
 New report rules should use a lowercase compact machine key and a regulation-style display
 label. New template specs should use `{rule_key}_summary` unless there is a specific reason
