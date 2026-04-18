@@ -43,6 +43,7 @@
 | `app/report/rules/*.py` | regulation-specific report row order and labels |
 | `app/report/templates/*.py` | Excel template anchors, aliases, and export rules |
 | `app/report/exporters/*.py` | report export writers |
+| `app/report/exporters/runtime.py` | Excel export filename, output folder, and OS open helpers |
 | `_codex/04_modules/report.md` | report module maintenance workflow |
 | `_codex/05_reference/excel_export_mapping.md` | Excel export mapping reference |
 

@@ -1,9 +1,4 @@
-import os
-import platform
-import subprocess
-import sys
 import tkinter as tk
-from pathlib import Path
 from tkinter import messagebox, ttk
 
 from app.report import (
@@ -13,7 +8,7 @@ from app.report import (
     get_regulation_choices,
     get_regulation_definition,
 )
-from app.report.templates import get_report_template_spec
+from app.report.exporters.runtime import open_export_file, unique_export_path
 
 
 class ReportSummaryPage(tk.Frame):
@@ -468,65 +463,12 @@ class ReportSummaryPage(tk.Frame):
         self._loaded_dataset_identity = None
         messagebox.showinfo("REPORT", f"REPORT 데이터가 저장되었습니다.\n{saved_path}")
 
-    def _default_export_filename(self):
-        test_id = self._sanitize_filename_part(self.test_id_var.get().strip() or "NO_TEST_ID")
-        template_path = Path(get_report_template_spec().get("template_path"))
-        stem = template_path.stem
-        if stem.lower().endswith("_temp"):
-            stem = stem[:-5]
-        return f"{stem}_{test_id}{template_path.suffix}"
-
-    def _execution_folder(self):
-        if getattr(sys, "frozen", False):
-            folder = Path(sys.executable).resolve().parent
-        else:
-            folder = Path(__file__).resolve().parents[3]
-        if self._folder_is_writable(folder):
-            return folder
-        documents = Path.home() / "Documents"
-        if documents.exists() and self._folder_is_writable(documents):
-            return documents
-        return folder
-
-    def _folder_is_writable(self, folder):
-        try:
-            folder.mkdir(parents=True, exist_ok=True)
-            probe = folder / ".crashoutput_write_test"
-            with probe.open("w", encoding="utf-8") as handle:
-                handle.write("")
-            probe.unlink(missing_ok=True)
-            return True
-        except Exception:
-            return False
-
-    def _sanitize_filename_part(self, text):
-        safe = "".join("_" if char in '\\/:*?"<>|' or ord(char) < 32 else char for char in str(text or "").strip())
-        safe = safe.strip(" .")
-        return safe or "NO_TEST_ID"
-
     def _unique_export_path(self):
-        folder = self._execution_folder()
-        candidate = folder / self._default_export_filename()
-        if not candidate.exists():
-            return candidate
-        stem = candidate.stem
-        suffix = candidate.suffix
-        for index in range(1, 1000):
-            numbered = folder / f"{stem}_{index:02d}{suffix}"
-            if not numbered.exists():
-                return numbered
-        return candidate
+        return unique_export_path(self.test_id_var.get().strip(), source_file=__file__)
 
     def _open_export_file(self, path):
-        path = Path(path)
         try:
-            system_name = platform.system().lower()
-            if system_name == "windows":
-                os.startfile(str(path))
-            elif system_name == "darwin":
-                subprocess.Popen(["open", str(path)])
-            else:
-                subprocess.Popen(["xdg-open", str(path)])
+            open_export_file(path)
         except Exception as exc:
             messagebox.showwarning("REPORT", f"Excel export completed, but the file could not be opened.\nSaved to: {path}\n{exc}")
 
