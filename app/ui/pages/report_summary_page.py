@@ -513,6 +513,13 @@ class ReportSummaryPage(tk.Frame):
         except Exception as exc:
             self._show_report_warning(WARNING_EXCEL_OPEN_FAILED.format(path=path, error=exc))
 
+    def _handle_excel_export_success(self, result):
+        output_path = result.get("output_path")
+        detail = INFO_EXCEL_EXPORT_COMPLETED.format(output_path=output_path)
+        self.status_var.set(STATUS_EXCEL_EXPORT_COMPLETED.format(output_path=output_path))
+        self._show_report_info(detail)
+        self._open_export_file(output_path)
+
     def export_excel(self):
         if not self._valuation_ready:
             self.run_valuation()
@@ -535,11 +542,7 @@ class ReportSummaryPage(tk.Frame):
             self.status_var.set(STATUS_EXCEL_EXPORT_FAILED.format(error=exc))
             return
 
-        output_path = result.get("output_path")
-        detail = INFO_EXCEL_EXPORT_COMPLETED.format(output_path=output_path)
-        self.status_var.set(STATUS_EXCEL_EXPORT_COMPLETED.format(output_path=output_path))
-        self._show_report_info(detail)
-        self._open_export_file(output_path)
+        self._handle_excel_export_success(result)
 
     def reset_session_state(self):
         self._loaded_dataset_identity = None

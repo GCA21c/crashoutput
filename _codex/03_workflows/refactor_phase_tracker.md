@@ -28,7 +28,8 @@
 | Phase 2-D | Done | user tested report summary dialog helper wrappers |
 | Phase 2-E | Done | user tested report summary loaded-count display helper |
 | Phase 2-F | Done | user tested report summary input variable helper reuse |
-| Phase 2-G | Ready for user test | report summary valuation status helper added; behavior unchanged |
+| Phase 2-G | Done | user tested report summary valuation status helper |
+| Phase 2-H | Ready for user test | report summary Excel export success helper added; behavior unchanged |
 | Phase 2 | In Progress | low-risk split started; calculation logic remains off-limits |
 | Phase 3 | Blocked | Requires snapshot comparison criteria |
 | Phase 4 | Blocked | Requires Phase 1-3 completion |
@@ -44,7 +45,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-User test for Phase 2-G.
+User test for Phase 2-H.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.
@@ -67,6 +68,7 @@ Phase 1-C decisions:
 - Phase 2-D report summary dialog helper wrappers were user-tested as normal.
 - Phase 2-E report summary loaded-count display helper was user-tested as normal.
 - Phase 2-F report summary input-variable helper reuse was user-tested as normal.
+- Phase 2-G report summary valuation status helper was user-tested as normal.
 
 ## Phase 1-D candidate decisions
 - Keep `report_ploting` as registered internal page key.
@@ -142,4 +144,10 @@ Phase 1-C decisions:
 - Added `_set_valuation_status()` in `app/ui/pages/report_summary_page.py`.
 - Moved only the existing `run_valuation()` status message selection into that helper.
 - Kept snapshot building, row population, loaded-count display, cache update, report payload, Excel writer behavior, filtering, and injury calculation unchanged.
-- User should test Valuation status messages and normal REPORT SUMMARY display before the next Phase 2 slice.
+- User tested Valuation status messages and normal REPORT SUMMARY display before the next Phase 2 slice.
+
+## Phase 2-H scope
+- Added `_handle_excel_export_success()` in `app/ui/pages/report_summary_page.py`.
+- Moved only the existing Excel export success status, info dialog, and open-file call into that helper.
+- Kept output path generation, Excel writer call, error handling, save/load metadata, report payload, filtering, and injury calculation unchanged.
+- User should test Excel Export success dialog and automatic file open before the next Phase 2 slice.
