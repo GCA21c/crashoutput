@@ -40,6 +40,11 @@
 - Implemented Phase 3-H Excel unused wrapper cleanup:
   - removed unused Excel private wrappers for slot normalization and slot-label dummy-name extraction
   - kept active Excel occupant wrappers and C9/G9 cell selection unchanged
+- Closed Phase 3-G/H after user testing passed.
+- Implemented Phase 3-I REPORT SUMMARY occupant wrapper closure:
+  - removed unused `ReportSummaryPage._occupant_slots_from_config()`
+  - removed unused `ReportSummaryPage._merge_occupant_slots()`
+  - kept `ReportSummaryPage._report_fields()` as the page entry point
 
 ## Why
 - Phase 3 helper commonization can indirectly change report values, occupant labels,
@@ -57,5 +62,6 @@
 - Phase 3-F changes only helper location behind the existing Excel wrapper.
 - Phase 3-G changes only helper location behind the existing REPORT SUMMARY `_report_fields()` entry point.
 - Phase 3-H removes unused Excel private wrapper code only.
+- Phase 3-I removes unused REPORT SUMMARY wrapper methods after user testing confirmed the helper path.
 - Filtering, injury calculation, report extraction, payload keys, metadata keys, and
   Excel writer behavior remain untouched.

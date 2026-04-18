@@ -38,8 +38,9 @@
 | Phase 3-D | Done | user tested Excel occupant label helper reuse |
 | Phase 3-E | Done | user tested Excel occupant slot merge helper reuse |
 | Phase 3-F | Done | user tested Excel occupant slot info wrapper |
-| Phase 3-G | Ready for user test | REPORT SUMMARY report field assembly delegates to occupant helper |
-| Phase 3-H | Ready for user test | unused Excel occupant wrapper imports removed |
+| Phase 3-G | Done | user tested REPORT SUMMARY report field assembly helper |
+| Phase 3-H | Done | user tested unused Excel occupant wrapper cleanup |
+| Phase 3-I | Ready for user test | removed unused REPORT SUMMARY occupant wrapper methods |
 | Phase 3 | In Progress | first helper commonization started with occupant helper only |
 | Phase 4 | Blocked | Requires Phase 1-3 completion |
 | Phase 5 | Blocked | Requires regression coverage and explicit approval |
@@ -54,7 +55,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-User test for Phase 3-G/H occupant helper batch.
+User test for Phase 3-I REPORT SUMMARY occupant wrapper closure.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.
@@ -384,3 +385,11 @@ Deferred occupant-related moves:
 - Removed unused Excel exporter private wrappers for slot normalization and slot-label dummy-name extraction.
 - Kept `_occupant_label()` and `_occupant_slot_infos()` wrappers because they are still used by Excel export flow.
 - Excel occupant source precedence, C9/G9 target selection, value writing, formatting, and template handling remain unchanged.
+
+## Phase 3-I REPORT SUMMARY occupant wrapper closure
+- Removed unused `ReportSummaryPage._occupant_slots_from_config()` and
+  `ReportSummaryPage._merge_occupant_slots()` wrapper methods.
+- `ReportSummaryPage._report_fields()` remains the page entry point and delegates to
+  `report_fields_from_sources()`.
+- REPORT SUMMARY occupant source precedence, save/load metadata keys, report payload keys,
+  filtering, and injury calculation remain unchanged.

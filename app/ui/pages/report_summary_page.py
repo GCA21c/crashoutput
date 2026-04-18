@@ -10,8 +10,6 @@ from app.report import (
 )
 from app.report.exporters.runtime import open_export_file, unique_export_path
 from app.report.occupants import (
-    merge_occupant_slots,
-    occupant_slots_from_config,
     report_fields_from_sources,
 )
 from app.ui.pages.report_summary_constants import (
@@ -318,12 +316,6 @@ class ReportSummaryPage(tk.Frame):
                 ),
                 tags=(tag,),
             )
-
-    def _occupant_slots_from_config(self, config):
-        return occupant_slots_from_config(config)
-
-    def _merge_occupant_slots(self, *slot_groups):
-        return merge_occupant_slots(*slot_groups)
 
     def _report_fields(self):
         metadata = dict(getattr(self.workbench, "dataset_metadata", {}) or {})

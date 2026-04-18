@@ -310,3 +310,10 @@ Phase 3-G/H implementation status:
   current snapshot slots, then saved summary slots.
 - Excel exporter no longer keeps unused wrappers for slot normalization and slot-label dummy-name
   extraction; the active Excel wrappers for occupant label and slot info remain.
+
+Phase 3-I implementation status:
+- Removed unused REPORT SUMMARY occupant wrapper methods after `report_fields_from_sources()` became
+  the single helper used by `_report_fields()`.
+- `ReportSummaryPage._report_fields()` remains in the page because it still owns page state access:
+  Tk variables, workbench metadata, current snapshot, and saved summary payload.
+- `app/report/engine.py` slot identity remains unchanged.

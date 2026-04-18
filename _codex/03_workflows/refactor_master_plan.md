@@ -307,6 +307,13 @@ Phase 3-G/H implementation record:
 - Excel `_occupant_label()` and `_occupant_slot_infos()` wrappers remain because the export flow still
   calls them directly.
 
+Phase 3-I implementation record:
+- Removed the now-unused `ReportSummaryPage._occupant_slots_from_config()` and
+  `ReportSummaryPage._merge_occupant_slots()` wrappers.
+- Kept `ReportSummaryPage._report_fields()` as the compatibility boundary for the page.
+- Occupant helper commonization remains limited to report metadata/display assembly and does not touch
+  report engine slot identity.
+
 Early Phase 3 must not touch:
 - peak helpers
 - force/moment unit conversion
