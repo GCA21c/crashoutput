@@ -301,3 +301,12 @@ Phase 3-F implementation status:
 - `occupant_slot_infos_from_snapshot()` now lives in `app/report/occupants.py`.
 - Excel `_occupant_slot_infos()` remains as a wrapper for rollback and delegates to that helper.
 - `_occupant_input_cells()` and C9/G9 target selection remain unchanged.
+
+Phase 3-G/H implementation status:
+- `report_fields_from_sources()` now lives in `app/report/occupants.py`.
+- `ReportSummaryPage._report_fields()` remains the page-level entry point and delegates report field
+  assembly to the shared helper.
+- REPORT SUMMARY occupant slot precedence remains current config, metadata config, saved report fields,
+  current snapshot slots, then saved summary slots.
+- Excel exporter no longer keeps unused wrappers for slot normalization and slot-label dummy-name
+  extraction; the active Excel wrappers for occupant label and slot info remain.

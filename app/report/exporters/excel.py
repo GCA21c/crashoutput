@@ -3,8 +3,6 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
 
 from app.report.occupants import (
-    dummy_name_from_slot_label,
-    normalize_slot_key,
     occupant_label,
     occupant_slot_infos_from_snapshot,
 )
@@ -167,14 +165,6 @@ def _summary_rows_by_slot(snapshot):
 
 def _occupant_label(slot_info):
     return occupant_label(slot_info)
-
-
-def _normalize_slot_key(slot):
-    return normalize_slot_key(slot)
-
-
-def _dummy_name_from_slot_label(slot_label, slot):
-    return dummy_name_from_slot_label(slot_label, slot)
 
 
 def _occupant_slot_infos(snapshot, report_fields):

@@ -12,6 +12,7 @@ from app.report.exporters.runtime import open_export_file, unique_export_path
 from app.report.occupants import (
     merge_occupant_slots,
     occupant_slots_from_config,
+    report_fields_from_sources,
 )
 from app.ui.pages.report_summary_constants import (
     BUTTON_EXCEL_EXPORT,
@@ -330,19 +331,18 @@ class ReportSummaryPage(tk.Frame):
         saved_fields = dict(saved_summary.get("report_fields") or {})
         current_config = self.workbench.get_shared_dummy_config() if hasattr(self.workbench, "get_shared_dummy_config") else {}
         metadata_config = dict(metadata.get("shared_dummy_config") or {})
-        occupant_slots = self._merge_occupant_slots(
-            self._occupant_slots_from_config(current_config),
-            self._occupant_slots_from_config(metadata_config),
-            saved_fields.get("occupant_slots"),
-            (self._snapshot or {}).get("slots"),
-            saved_summary.get("slots"),
-        )
-        report_fields = {
+        input_fields = {
             field_key: variable.get().strip()
             for field_key, variable in self._report_input_variables().items()
         }
-        report_fields["occupant_slots"] = occupant_slots
-        return report_fields
+        return report_fields_from_sources(
+            input_fields,
+            current_config=current_config,
+            metadata_config=metadata_config,
+            saved_fields=saved_fields,
+            snapshot=self._snapshot,
+            saved_summary=saved_summary,
+        )
 
     def _build_report_payload(self):
         snapshot = self._snapshot or build_report_snapshot(self.workbench.dataset_metadata, self.regulation_var.get())

@@ -37,7 +37,9 @@
 | Phase 3-C | Done | user tested first occupant helper extraction |
 | Phase 3-D | Done | user tested Excel occupant label helper reuse |
 | Phase 3-E | Done | user tested Excel occupant slot merge helper reuse |
-| Phase 3-F | Ready for user test | Excel occupant slot info body moved behind wrapper |
+| Phase 3-F | Done | user tested Excel occupant slot info wrapper |
+| Phase 3-G | Ready for user test | REPORT SUMMARY report field assembly delegates to occupant helper |
+| Phase 3-H | Ready for user test | unused Excel occupant wrapper imports removed |
 | Phase 3 | In Progress | first helper commonization started with occupant helper only |
 | Phase 4 | Blocked | Requires Phase 1-3 completion |
 | Phase 5 | Blocked | Requires regression coverage and explicit approval |
@@ -52,7 +54,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-User test for Phase 3-F Excel occupant slot info wrapper.
+User test for Phase 3-G/H occupant helper batch.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.
@@ -365,4 +367,20 @@ Deferred occupant-related moves:
 - `_occupant_input_cells()` and C9/G9 target selection remain unchanged.
 - Report engine slot identity remains unchanged.
 - Save/load metadata keys, report payload keys, filtering, and injury calculation remain unchanged.
-- User should test Excel C9/G9 occupant labels and REPORT SUMMARY Save / `_R` reload before further occupant refactor.
+- User tested Excel C9/G9 occupant labels and REPORT SUMMARY Save / `_R` reload before further occupant refactor.
+
+## Phase 3-G REPORT field assembly helper
+- Added `report_fields_from_sources()` to `app/report/occupants.py`.
+- `ReportSummaryPage._report_fields()` remains as the page entry point and delegates report input field / occupant slot assembly to the helper.
+- The REPORT SUMMARY occupant source precedence remains:
+  1. current workbench shared dummy config
+  2. metadata `shared_dummy_config`
+  3. saved `report_fields.occupant_slots`
+  4. current snapshot `slots`
+  5. saved summary `slots`
+- Save/load metadata keys, report payload keys, filtering, and injury calculation remain unchanged.
+
+## Phase 3-H Excel unused wrapper cleanup
+- Removed unused Excel exporter private wrappers for slot normalization and slot-label dummy-name extraction.
+- Kept `_occupant_label()` and `_occupant_slot_infos()` wrappers because they are still used by Excel export flow.
+- Excel occupant source precedence, C9/G9 target selection, value writing, formatting, and template handling remain unchanged.

@@ -76,6 +76,31 @@ def merge_occupant_slots(*slot_groups):
     return [merged[slot] for slot in order]
 
 
+def report_fields_from_sources(
+    input_fields,
+    current_config=None,
+    metadata_config=None,
+    saved_fields=None,
+    snapshot=None,
+    saved_summary=None,
+):
+    saved_fields = dict(saved_fields or {})
+    saved_summary = dict(saved_summary or {})
+    occupant_slots = merge_occupant_slots(
+        occupant_slots_from_config(current_config),
+        occupant_slots_from_config(metadata_config),
+        saved_fields.get("occupant_slots"),
+        (snapshot or {}).get("slots"),
+        saved_summary.get("slots"),
+    )
+    report_fields = {
+        field_key: str(value or "").strip()
+        for field_key, value in dict(input_fields or {}).items()
+    }
+    report_fields["occupant_slots"] = occupant_slots
+    return report_fields
+
+
 def occupant_slot_infos_from_snapshot(snapshot, report_fields):
     report_slots = list(dict(report_fields or {}).get("occupant_slots") or [])
     snapshot_slots = list((snapshot or {}).get("slots") or [])

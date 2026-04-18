@@ -296,6 +296,17 @@ Phase 3-F implementation record:
 - Excel `_occupant_slot_infos()` remains as a wrapper for rollback and delegates to the shared helper.
 - Excel C9/G9 input cell detection remains unchanged.
 
+Phase 3-G/H implementation record:
+- `report_fields_from_sources()` was added to `app/report/occupants.py`.
+- `ReportSummaryPage._report_fields()` remains as the UI page entry point and delegates report input
+  field / occupant slot assembly to the helper.
+- REPORT SUMMARY occupant precedence remains current config, metadata config, saved report fields,
+  current snapshot slots, then saved summary slots.
+- Excel exporter unused private wrappers for slot normalization and slot-label dummy-name extraction
+  were removed after their logic moved behind `occupant_slot_infos_from_snapshot()`.
+- Excel `_occupant_label()` and `_occupant_slot_infos()` wrappers remain because the export flow still
+  calls them directly.
+
 Early Phase 3 must not touch:
 - peak helpers
 - force/moment unit conversion

@@ -32,6 +32,14 @@
   - added `occupant_slot_infos_from_snapshot()` to `app/report/occupants.py`
   - kept Excel `_occupant_slot_infos()` as a wrapper
   - source precedence and C9/G9 cell selection remain unchanged
+- Closed Phase 3-F after user testing passed.
+- Implemented Phase 3-G REPORT field assembly helper:
+  - added `report_fields_from_sources()` to `app/report/occupants.py`
+  - kept `ReportSummaryPage._report_fields()` as the page entry point
+  - preserved current config / metadata config / saved fields / snapshot / saved summary precedence
+- Implemented Phase 3-H Excel unused wrapper cleanup:
+  - removed unused Excel private wrappers for slot normalization and slot-label dummy-name extraction
+  - kept active Excel occupant wrappers and C9/G9 cell selection unchanged
 
 ## Why
 - Phase 3 helper commonization can indirectly change report values, occupant labels,
@@ -47,5 +55,7 @@
 - Phase 3-D changes only wrapper helper delegation for Excel occupant labels.
 - Phase 3-E changes only the internal merge helper used by Excel occupant slot resolution.
 - Phase 3-F changes only helper location behind the existing Excel wrapper.
+- Phase 3-G changes only helper location behind the existing REPORT SUMMARY `_report_fields()` entry point.
+- Phase 3-H removes unused Excel private wrapper code only.
 - Filtering, injury calculation, report extraction, payload keys, metadata keys, and
   Excel writer behavior remain untouched.
