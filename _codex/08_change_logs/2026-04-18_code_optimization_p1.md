@@ -41,6 +41,7 @@
 - Started Phase 2-H by moving REPORT SUMMARY Excel export success UI follow-up into a helper.
 - Closed Phase 2-H after user confirmed normal behavior.
 - Added the Phase 2-I closure boundary and final-test checklist before Phase 3.
+- Closed Phase 2 after final whole-program user testing passed.
 
 ## Why
 - Keep REPORT page code focused on UI flow while moving export runtime concerns into
@@ -74,3 +75,5 @@
   into a helper.
 - Phase 2-I is documentation-only. Phase 3 remains blocked until final Phase 2 testing,
   commit/merge decision, and a new branch.
+- Phase 3 must start from a new branch and define snapshot comparison criteria before
+  helper behavior is changed.

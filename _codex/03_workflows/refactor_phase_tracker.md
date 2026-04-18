@@ -30,9 +30,9 @@
 | Phase 2-F | Done | user tested report summary input variable helper reuse |
 | Phase 2-G | Done | user tested report summary valuation status helper |
 | Phase 2-H | Done | user tested report summary Excel export success helper |
-| Phase 2-I | Ready for final user test | Phase 2 closure boundary documented; no code behavior change |
-| Phase 2 | Ready for final user test | low-risk split is complete pending final whole-program test |
-| Phase 3 | Blocked | Requires final Phase 2 test, commit/merge decision, new branch, and snapshot comparison criteria |
+| Phase 2-I | Done | final whole-program user test passed; closure boundary documented |
+| Phase 2 | Closed | low-risk split complete and user-tested |
+| Phase 3 | Ready on new branch | Requires snapshot comparison criteria before code changes |
 | Phase 4 | Blocked | Requires Phase 1-3 completion |
 | Phase 5 | Blocked | Requires regression coverage and explicit approval |
 
@@ -46,7 +46,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-Final whole-program user test for Phase 2.
+Create Phase 3 branch and define snapshot comparison criteria before code changes.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.
@@ -71,6 +71,7 @@ Phase 1-C decisions:
 - Phase 2-F report summary input-variable helper reuse was user-tested as normal.
 - Phase 2-G report summary valuation status helper was user-tested as normal.
 - Phase 2-H report summary Excel export success helper was user-tested as normal.
+- Phase 2 final whole-program test was completed as normal.
 
 ## Phase 1-D candidate decisions
 - Keep `report_ploting` as registered internal page key.
@@ -179,3 +180,10 @@ Phase 1-C decisions:
   - representative TEST SETUP / DATA FILTERING / INJURY page entry
 - Do not start Phase 3 in this branch.
 - Phase 3 must start only after final Phase 2 test and a new branch is created.
+- Final Phase 2 whole-program user test passed.
+- Phase 2 is closed.
+
+## Phase 3 start guard
+- Phase 3 code changes must happen on a new branch.
+- Define snapshot comparison criteria before changing helper behavior.
+- Do not touch filtering math, injury formulas, report extraction contract, payload keys, or saved metadata keys without explicit approval.
