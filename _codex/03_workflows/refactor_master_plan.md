@@ -213,6 +213,78 @@ Validation:
 - Excel occupant label 비교
 - VC 관련 값 비교
 
+### Phase 3-A snapshot gate
+Phase 3-A must be completed before any helper code move.
+
+Required comparison targets:
+- report snapshot from `app/report/engine.py` `build_report_snapshot(metadata, regulation_name)`
+- saved REPORT SUMMARY payload under `report_saved_results.summary_report`
+- Excel export values only when the refactor touches export mapping or occupant label resolution
+
+Fields that must remain identical for a no-behavior-change helper refactor:
+- snapshot `regulation_name`
+- slot count/order and slot `slot`, `dummy_name`, `dummy_profile`
+- row count/order
+- row `slot`, `slot_label`, `dummy_name`, `dummy_profile`
+- row `section_key`, `region`, `result_key`, `label`
+- row `value`, `unit`, `limit`, `status`, `comparison`
+- row `result_uid`, `value_source`, `value_path`, `limit_source`
+- saved `report_fields`, including `occupant_slots`
+- saved `rows`, `slots`, and `excel_mapping`
+
+First safe candidate:
+- occupant slot merge / label extraction helper.
+- Keep `report_summary_page.py` wrapper methods during the first move.
+- Compare `_report_fields()` output before and after.
+
+### Phase 3-B occupant helper analysis
+Phase 3-B is analysis-only.
+
+Current locations:
+- `app/ui/pages/report_summary_page.py`
+  - config-to-slot extraction and merge for `report_fields.occupant_slots`
+- `app/report/exporters/excel.py`
+  - occupant label formatting and fallback slot merge for Excel C9/G9 export
+- `app/report/engine.py`
+  - snapshot slot identity from saved injury payload and shared dummy config
+
+First implementation boundary:
+- Add `app/report/occupants.py`.
+- Move only pure helpers:
+  - `normalize_slot_key()`
+  - `occupant_slots_from_config()`
+  - `merge_occupant_slots()`
+- Keep `report_summary_page.py` wrapper methods during the first move.
+- Do not move `_report_fields()` yet.
+- Do not alter Excel exporter occupant fallback logic yet.
+- Do not move report engine slot identity logic yet.
+
+Why this boundary:
+- REPORT SUMMARY currently decides the precedence of current config, metadata config,
+  saved occupant slots, snapshot slots, and saved summary slots.
+- Excel export has similar but not identical fallback behavior, including row-based
+  extraction and `slot_label` parsing.
+- Combining both at once would make C9/G9 label regressions harder to isolate.
+
+First implementation verification:
+- `_report_fields()` output must match exactly before and after.
+- `report_fields.occupant_slots` order and values must match.
+- Excel first and second occupant labels must remain unchanged.
+- Save and `_R` reload must preserve input fields and occupant slots.
+
+Phase 3-C implementation record:
+- `app/report/occupants.py` was added with only the pure helper functions listed above.
+- `report_summary_page.py` wrapper methods remain for rollback.
+- `_report_fields()`, Excel exporter occupant logic, and report engine slot identity logic remain in place.
+
+Early Phase 3 must not touch:
+- peak helpers
+- force/moment unit conversion
+- `_gradient_contiguous`
+- filtering math
+- derived channel generation
+- injury input resolver behavior
+
 Rollback:
 - module-local helper를 남긴 상태에서 한 module씩 import 교체한다.
 - 문제가 생기면 해당 module import만 원복한다.

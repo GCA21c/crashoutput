@@ -4,7 +4,7 @@
 다음 작업을 시작하기 전 항상 이 문서를 확인한다.
 
 ## Current branch
-- `코드최적화p1`
+- `코드최적화p1_phase3`
 
 ## Global guard
 - 계산 로직 변경 금지
@@ -32,7 +32,10 @@
 | Phase 2-H | Done | user tested report summary Excel export success helper |
 | Phase 2-I | Done | final whole-program user test passed; closure boundary documented |
 | Phase 2 | Closed | low-risk split complete and user-tested |
-| Phase 3 | Ready on new branch | Requires snapshot comparison criteria before code changes |
+| Phase 3-A | Done | snapshot comparison criteria reviewed; no code changes |
+| Phase 3-B | Done | occupant helper usage analysis reviewed; no code changes |
+| Phase 3-C | Ready for user test | first occupant helper extraction; page wrappers kept |
+| Phase 3 | In Progress | first helper commonization started with occupant helper only |
 | Phase 4 | Blocked | Requires Phase 1-3 completion |
 | Phase 5 | Blocked | Requires regression coverage and explicit approval |
 
@@ -46,7 +49,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-Create Phase 3 branch and define snapshot comparison criteria before code changes.
+User test for Phase 3-C occupant helper extraction.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.
@@ -187,3 +190,137 @@ Phase 1-C decisions:
 - Phase 3 code changes must happen on a new branch.
 - Define snapshot comparison criteria before changing helper behavior.
 - Do not touch filtering math, injury formulas, report extraction contract, payload keys, or saved metadata keys without explicit approval.
+
+## Phase 3-A snapshot criteria
+Phase 3-A is documentation-only. No code behavior is changed here.
+
+Baseline sources:
+- saved dataset metadata containing `injury_saved_results`
+- report snapshot from `build_report_snapshot(metadata, regulation_name)`
+- saved REPORT SUMMARY payload under `report_saved_results.summary_report`
+- Excel export output values only when an export-specific refactor is in scope
+
+Minimum report snapshot fields that must match before and after a no-behavior-change helper refactor:
+- `regulation_name`
+- slot count and slot order
+- each slot's `slot`, `dummy_name`, `dummy_profile`
+- row count and row order
+- each row's `slot`, `slot_label`, `dummy_name`, `dummy_profile`
+- each row's `section_key`, `region`, `result_key`, `label`
+- each row's `value`, `unit`, `limit`, `status`, `comparison`
+- each row's `result_uid`, `value_source`, `value_path`, `limit_source`
+
+Minimum REPORT SUMMARY saved payload fields that must match:
+- `report_type`
+- `regulation`
+- `report_fields` keys and values, including `occupant_slots`
+- `slots`
+- `rows`
+- `excel_mapping`
+
+Allowed differences:
+- pure UI layout internals
+- helper function location
+- comments and documentation
+- import location when public behavior and compatibility wrappers remain stable
+
+Disallowed differences without explicit approval:
+- numeric injury values
+- report row order
+- limit/status/comparison
+- `result_key`, `value_key`, `payload_aliases`
+- saved metadata keys
+- Excel result/IARV cell values
+- occupant label text such as `DRV - H3_5%F`
+
+First Phase 3 implementation candidate:
+- analyze and then move occupant slot merge / label extraction into a report helper module.
+- keep wrappers in `report_summary_page.py` for rollback.
+- compare `_report_fields()` output before and after the move.
+
+Still blocked in early Phase 3:
+- peak helpers
+- force/moment unit conversion helpers
+- `_gradient_contiguous`
+- filtering math and derived channel generation
+- injury input resolver behavior
+
+## Phase 3-B occupant helper usage analysis
+Phase 3-B is analysis/documentation-only. No code behavior is changed here.
+
+Current occupant-related code paths:
+- `app/ui/pages/report_summary_page.py`
+  - `_occupant_slots_from_config(config)`
+  - `_merge_occupant_slots(*slot_groups)`
+  - `_report_fields()`
+- `app/report/exporters/excel.py`
+  - `_occupant_label(slot_info)`
+  - `_normalize_slot_key(slot)`
+  - `_dummy_name_from_slot_label(slot_label, slot)`
+  - `_occupant_slot_infos(snapshot, report_fields)`
+  - `_occupant_input_cells(ws, template_spec)`
+- `app/report/engine.py`
+  - `_shared_slot_meta(metadata)`
+  - `_resolve_slots(metadata, injury_saved)`
+  - `_slot_identity(slot, slot_payload, slot_meta)`
+- `app/ui/pages/test_setup_page.py`
+  - writes `shared_dummy_config.slot_meta`
+- `app/shell.py`
+  - normalizes and persists `shared_dummy_config.slot_meta`
+
+Data precedence currently used by REPORT SUMMARY `_report_fields()`:
+1. current workbench shared dummy config
+2. metadata `shared_dummy_config`
+3. saved `report_fields.occupant_slots`
+4. current `_snapshot.slots`
+5. saved summary `slots`
+
+Data precedence currently used by Excel export occupant labels:
+1. `report_fields.occupant_slots`
+2. snapshot `slots`
+3. snapshot `rows`
+4. fallback extraction from `slot_label`
+
+First implementation candidate:
+- Add a report-level helper module, recommended path: `app/report/occupants.py`.
+- Move only pure occupant slot normalization/merge/config extraction into that module first.
+- Keep `report_summary_page.py` methods as wrappers during the first implementation:
+  - `_occupant_slots_from_config()` calls the new helper
+  - `_merge_occupant_slots()` calls the new helper
+- Do not move `_report_fields()` in the first implementation.
+- Do not change Excel exporter behavior in the first implementation.
+
+Expected first helper API:
+- `normalize_slot_key(slot) -> str`
+- `occupant_slots_from_config(config) -> list[dict]`
+- `merge_occupant_slots(*slot_groups) -> list[dict]`
+
+First implementation verification:
+- compare `_report_fields()` before/after using a config with:
+  - active positions such as `B1`, `B3`
+  - row positions
+  - slot meta with empty and non-empty `dummy_name` / `dummy_profile`
+  - saved `occupant_slots`
+  - snapshot `slots`
+- verify REPORT SUMMARY Save and `_R` reload
+- verify Excel occupant labels for first and second slots
+
+Deferred occupant-related moves:
+- Excel `_occupant_slot_infos()` can be refactored only after the first helper move is user-tested.
+- `app/report/engine.py` `_slot_identity()` is report snapshot contract-adjacent and should not move in early Phase 3.
+- `_report_fields()` itself remains in the page until occupant helper stability is proven.
+
+## Phase 3-C occupant helper extraction
+- Added `app/report/occupants.py`.
+- Moved only pure helper logic from `app/ui/pages/report_summary_page.py`:
+  - `normalize_slot_key()`
+  - `occupant_slots_from_config()`
+  - `merge_occupant_slots()`
+- Kept page wrapper methods:
+  - `_occupant_slots_from_config()`
+  - `_merge_occupant_slots()`
+- Kept `_report_fields()` in the page.
+- Did not change Excel exporter occupant fallback logic.
+- Did not change report engine slot identity logic.
+- Did not change save/load metadata keys, report payload keys, filtering, or injury calculation.
+- User should test REPORT SUMMARY Save, `_R` reload, and Excel C9/G9 occupant labels before any further occupant helper refactor.

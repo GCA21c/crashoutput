@@ -41,6 +41,7 @@
 | Path | Responsibility |
 |---|---|
 | `app/report/engine.py` | summary report snapshot / value extraction |
+| `app/report/occupants.py` | report occupant slot normalization and merge helpers |
 | `app/report/registry.py` | report rule/template registry |
 | `app/report/rules/*.py` | regulation-specific report row order and labels |
 | `app/report/templates/*.py` | Excel template anchors, aliases, and export rules |

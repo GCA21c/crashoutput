@@ -193,3 +193,92 @@ For Excel export refactors, also compare:
 
 Formatting-only differences should not change snapshot numeric values. Excel-only
 rounding is checked at export time and must not be pushed back into the report snapshot.
+
+## Phase 3 helper refactor gate
+Phase 3 helper commonization must start with snapshot comparison, not code movement.
+
+Required baseline artifacts:
+- metadata with `injury_saved_results`
+- `build_report_snapshot(metadata, regulation_name)` output
+- saved `report_saved_results.summary_report` payload if `_R` reload behavior is in scope
+- Excel export output values if template/export helper behavior is in scope
+
+No-behavior-change helper refactors must keep these report fields identical:
+- `regulation_name`
+- slot count/order and each slot's `slot`, `dummy_name`, `dummy_profile`
+- row count/order
+- each row's `slot`, `slot_label`, `dummy_name`, `dummy_profile`
+- each row's `section_key`, `region`, `result_key`, `label`
+- each row's `value`, `unit`, `limit`, `status`, `comparison`
+- each row's `result_uid`, `value_source`, `value_path`, `limit_source`
+
+If saved report payload behavior is in scope, these must also remain identical:
+- `report_type`
+- `regulation`
+- `report_fields`, including `occupant_slots`
+- `slots`
+- `rows`
+- `excel_mapping`
+
+First permitted Phase 3 implementation candidate:
+- occupant slot merge / label extraction helper.
+
+Rules for that first move:
+- keep `report_summary_page.py` wrapper methods until user testing passes
+- compare `_report_fields()` output before and after
+- verify Excel occupant labels for the first and second slots
+- do not change `shared_dummy_config`, `report_saved_results.summary_report`, or row payload keys
+
+Blocked until later explicit approval:
+- peak helpers
+- force/moment unit conversion
+- `_gradient_contiguous`
+- filtering math
+- derived channel generation
+- injury input resolver behavior
+
+## Occupant helper usage map
+REPORT currently has multiple occupant-related paths that must not be merged in one step.
+
+`app/ui/pages/report_summary_page.py`:
+- `_occupant_slots_from_config(config)` extracts `slot`, `dummy_name`, and `dummy_profile`
+  from TEST SETUP style config.
+- `_merge_occupant_slots(*slot_groups)` preserves first-seen slot order and fills missing
+  `dummy_name` / `dummy_profile` from later groups.
+- `_report_fields()` defines the REPORT SUMMARY occupant precedence:
+  1. current shared dummy config
+  2. metadata `shared_dummy_config`
+  3. saved `report_fields.occupant_slots`
+  4. current snapshot `slots`
+  5. saved summary `slots`
+
+`app/report/exporters/excel.py`:
+- `_occupant_label(slot_info)` formats `{dummy_name} - {dummy_profile}`.
+- `_occupant_slot_infos(snapshot, report_fields)` builds Excel occupant labels from
+  `report_fields.occupant_slots`, snapshot slots, and snapshot rows.
+- `_dummy_name_from_slot_label()` is an Excel fallback when row dummy name is missing.
+- `_occupant_input_cells()` finds the template targets such as C9 and G9.
+
+`app/report/engine.py`:
+- `_slot_identity()` builds snapshot slot labels and dummy display values.
+- This is report snapshot contract-adjacent and should not move in early Phase 3.
+
+First safe implementation:
+- create `app/report/occupants.py`
+- move only pure slot helper logic used by `report_summary_page.py`
+- keep page wrappers during the first move
+- leave Excel exporter and report engine occupant logic unchanged
+
+Required verification for the first move:
+- `_report_fields()` output matches before and after
+- `report_fields.occupant_slots` order and values match
+- Excel occupant labels for C9 and G9 remain unchanged
+- `_R` reload keeps the same report input and occupant slot values
+
+Phase 3-C implementation status:
+- `app/report/occupants.py` now owns:
+  - `normalize_slot_key()`
+  - `occupant_slots_from_config()`
+  - `merge_occupant_slots()`
+- `report_summary_page.py` keeps wrapper methods and still owns `_report_fields()`.
+- Excel exporter occupant fallback and report engine slot identity remain unchanged.
