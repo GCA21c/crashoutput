@@ -15,6 +15,8 @@
 - Marked Phase 1-C as ready for user test after keeping all compatibility aliases and
   documenting stable report rule/template naming in code comments.
 - Documented Phase 1-D rename candidate decisions in the master plan and phase tracker.
+- Documented Phase 1-E decision to defer actual internal key/class/file renames from
+  this branch.
 - Updated the file responsibility map for the new runtime export helper.
 
 ## Why

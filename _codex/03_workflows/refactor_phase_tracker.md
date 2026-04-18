@@ -19,8 +19,8 @@
 | Phase 1-A | Done | naming reference search / contract check |
 | Phase 1-B | Partial | PLOTING user-facing label changed to PLOTTING; no key/class/file rename |
 | Phase 1-C | Done | user tested overall startup/navigation; aliases documented and kept; no key/class/file rename |
-| Phase 1-D | Ready for user review | rename candidate list documented; no code rename |
-| Phase 1-E | Not started | actual rename deferred |
+| Phase 1-D | Done | rename candidate list documented; no code rename |
+| Phase 1-E | Ready for user review | actual internal key/class/file rename deferred from this branch |
 | Phase 2 | Blocked | Do not start until Phase 1 is explicitly closed by user |
 | Phase 3 | Blocked | Requires snapshot comparison criteria |
 | Phase 4 | Blocked | Requires Phase 1-3 completion |
@@ -36,7 +36,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-User review for Phase 1-D rename candidate decisions.
+User review for Phase 1-E rename deferral decision.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.
@@ -64,6 +64,13 @@ Phase 1-C decisions:
 - Do not rename report rule/template names: `fmvss208`, `FMVSS 208`, `fmvss208_summary`.
 - Do not rename injury slot payload keys such as `head_metadata` and `*_saved_payload`.
 - Treat `criterion_key` and `dummy_profile` as compatibility pair.
+
+## Phase 1-E decision
+- No actual internal key/class/file rename will be performed in `코드최적화p1`.
+- Keep `report_ploting`, `ReportPlotingPage`, and `app/ui/pages/report_ploting_page.py`.
+- Keep `dummyset`, `DummySetPage`, and `dummy_set_page.py`.
+- Real rename work is deferred to a later, explicitly approved compatibility phase.
+- Phase 1 can be closed only after user accepts this deferral decision.
 
 ## Hard block
 Do not proceed to Phase 2 yet.

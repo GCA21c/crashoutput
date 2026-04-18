@@ -94,6 +94,30 @@ Phase 1-D conclusion:
 - Metadata and payload keys are compatibility contracts and must not be renamed without a migration adapter.
 - Old change logs may mention obsolete paths such as `app/report/regulations/fmvss208.py`; do not edit historical logs for code cleanup.
 
+### Phase 1-E rename deferral decision
+Phase 1-E is the explicit decision point for actual rename work.
+
+Decision for `코드최적화p1`:
+- Do not perform actual internal key/class/file renames in this branch.
+- Keep compatibility aliases in place.
+- Treat Phase 1 as complete after user review/test of the documentation and current alias behavior.
+- Move any real rename into a later, separately approved compatibility phase.
+
+Deferred rename candidates:
+- `report_ploting` -> `report_plotting`
+- `ReportPlotingPage` -> `ReportPlottingPage`
+- `app/ui/pages/report_ploting_page.py` -> `app/ui/pages/report_plotting_page.py`
+- possible future cleanup of `dummyset` and `DummySetPage` after saved-file/import compatibility is confirmed
+
+Required conditions before any future actual rename:
+1. Add alias wrapper first.
+2. Keep old imports/page keys working.
+3. Verify existing pickle open.
+4. Verify REPORT nav/page registration.
+5. Verify packaging/import paths.
+6. Update `_codex/05_reference/file_to_responsibility_map.md`.
+7. Get explicit user approval for the rename phase.
+
 ## Phase 2 - Low-risk split
 목표:
 - 계산과 무관한 UI / export runtime / style helper부터 분리한다.
