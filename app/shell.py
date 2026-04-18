@@ -35,6 +35,8 @@ INJURY_TEST_MODE_MODULES = {
     "SIDE": ("hic", "chest", "pelvis", "iliac"),
 }
 
+# Compatibility aliases for legacy page keys and forward spelling fixes.
+# Keep these aliases until saved references/imports are explicitly migrated.
 PAGE_KEY_ALIASES = {
     "dummyset": "test_setup",
     "report_plotting": "report_ploting",
@@ -198,8 +200,10 @@ class CrashAnalysisWorkbench(tk.Frame):
         self.pages["iliac"] = InjuryPage(self.page_host, self, initial_mode="iliac", show_internal_menu=False)
         self.pages["tibia"] = InjuryPage(self.page_host, self, initial_mode="tibia", show_internal_menu=False)
         self.pages["test_setup"] = TestSetupPage(self.page_host, self)
+        # Keep the old key registered because older saved/UI references may still request it.
         self.pages["dummyset"] = self.pages["test_setup"]
         self.pages["report_summary"] = ReportSummaryPage(self.page_host, self)
+        # Internal key/class spelling is kept for compatibility; user-facing text says PLOTTING.
         self.pages["report_ploting"] = ReportPlotingPage(self.page_host, self)
         self._apply_injury_mode_nav()
 

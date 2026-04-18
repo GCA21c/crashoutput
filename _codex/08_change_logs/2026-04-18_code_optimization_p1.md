@@ -9,6 +9,11 @@
   adding `report_plotting` as a forward page-key alias.
 - Documented that `dummyset` and `DummySetPage` compatibility shims must remain during
   Phase 1 naming cleanup.
+- Added `_codex/03_workflows/refactor_master_plan.md` to pin the full refactoring direction.
+- Added `_codex/03_workflows/refactor_phase_tracker.md` to track the current phase and
+  prevent accidental phase skipping.
+- Marked Phase 1-C as ready for user test after keeping all compatibility aliases and
+  documenting stable report rule/template naming in code comments.
 - Updated the file responsibility map for the new runtime export helper.
 
 ## Why
@@ -16,6 +21,8 @@
   the report/exporter boundary.
 - Establish compatibility rules before larger cleanup around page keys, report keys,
   template keys, and saved metadata keys.
+- Keep the refactoring sequence explicit so Phase 2 is not started before Phase 1 is
+  closed and user-tested.
 
 ## Risk
 - Calculation logic is not changed.

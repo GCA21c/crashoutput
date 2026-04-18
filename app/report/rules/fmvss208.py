@@ -1,3 +1,7 @@
+# Naming contract:
+# - definition key: "fmvss208"
+# - display label: "FMVSS 208"
+# - Excel template key: "fmvss208_summary"
 FMVSS_208_NAME = "FMVSS 208"
 
 

@@ -1,0 +1,254 @@
+# Refactor master plan
+
+이 문서는 코드 최적화 / 리팩토링의 전체 방향을 고정한다.
+리팩토링 중 판단이 흔들리면 이 문서를 기준으로 phase를 확인한다.
+
+## Global rule
+- 계산 결과 불변이 최우선이다.
+- 다음 phase는 현재 phase가 명시적으로 완료되고 사용자 테스트가 끝나기 전까지 시작하지 않는다.
+- 실제 rename, 파일 이동, 함수 이동은 compatibility alias와 rollback 경로를 먼저 확보한 뒤 진행한다.
+- 기존 pickle / metadata key는 삭제하지 않는다. 신규 key를 추가하더라도 기존 key는 adapter 또는 alias로 계속 읽는다.
+- filtering math, injury formula, dummy factor / limit DB는 검증 장치 없이 먼저 건드리지 않는다.
+
+## Current refactor objective
+현재 문제는 계산식 자체보다 아래 경계가 뒤섞인 것이다.
+
+- `app/ui/pages/injury_page.py`: 계산 입력 준비, 채널 선택, 상태 저장, plot, report payload 조립이 UI page에 집중됨
+- `app/services/preprocessing/service.py`: filtering, derived channel, HIC, 3ms, VC helper가 한 파일에 섞임
+- `app/ui/viewer_module.py`: loader UI, table, graph, cursor, preview filtering이 한 클래스에 집중됨
+- `app/shell.py`: shell composition, metadata, persistence, shared dummy config, history가 한 파일에 집중됨
+- `app/ui/pages/report_summary_page.py`: report UI와 export runtime orchestration 일부가 같이 있음
+- report/export contract는 존재하지만 payload key 의존성이 강함
+- ISO parsing은 중앙화되어 있으나 page fallback string matching과 일부 중복됨
+
+## Phase 1 - Naming / Contract
+목표:
+- naming rule과 compatibility contract를 먼저 고정한다.
+- 실제 rename은 최소화하고 alias를 유지한다.
+- page key, class name, file name, UI label, saved metadata key를 분리해서 관리한다.
+
+수정 후보:
+- `app/shell.py`
+- `app/ui/pages/dummy_set_page.py`
+- `app/ui/pages/report_ploting_page.py`
+- `app/report/registry.py`
+- `app/report/rules/fmvss208.py`
+- `app/report/templates/fmvss208_summary.py`
+- `_codex/04_modules/report.md`
+- `_codex/04_modules/dummy_set.md`
+
+Subphases:
+- Phase 1-A: naming 참조 검색 / contract 확인
+- Phase 1-B: UI 표시명만 정리
+- Phase 1-C: compatibility alias 정리 / 격리
+- Phase 1-D: 실제 rename 후보 목록 작성
+- Phase 1-E: 실제 rename은 별도 승인 전까지 보류
+
+Risk:
+- UI label only: LOW
+- page key / class / file rename: MEDIUM to HIGH
+- saved metadata key rename: HIGH
+
+Calculation impact:
+- 직접 계산 영향 없음
+- 단, key mismatch가 생기면 기존 저장 결과, report, navigation이 깨질 수 있음
+
+Validation:
+- 프로그램 실행
+- TEST SETUP 진입
+- REPORT SUMMARY 진입
+- PLOTTING page 진입
+- 기존 pickle open
+- SUMMARY REPORT Valuation
+- Excel Export
+
+Rollback:
+- alias 유지 상태에서 UI label 변경만 되돌린다.
+- internal key rename을 수행했다면 alias resolver를 먼저 확인하고 key를 기존 값으로 되돌린다.
+
+## Phase 2 - Low-risk split
+목표:
+- 계산과 무관한 UI / export runtime / style helper부터 분리한다.
+- page code를 줄이되, 계산 입력과 report extraction contract는 건드리지 않는다.
+
+수정 후보:
+- `app/ui/styles.py` or `app/ui/constants.py`
+- `app/report/exporters/runtime.py`
+- `app/ui/pages/report_summary_page.py`
+- `app/ui/pages/offset_page.py`
+- `app/ui/pages/trimming_page.py`
+- `app/ui/pages/report_ploting_page.py`
+
+작업 후보:
+- UI font / color / title constants 분리
+- Excel export filename / execution folder / OS open helper 분리
+- offset/trimming plot refresh 공통화 전 사전 분석
+
+Risk:
+- LOW
+- plot refresh 공통화는 LOW to MEDIUM
+
+Calculation impact:
+- 없음
+
+Validation:
+- 모든 page 진입
+- Excel export 파일명 / 저장 위치 / 자동 열기 확인
+- offset/trimming preview plot 확인
+
+Rollback:
+- 이동한 helper를 page local method로 되돌린다.
+- style constants 적용은 import 제거 후 literal 복원 가능해야 한다.
+
+## Phase 3 - Helper commonization
+목표:
+- 중복 helper를 공통화하되 결과 동일성 검증을 먼저 둔다.
+
+수정 후보:
+- `app/services/injury/common_engines.py`
+- `app/services/injury/head_injury.py`
+- `app/services/injury/chest_injury.py`
+- `app/services/injury/pelvis_injury.py`
+- `app/services/injury/femur_injury.py`
+- `app/services/injury/tibia_injury.py`
+- `app/services/injury/iliac_injury.py`
+- `app/report/exporters/excel.py`
+- `app/ui/pages/report_summary_page.py`
+
+중복 정리 우선순위:
+1. occupant slot merge / label 추출 helper
+2. time/value valid mask
+3. peak helper
+4. force/moment unit conversion
+5. `_gradient_contiguous`
+
+Risk:
+- occupant helper: LOW to MEDIUM
+- peak/unit helper: MEDIUM
+- `_gradient_contiguous`: HIGH, VC 결과 영향 가능
+
+Calculation impact:
+- peak, unit, gradient helper는 계산 결과 영향 가능성이 있으므로 snapshot 비교 필요
+
+Validation:
+- 각 injury bundle numeric metadata 비교
+- report snapshot row/value/limit/status 비교
+- Excel occupant label 비교
+- VC 관련 값 비교
+
+Rollback:
+- module-local helper를 남긴 상태에서 한 module씩 import 교체한다.
+- 문제가 생기면 해당 module import만 원복한다.
+
+## Phase 4 - Orchestration split
+목표:
+- UI page 안에 있는 계산 준비, AUTO SET matching, metadata persistence, report orchestration을 service/helper로 분리한다.
+
+수정 후보:
+- `app/ui/pages/injury_page.py`
+- `app/ui/pages/filtering_page.py`
+- `app/shell.py`
+- `app/ui/pages/report_summary_page.py`
+- `app/services/injury/input_resolver.py`
+- `app/services/filtering/presets.py`
+- `app/services/state/persistence.py`
+- `app/report/service.py`
+
+이동 후보:
+- `injury_page.py` `_resolve_standard_series_for_calc()`
+- `injury_page.py` `_find_derived_channel()`
+- `injury_page.py` `_collect_chest_disp_prefiltered()`
+- `filtering_page.py` `_build_auto_filter_map()`
+- `shell.py` metadata persistence assembly
+- `report_summary_page.py` `_report_fields()` and occupant slot merge
+
+Risk:
+- HIGH
+
+Calculation impact:
+- injury input resolver 이동은 계산 결과 영향 가능성 HIGH
+- AUTO SET matching 이동은 filtering preset 대상 영향 가능성 MEDIUM to HIGH
+- persistence 이동은 existing pickle compatibility 영향 가능성 HIGH
+
+Validation:
+- selected channel, resolved source, filter label, raw source channel 비교
+- AUTO SET channel_to_filter map 비교
+- derived channel metadata 비교
+- saved pickle metadata diff
+- report snapshot diff
+
+Rollback:
+- 기존 page method를 wrapper로 남기고 새 service를 호출한다.
+- 문제가 있으면 wrapper 내부를 기존 로직으로 되돌린다.
+- 한 번에 한 function family만 이동한다.
+
+## Phase 5 - High-risk structural split
+목표:
+- `app/services/preprocessing/service.py`와 dummy / ISO / rule DB를 장기 유지보수 가능한 구조로 분해한다.
+
+수정 후보:
+- `app/services/preprocessing/service.py`
+- `app/services/preprocessing/filtering.py`
+- `app/services/preprocessing/derived_channels.py`
+- `app/services/injury/hic_engine.py`
+- `app/services/injury/clip3_engine.py`
+- `app/services/injury/vc_engine.py`
+- `app/core/dummy/engine.py`
+- `app/core/dummy/profiles/*.py`
+- `app/core/isocode/engine.py`
+
+분리 후보:
+- CFC filtering engine
+- derived channel builder
+- HIC helper
+- 3ms helper
+- VC helper
+- dummy factor DB schema / profile source
+- ISO fallback matching
+
+Risk:
+- HIGH
+
+Calculation impact:
+- 매우 높음
+
+Validation:
+- filtering output numeric diff
+- derived channel list / metadata diff
+- HIC15 / HIC36 / 3ms / VC 결과 diff
+- dummy factor lookup diff
+- ISO parsed map diff
+- existing pickle load/save diff
+
+Rollback:
+- 기존 `preprocessing/service.py`를 compatibility facade로 유지한다.
+- public function name은 유지한다.
+- 내부 import만 새 모듈로 돌린다.
+- 파일 전체 이동 금지, function group 단위로 이동한다.
+
+## Do not touch first
+아래 영역은 검증 장치 없이 먼저 수정하지 않는다.
+
+- filtering math
+- `app/services/preprocessing/service.py` `apply_filtering_with_derivatives()`
+- `app/ui/pages/injury_page.py` `_resolve_standard_series_for_calc()`
+- dummy factor / IARV / limit DB
+- report metric extraction key contract
+- ISO rewrite / filter code rewrite
+- `_gradient_contiguous`
+
+## Quick wins allowed before high-risk work
+- UI label/style constants
+- report export runtime helper
+- plotting page user-facing label
+- documentation and phase tracker
+- occupant label helper, if snapshot comparison is available
+
+## Phase exit rule
+한 phase를 끝냈다고 말하려면 아래 조건을 만족해야 한다.
+
+1. phase tracker status가 updated 되어야 한다.
+2. 변경 범위가 해당 phase 안에 있어야 한다.
+3. syntax/import check가 통과해야 한다.
+4. 사용자가 프로그램 테스트 결과를 알려야 한다.
+5. 사용자가 다음 phase 진입을 명시적으로 승인해야 한다.
