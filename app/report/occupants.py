@@ -5,6 +5,29 @@ def normalize_slot_key(slot):
     return str(slot or "").strip().upper()
 
 
+def occupant_label(slot_info):
+    name = str((slot_info or {}).get("dummy_name") or "").strip()
+    profile = str((slot_info or {}).get("dummy_profile") or "").strip()
+    if name and profile:
+        return f"{name} - {profile}"
+    return name or profile or None
+
+
+def dummy_name_from_slot_label(slot_label, slot):
+    text = str(slot_label or "").strip()
+    slot_key = normalize_slot_key(slot)
+    if not text:
+        return ""
+    prefix = f"{slot_key} - "
+    if slot_key and text.upper().startswith(prefix.upper()):
+        return text[len(prefix):].strip()
+    if " - " in text:
+        left, right = text.split(" - ", 1)
+        if normalize_slot_key(left) == slot_key:
+            return right.strip()
+    return ""
+
+
 def occupant_slots_from_config(config):
     config = dict(config or {})
     slot_meta = dict(config.get("slot_meta") or {})

@@ -17,6 +17,11 @@
   - moved only pure occupant slot normalization/config extraction/merge helpers
   - kept `report_summary_page.py` wrapper methods
   - left `_report_fields()`, Excel exporter occupant fallback, and report engine slot identity unchanged
+- Closed Phase 3-C after user testing passed.
+- Implemented Phase 3-D Excel occupant label helper reuse:
+  - moved shared occupant label formatting and slot-label dummy-name extraction into `app/report/occupants.py`
+  - kept Excel exporter wrapper function names
+  - left `_occupant_slot_infos()` merge/fallback flow and C9/G9 cell selection unchanged
 
 ## Why
 - Phase 3 helper commonization can indirectly change report values, occupant labels,
@@ -29,5 +34,6 @@
 ## Risk
 - Phase 3-A/B were documentation-only.
 - Phase 3-C changed helper location but preserved wrapper methods.
+- Phase 3-D changes only wrapper helper delegation for Excel occupant labels.
 - Filtering, injury calculation, report extraction, payload keys, metadata keys, and
   Excel writer behavior remain untouched.

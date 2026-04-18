@@ -282,3 +282,11 @@ Phase 3-C implementation status:
   - `merge_occupant_slots()`
 - `report_summary_page.py` keeps wrapper methods and still owns `_report_fields()`.
 - Excel exporter occupant fallback and report engine slot identity remain unchanged.
+
+Phase 3-D implementation status:
+- `app/report/occupants.py` also owns:
+  - `occupant_label()`
+  - `dummy_name_from_slot_label()`
+- `app/report/exporters/excel.py` keeps wrapper functions and delegates to shared helpers.
+- `_occupant_slot_infos()` remains in the Excel exporter and is not refactored yet.
+- `_occupant_input_cells()` and C9/G9 target selection remain unchanged.

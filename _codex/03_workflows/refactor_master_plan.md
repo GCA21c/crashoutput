@@ -277,6 +277,14 @@ Phase 3-C implementation record:
 - `report_summary_page.py` wrapper methods remain for rollback.
 - `_report_fields()`, Excel exporter occupant logic, and report engine slot identity logic remain in place.
 
+Phase 3-D implementation record:
+- `app/report/occupants.py` now also owns shared occupant label helpers:
+  - `occupant_label()`
+  - `dummy_name_from_slot_label()`
+- Excel exporter wrapper names remain stable and delegate to the shared helpers.
+- `_occupant_slot_infos()` remains local to the Excel exporter.
+- C9/G9 input cell detection remains unchanged.
+
 Early Phase 3 must not touch:
 - peak helpers
 - force/moment unit conversion

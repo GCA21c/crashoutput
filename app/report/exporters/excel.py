@@ -2,6 +2,11 @@ import re
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
 
+from app.report.occupants import (
+    dummy_name_from_slot_label,
+    normalize_slot_key,
+    occupant_label,
+)
 from app.report.templates import get_report_template_spec
 
 
@@ -160,30 +165,15 @@ def _summary_rows_by_slot(snapshot):
 
 
 def _occupant_label(slot_info):
-    name = str((slot_info or {}).get("dummy_name") or "").strip()
-    profile = str((slot_info or {}).get("dummy_profile") or "").strip()
-    if name and profile:
-        return f"{name} - {profile}"
-    return name or profile or None
+    return occupant_label(slot_info)
 
 
 def _normalize_slot_key(slot):
-    return str(slot or "").strip().upper()
+    return normalize_slot_key(slot)
 
 
 def _dummy_name_from_slot_label(slot_label, slot):
-    text = str(slot_label or "").strip()
-    slot_key = _normalize_slot_key(slot)
-    if not text:
-        return ""
-    prefix = f"{slot_key} - "
-    if slot_key and text.upper().startswith(prefix.upper()):
-        return text[len(prefix):].strip()
-    if " - " in text:
-        left, right = text.split(" - ", 1)
-        if _normalize_slot_key(left) == slot_key:
-            return right.strip()
-    return ""
+    return dummy_name_from_slot_label(slot_label, slot)
 
 
 def _occupant_slot_infos(snapshot, report_fields):
