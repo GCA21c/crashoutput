@@ -72,3 +72,23 @@ STATUS_NO_NUMERIC_VALUES = (
     "Stored uid results were found, but no numeric values are currently extractable for the selected regulation."
 )
 STATUS_VALUATION_REFRESHED = "Valuation refreshed from existing uid-based saved results."
+
+DIALOG_TITLE_REPORT = "REPORT"
+WARNING_LOAD_DATA_FIRST_KO = "먼저 데이터를 로드하세요."
+WARNING_REPORT_SAVE_PATH_KO = "REPORT 저장 경로를 만들 수 없습니다."
+WARNING_VALUATION_REQUIRED_KO = "먼저 Valuation으로 SUMMARY REPORT 결과를 불러오세요."
+
+HISTORY_SUMMARY_SAVED = "Summary report saved: {display_name}"
+HISTORY_SUMMARY_SAVED_DISPLAY = "Summary report saved as {display_name}"
+STATUS_REPORT_SAVED = "Saved report dataset: {saved_path}"
+INFO_REPORT_SAVED_KO = "REPORT 데이터가 저장되었습니다.\n{saved_path}"
+
+STATUS_EXCEL_EXPORT_FAILED = "Excel export failed: {error}"
+WARNING_EXCEL_EXPORT_FAILED = "Excel export failed.\n{error}"
+INFO_EXCEL_EXPORT_COMPLETED = "Excel export completed.\nSaved to: {output_path}"
+STATUS_EXCEL_EXPORT_COMPLETED = "Excel export completed. | Saved to: {output_path}"
+WARNING_EXCEL_OPEN_FAILED = (
+    "Excel export completed, but the file could not be opened.\n"
+    "Saved to: {path}\n"
+    "{error}"
+)

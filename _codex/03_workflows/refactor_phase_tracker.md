@@ -23,7 +23,8 @@
 | Phase 1-E | Done | user accepted deferring actual internal key/class/file renames |
 | Phase 1 | Closed | user tested overall program as normal after Phase 1 |
 | Phase 2-A | Done | user tested normal startup/navigation after shared UI style constants split |
-| Phase 2-B | Ready for user test | report summary presentation constants split; report/export contracts unchanged |
+| Phase 2-B | Done | user tested report summary presentation constants split |
+| Phase 2-C | Ready for user test | report summary message/status constants split; behavior unchanged |
 | Phase 2 | In Progress | low-risk split started; calculation logic remains off-limits |
 | Phase 3 | Blocked | Requires snapshot comparison criteria |
 | Phase 4 | Blocked | Requires Phase 1-3 completion |
@@ -39,7 +40,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-User test for Phase 2-B.
+User test for Phase 2-C.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.
@@ -57,6 +58,7 @@ Phase 1-C decisions:
 - Phase 1-C final alias/comment contract changes were user-tested as normal overall startup/navigation.
 - Phase 1-E deferral decision was accepted, and the overall program was user-tested as normal.
 - Phase 2-A shared UI style constants split was user-tested as normal.
+- Phase 2-B report summary presentation constants split was user-tested as normal.
 
 ## Phase 1-D candidate decisions
 - Keep `report_ploting` as registered internal page key.
@@ -102,4 +104,9 @@ Phase 1-C decisions:
 - Moved only UI labels, table headings, table status colors, source display names, and status strings.
 - Kept `app/ui/pages/report_summary_page.py` responsible for page behavior.
 - Did not change summary payload keys, report snapshot building, save/load metadata, Excel writer behavior, filtering, or injury calculation.
-- User should test REPORT - SUMMARY screen rendering, Valuation button, Save button visibility, Excel Export button visibility, and saved summary reload display before the next Phase 2 slice.
+- User tested REPORT - SUMMARY screen rendering, Valuation button, Save button visibility, Excel Export button visibility, and saved summary reload display before the next Phase 2 slice.
+
+## Phase 2-C scope
+- Moved remaining REPORT SUMMARY messagebox/history/status text templates into `app/ui/pages/report_summary_constants.py`.
+- Kept messagebox call sites, save/report/export control flow, metadata keys, and Excel writer behavior unchanged.
+- User should test Save, Excel Export success, and any available warning path before the next Phase 2 slice.

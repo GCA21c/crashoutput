@@ -24,6 +24,9 @@
 - Closed Phase 2-A after user confirmed normal program behavior.
 - Started Phase 2-B by moving REPORT SUMMARY presentation constants out of
   `app/ui/pages/report_summary_page.py` into `app/ui/pages/report_summary_constants.py`.
+- Closed Phase 2-B after user confirmed normal behavior.
+- Started Phase 2-C by moving remaining REPORT SUMMARY messagebox/history/status text
+  templates into `app/ui/pages/report_summary_constants.py`.
 
 ## Why
 - Keep REPORT page code focused on UI flow while moving export runtime concerns into
@@ -43,3 +46,5 @@
   filtering, or export contracts.
 - Phase 2-B is also presentation-only. Summary payload keys, Excel export behavior,
   save/load metadata, filtering, and injury calculations are unchanged.
+- Phase 2-C keeps the same save/export call flow and only changes where report summary
+  messages are defined.

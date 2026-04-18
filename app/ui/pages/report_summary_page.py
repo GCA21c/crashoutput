@@ -23,11 +23,19 @@ from app.ui.pages.report_summary_constants import (
     REPORT_INPUT_FIELDS,
     SELECTED_REGULATION_FIELDS,
     SOURCE_DISPLAY_NAMES,
+    DIALOG_TITLE_REPORT,
+    HISTORY_SUMMARY_SAVED,
+    HISTORY_SUMMARY_SAVED_DISPLAY,
+    INFO_EXCEL_EXPORT_COMPLETED,
+    INFO_REPORT_SAVED_KO,
     STATUS_LOAD_DATASET_FIRST,
     STATUS_LOADED_SAVED,
     STATUS_NO_NUMERIC_VALUES,
     STATUS_NO_ROWS,
     STATUS_READY,
+    STATUS_EXCEL_EXPORT_COMPLETED,
+    STATUS_EXCEL_EXPORT_FAILED,
+    STATUS_REPORT_SAVED,
     STATUS_VALUATION_REFRESHED,
     STATUS_WAITING,
     SUMMARY_GUIDE_TEXT,
@@ -35,6 +43,11 @@ from app.ui.pages.report_summary_constants import (
     SUMMARY_TABLE_COLUMN_SPECS,
     TABLE_GROUP_TITLE,
     TREE_STATUS_TAG_COLORS,
+    WARNING_EXCEL_EXPORT_FAILED,
+    WARNING_EXCEL_OPEN_FAILED,
+    WARNING_LOAD_DATA_FIRST_KO,
+    WARNING_REPORT_SAVE_PATH_KO,
+    WARNING_VALUATION_REQUIRED_KO,
 )
 from app.ui.styles import HEADER_FONT, MUTED_FG, PAGE_BG, TEXT_FG
 
@@ -449,7 +462,7 @@ class ReportSummaryPage(tk.Frame):
 
     def save_report(self):
         if getattr(self.workbench, "working_df", None) is None:
-            messagebox.showwarning("REPORT", "먼저 데이터를 로드하세요.")
+            messagebox.showwarning(DIALOG_TITLE_REPORT, WARNING_LOAD_DATA_FIRST_KO)
             return
         if not self._valuation_ready:
             self.run_valuation()
@@ -460,9 +473,9 @@ class ReportSummaryPage(tk.Frame):
         self.workbench.add_history_entry(
             {
                 "type": "save",
-                "section": "REPORT",
-                "message": f"Summary report saved: {display_name}",
-                "display_message": f"Summary report saved as {display_name}",
+                "section": DIALOG_TITLE_REPORT,
+                "message": HISTORY_SUMMARY_SAVED.format(display_name=display_name),
+                "display_message": HISTORY_SUMMARY_SAVED_DISPLAY.format(display_name=display_name),
             }
         )
         saved_path = self.workbench.save_current_dataset_snapshot(
@@ -471,11 +484,11 @@ class ReportSummaryPage(tk.Frame):
             prefer_original_source=False,
         )
         if not saved_path:
-            messagebox.showwarning("REPORT", "REPORT 저장 경로를 만들 수 없습니다.")
+            messagebox.showwarning(DIALOG_TITLE_REPORT, WARNING_REPORT_SAVE_PATH_KO)
             return
-        self.status_var.set(f"Saved report dataset: {saved_path}")
+        self.status_var.set(STATUS_REPORT_SAVED.format(saved_path=saved_path))
         self._loaded_dataset_identity = None
-        messagebox.showinfo("REPORT", f"REPORT 데이터가 저장되었습니다.\n{saved_path}")
+        messagebox.showinfo(DIALOG_TITLE_REPORT, INFO_REPORT_SAVED_KO.format(saved_path=saved_path))
 
     def _unique_export_path(self):
         return unique_export_path(self.test_id_var.get().strip(), source_file=__file__)
@@ -484,13 +497,16 @@ class ReportSummaryPage(tk.Frame):
         try:
             open_export_file(path)
         except Exception as exc:
-            messagebox.showwarning("REPORT", f"Excel export completed, but the file could not be opened.\nSaved to: {path}\n{exc}")
+            messagebox.showwarning(
+                DIALOG_TITLE_REPORT,
+                WARNING_EXCEL_OPEN_FAILED.format(path=path, error=exc),
+            )
 
     def export_excel(self):
         if not self._valuation_ready:
             self.run_valuation()
         if not self._snapshot:
-            messagebox.showwarning("REPORT", "먼저 Valuation으로 SUMMARY REPORT 결과를 불러오세요.")
+            messagebox.showwarning(DIALOG_TITLE_REPORT, WARNING_VALUATION_REQUIRED_KO)
             return
         output_path = self._unique_export_path()
         try:
@@ -500,18 +516,19 @@ class ReportSummaryPage(tk.Frame):
                 output_path,
             )
         except ExcelExportError as exc:
-            messagebox.showwarning("REPORT", str(exc))
-            self.status_var.set(f"Excel export failed: {exc}")
+            messagebox.showwarning(DIALOG_TITLE_REPORT, str(exc))
+            self.status_var.set(STATUS_EXCEL_EXPORT_FAILED.format(error=exc))
             return
         except Exception as exc:
-            messagebox.showwarning("REPORT", f"Excel export failed.\n{exc}")
-            self.status_var.set(f"Excel export failed: {exc}")
+            messagebox.showwarning(DIALOG_TITLE_REPORT, WARNING_EXCEL_EXPORT_FAILED.format(error=exc))
+            self.status_var.set(STATUS_EXCEL_EXPORT_FAILED.format(error=exc))
             return
 
-        detail = f"Excel export completed.\nSaved to: {result.get('output_path')}"
-        self.status_var.set(detail.replace("\n", " | "))
-        messagebox.showinfo("REPORT", detail)
-        self._open_export_file(result.get("output_path"))
+        output_path = result.get("output_path")
+        detail = INFO_EXCEL_EXPORT_COMPLETED.format(output_path=output_path)
+        self.status_var.set(STATUS_EXCEL_EXPORT_COMPLETED.format(output_path=output_path))
+        messagebox.showinfo(DIALOG_TITLE_REPORT, detail)
+        self._open_export_file(output_path)
 
     def reset_session_state(self):
         self._loaded_dataset_identity = None
