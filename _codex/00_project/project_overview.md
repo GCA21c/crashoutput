@@ -10,7 +10,7 @@ Desktop Python crash-analysis tool with a UI-driven workflow.
 - `app/ui/` : pages, viewer orchestration, UI components
 
 ## Main goal
-DIAdem-like crash-analysis workflow를 유지·확장한다.
+DAT/CSV 기반 crash-analysis workflow를 유지·확장한다.
 중점 영역은 다음과 같다.
 - filtering / preprocessing
 - multi-dummy handling

@@ -118,8 +118,8 @@ def _decimal_places_from_text(value_text: str, max_places: int = 12) -> int:
 
 
 def _build_implicit_channel(block, count):
-    # Time-like implicit channels in DIAdem DAT use 240=start and 241=step in some
-    # exports, but DataPRO DAT samples consistently expose time through 271/272.
+    # Time-like implicit channels in some DAT exports use 240=start and 241=step,
+    # but DAS program DAT samples consistently expose time through 271/272.
     # Prioritizing 272/271 avoids misreading channel scale/offset as time values.
     start_text = block.get("272", block.get("240", 0.0))
     dt_text = block.get("271", block.get("241", 0.0))
