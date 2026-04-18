@@ -2,15 +2,7 @@ import re
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
 
-from .excel_summary_mapping import (
-    EXCEL_IARV_EXPORT_RULES,
-    EXCEL_RESULT_SOURCE_OVERRIDES,
-    EXCEL_VALUE_EXPORT_RULES,
-    SUMMARY_CRITERIA_ALIASES,
-    SUMMARY_META_FIELDS,
-    SUMMARY_OCCUPANT_LABEL_CELLS,
-    SUMMARY_TEMPLATE_PATH,
-)
+from app.report.templates import get_report_template_spec
 
 
 class ExcelExportError(RuntimeError):
@@ -33,7 +25,7 @@ def _normalize_text(value):
     return " ".join(text.split())
 
 
-def format_excel_numeric_value(value, decimals=2):
+def round_for_excel_export(value, decimals=2):
     if value is None:
         return None
     try:
@@ -41,10 +33,6 @@ def format_excel_numeric_value(value, decimals=2):
     except (InvalidOperation, ValueError, TypeError):
         return str(value)
     return f"{quantized:.{int(decimals)}f}"
-
-
-def round_for_excel_export(value, decimals=2):
-    return format_excel_numeric_value(value, decimals=decimals)
 
 
 def _worksheet_cells(ws):
@@ -198,79 +186,60 @@ def _dummy_name_from_slot_label(slot_label, slot):
     return ""
 
 
-def _occupant_slots_from_rows(snapshot):
+def _occupant_slot_infos(snapshot, report_fields):
     result = []
     by_slot = {}
-    for row in list((snapshot or {}).get("rows") or []):
-        row = dict(row or {})
-        slot_key = _normalize_slot_key(row.get("slot"))
+
+    def merge_slot(slot, dummy_name="", dummy_profile=""):
+        slot_key = _normalize_slot_key(slot)
         if not slot_key:
-            continue
+            return
         if slot_key not in by_slot:
             by_slot[slot_key] = {"slot": slot_key, "dummy_name": "", "dummy_profile": ""}
             result.append(by_slot[slot_key])
         current = by_slot[slot_key]
-        dummy_name = str(row.get("dummy_name") or "").strip() or _dummy_name_from_slot_label(row.get("slot_label"), slot_key)
-        dummy_profile = str(row.get("dummy_profile") or row.get("criterion_key") or "").strip()
+        dummy_name = str(dummy_name or "").strip()
+        dummy_profile = str(dummy_profile or "").strip()
         if dummy_name and not current["dummy_name"]:
             current["dummy_name"] = dummy_name
         if dummy_profile and not current["dummy_profile"]:
             current["dummy_profile"] = dummy_profile
-    return result
+
+    for info in list(dict(report_fields or {}).get("occupant_slots") or []):
+        info = dict(info or {})
+        merge_slot(info.get("slot"), info.get("dummy_name"), info.get("dummy_profile"))
+    for info in list((snapshot or {}).get("slots") or []):
+        info = dict(info or {})
+        merge_slot(info.get("slot"), info.get("dummy_name"), info.get("dummy_profile"))
+    for row in list((snapshot or {}).get("rows") or []):
+        row = dict(row or {})
+        slot_key = _normalize_slot_key(row.get("slot"))
+        dummy_name = str(row.get("dummy_name") or "").strip() or _dummy_name_from_slot_label(row.get("slot_label"), slot_key)
+        dummy_profile = str(row.get("dummy_profile") or row.get("criterion_key") or "").strip()
+        merge_slot(slot_key, dummy_name, dummy_profile)
+    return [slot_info for slot_info in result if _occupant_label(slot_info)]
 
 
-def _merge_occupant_slot_sources(*slot_groups):
-    result = []
-    by_slot = {}
-    for group in slot_groups:
-        for info in list(group or []):
-            info = dict(info or {})
-            slot_key = _normalize_slot_key(info.get("slot"))
-            if not slot_key:
-                continue
-            if slot_key not in by_slot:
-                by_slot[slot_key] = {"slot": slot_key, "dummy_name": "", "dummy_profile": ""}
-                result.append(by_slot[slot_key])
-            current = by_slot[slot_key]
-            dummy_name = str(info.get("dummy_name") or "").strip()
-            dummy_profile = str(info.get("dummy_profile") or "").strip()
-            if dummy_name and not current["dummy_name"]:
-                current["dummy_name"] = dummy_name
-            if dummy_profile and not current["dummy_profile"]:
-                current["dummy_profile"] = dummy_profile
-    return result
-
-
-def _occupant_slot_infos(snapshot, report_fields):
-    snapshot_slots = list((snapshot or {}).get("slots") or [])
-    field_slots = list(dict(report_fields or {}).get("occupant_slots") or [])
-    row_slots = _occupant_slots_from_rows(snapshot)
-    return [
-        slot_info
-        for slot_info in _merge_occupant_slot_sources(field_slots, snapshot_slots, row_slots)
-        if _occupant_label(slot_info)
-    ]
-
-
-def _occupant_input_cells(ws):
+def _occupant_input_cells(ws, template_spec):
     anchor_cell = _find_anchor_cell(ws, "occupant")
     first_cell = _next_input_cell(ws, anchor_cell) if anchor_cell is not None else None
     second_cell = _next_input_cell_after(ws, first_cell) if first_cell is not None else None
     cells = [cell for cell in (first_cell, second_cell) if cell is not None]
     if cells:
         return cells
-    return [ws[cell_ref] for cell_ref in SUMMARY_OCCUPANT_LABEL_CELLS]
+    return [ws[cell_ref] for cell_ref in template_spec.get("occupant_label_cells", ())]
 
 
-def _template_alias_candidates(region, template_label):
-    mapping = SUMMARY_CRITERIA_ALIASES.get(region, {})
+def _template_alias_candidates(region, template_label, template_spec):
+    mapping = template_spec.get("criteria_aliases", {}).get(region, {})
     candidates = [template_label]
     candidates.extend(mapping.get(template_label, ()))
     return tuple(_normalize_text(candidate) for candidate in candidates if str(candidate or "").strip())
 
 
-def should_export_iarv(regulation_name, region, criteria_label):
-    rule = EXCEL_IARV_EXPORT_RULES.get(str(regulation_name or "").strip(), {})
+def should_export_iarv(regulation_name, region, criteria_label, template_spec=None):
+    spec = _active_template_spec(template_spec)
+    rule = spec.get("iarv_export_rules", {}).get(str(regulation_name or "").strip(), {})
     excluded = {
         (str(item_region).strip().upper(), _normalize_text(item_label))
         for item_region, item_label in rule.get("exclude", set())
@@ -278,10 +247,11 @@ def should_export_iarv(regulation_name, region, criteria_label):
     return (str(region or "").strip().upper(), _normalize_text(criteria_label)) not in excluded
 
 
-def transform_excel_export_value(regulation_name, region, criteria_label, value, value_kind):
+def transform_excel_export_value(regulation_name, region, criteria_label, value, value_kind, template_spec=None):
     if value is None:
         return None
-    rule = EXCEL_VALUE_EXPORT_RULES.get(str(regulation_name or "").strip(), {})
+    spec = _active_template_spec(template_spec)
+    rule = spec.get("value_export_rules", {}).get(str(regulation_name or "").strip(), {})
     key = (str(region or "").strip().upper(), _normalize_text(criteria_label))
     abs_result = {
         (str(item_region).strip().upper(), _normalize_text(item_label))
@@ -295,8 +265,8 @@ def transform_excel_export_value(regulation_name, region, criteria_label, value,
     return value
 
 
-def _result_source_row(regulation_name, slot_rows, region, template_label, default_row):
-    rule = EXCEL_RESULT_SOURCE_OVERRIDES.get(str(regulation_name or "").strip(), {})
+def _result_source_row(regulation_name, slot_rows, region, template_label, default_row, template_spec):
+    rule = template_spec.get("result_source_overrides", {}).get(str(regulation_name or "").strip(), {})
     source_labels = rule.get((str(region or "").strip().upper(), str(template_label or "").strip()), ())
     for label in source_labels:
         row = slot_rows.get((str(region or "").strip().upper(), _normalize_text(label)))
@@ -320,10 +290,15 @@ def safe_set_cell_value(ws, target_cell, value):
     return True
 
 
-def export_summary_report_to_excel(snapshot, report_fields, output_path, template_path=None):
-    load_workbook = _load_openpyxl()
+def _active_template_spec(template_spec=None):
+    return dict(template_spec or get_report_template_spec())
 
-    template = Path(template_path or SUMMARY_TEMPLATE_PATH)
+
+def export_summary_report_to_excel(snapshot, report_fields, output_path, template_path=None, template_spec=None):
+    load_workbook = _load_openpyxl()
+    spec = _active_template_spec(template_spec)
+
+    template = Path(template_path or spec.get("template_path"))
     if not template.exists():
         raise ExcelExportError(f"Excel template not found: {template}")
 
@@ -335,14 +310,14 @@ def export_summary_report_to_excel(snapshot, report_fields, output_path, templat
     worksheet = workbook.active
 
     written_meta = 0
-    for spec in SUMMARY_META_FIELDS:
-        label_cell = _find_anchor_cell(worksheet, spec["template_anchor"])
+    for meta_spec in spec.get("meta_fields", ()):
+        label_cell = _find_anchor_cell(worksheet, meta_spec["template_anchor"])
         target_cell = _next_input_cell(worksheet, label_cell) if label_cell is not None else None
-        if safe_set_cell_value(worksheet, target_cell, dict(report_fields or {}).get(spec["field_key"]) or None):
+        if safe_set_cell_value(worksheet, target_cell, dict(report_fields or {}).get(meta_spec["field_key"]) or None):
             written_meta += 1
 
     written_occupants = 0
-    for target_cell, slot_info in zip(_occupant_input_cells(worksheet), _occupant_slot_infos(snapshot or {}, report_fields or {})):
+    for target_cell, slot_info in zip(_occupant_input_cells(worksheet, spec), _occupant_slot_infos(snapshot or {}, report_fields or {})):
         if safe_set_cell_value(worksheet, target_cell, _occupant_label(slot_info)):
             written_occupants += 1
 
@@ -359,7 +334,7 @@ def export_summary_report_to_excel(snapshot, report_fields, output_path, templat
         for (region, template_label_key), template_row in template_rows.items():
             template_label = worksheet.cell(row=template_row, column=2).value
             matched = None
-            for candidate_key in _template_alias_candidates(region, str(template_label or "")):
+            for candidate_key in _template_alias_candidates(region, str(template_label or ""), spec):
                 matched = slot_rows.get((region, candidate_key))
                 if matched:
                     break
@@ -368,14 +343,14 @@ def export_summary_report_to_excel(snapshot, report_fields, output_path, templat
                 continue
             iarv_cell = worksheet.cell(row=template_row, column=column_group["iarv_column"])
             result_cell = worksheet.cell(row=template_row, column=column_group["result_column"])
-            if should_export_iarv(regulation_name, region, matched.get("label")):
-                iarv_value = transform_excel_export_value(regulation_name, region, matched.get("label"), matched.get("limit"), "iarv")
-                safe_set_cell_value(worksheet, iarv_cell, format_excel_numeric_value(iarv_value))
+            if should_export_iarv(regulation_name, region, matched.get("label"), spec):
+                iarv_value = transform_excel_export_value(regulation_name, region, matched.get("label"), matched.get("limit"), "iarv", spec)
+                safe_set_cell_value(worksheet, iarv_cell, round_for_excel_export(iarv_value))
             else:
                 safe_set_cell_value(worksheet, iarv_cell, None)
-            result_source = _result_source_row(regulation_name, slot_rows, region, template_label, matched)
-            result_value = transform_excel_export_value(regulation_name, region, matched.get("label"), result_source.get("value"), "result")
-            safe_set_cell_value(worksheet, result_cell, format_excel_numeric_value(result_value))
+            result_source = _result_source_row(regulation_name, slot_rows, region, template_label, matched, spec)
+            result_value = transform_excel_export_value(regulation_name, region, matched.get("label"), result_source.get("value"), "result", spec)
+            safe_set_cell_value(worksheet, result_cell, round_for_excel_export(result_value))
             written_results += 1
 
     workbook.save(output)

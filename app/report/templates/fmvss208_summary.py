@@ -12,7 +12,9 @@ def _resolve_summary_template_path():
         if bundle_root:
             candidates.append(Path(bundle_root))
         candidates.append(Path(sys.executable).resolve().parent)
-    candidates.append(Path(__file__).resolve().parents[2])
+    module_path = Path(__file__).resolve()
+    candidates.append(module_path.parents[3])
+    candidates.append(module_path.parents[2])
 
     for root in candidates:
         path = root / "resources" / "templates" / SUMMARY_TEMPLATE_FILENAME
@@ -113,4 +115,18 @@ SUMMARY_CRITERIA_ALIASES = {
         "Peak Tension Force(FZ+)": ("Peak Tension Force(FZ+)",),
         "Shear Force(FX)": ("Peak Shear Force(FX)",),
     },
+}
+
+
+FMVSS208_SUMMARY_TEMPLATE = {
+    "key": "fmvss208_summary",
+    "label": "FMVSS 208 Summary Excel",
+    "regulation": "FMVSS 208",
+    "template_path": SUMMARY_TEMPLATE_PATH,
+    "meta_fields": SUMMARY_META_FIELDS,
+    "occupant_label_cells": SUMMARY_OCCUPANT_LABEL_CELLS,
+    "iarv_export_rules": EXCEL_IARV_EXPORT_RULES,
+    "value_export_rules": EXCEL_VALUE_EXPORT_RULES,
+    "result_source_overrides": EXCEL_RESULT_SOURCE_OVERRIDES,
+    "criteria_aliases": SUMMARY_CRITERIA_ALIASES,
 }

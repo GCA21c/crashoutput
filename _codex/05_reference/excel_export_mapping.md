@@ -2,12 +2,12 @@
 
 ## Template
 - Path: `resources/templates/FMVSS208 Sumy_temp.xlsx`
-- Writer: `app/report/excel_export.py`
-- Mapping constants: `app/report/excel_summary_mapping.py`
+- Writer: `app/report/exporters/excel.py`
+- Template spec: `app/report/templates/fmvss208_summary.py`
 - Runtime dependency: `openpyxl`
-- Export writer rule: use `openpyxl` only for template inspection. Final output is a
-  byte-for-byte template copy with worksheet XML cell values patched. Do not call
-  `workbook.save()` for export because it can rewrite merged-cell styles.
+- Export writer rule: use `openpyxl` to load the template, assign values to existing
+  cells, and save the workbook. Do not patch worksheet XML directly; stale workbook
+  internals such as `calcChain.xml` can cause Excel repair warnings.
 
 ## Metadata anchors
 The exporter searches normalized label text and writes to the merged/input cell immediately
@@ -44,7 +44,7 @@ Example: `DRV - H3_5%F`.
   Examples: `0.1` -> `0.10`, `1` -> `1.00`.
 
 ## FMVSS 208 IARV exclusions
-Maintain regulation-aware IARV exclusions in `app/report/excel_summary_mapping.py`
+Maintain regulation-aware IARV exclusions in `app/report/templates/fmvss208_summary.py`
 `EXCEL_IARV_EXPORT_RULES`.
 
 For `FMVSS 208`, these IARV cells are intentionally left blank because the current FMVSS
@@ -60,14 +60,14 @@ summary template has no applicable IARV basis for them:
 The RESULT cells for the same rows are still exported when values are available.
 
 ## Excel-only value transforms
-Maintain export-only value transforms in `app/report/excel_summary_mapping.py`
+Maintain export-only value transforms in `app/report/templates/fmvss208_summary.py`
 `EXCEL_VALUE_EXPORT_RULES`.
 
 FMVSS 208 currently does not force CHEST V*C RESULT values positive. V*C rows export
 the same MAX value selected by SUMMARY REPORT.
 
 ## Excel RESULT source overrides
-Maintain template-row-specific RESULT source overrides in `app/report/excel_summary_mapping.py`
+Maintain template-row-specific RESULT source overrides in `app/report/templates/fmvss208_summary.py`
 `EXCEL_RESULT_SOURCE_OVERRIDES`.
 
 For `FMVSS 208`, these Excel template rows keep their template label but export the
@@ -83,7 +83,7 @@ not changed.
 
 ## Criteria aliases
 Template labels do not always match SUMMARY REPORT labels exactly. Maintain aliases in
-`app/report/excel_summary_mapping.py` `SUMMARY_CRITERIA_ALIASES`.
+`app/report/templates/fmvss208_summary.py` `SUMMARY_CRITERIA_ALIASES`.
 
 Examples:
 - `HEAD / HIC 15ms` -> `HIC15ms`
@@ -100,7 +100,7 @@ The exporter opens the template workbook and assigns values only. It must not:
 - alter fonts, fills, borders, or alignment
 - overwrite formulas outside the IARV/RESULT targets
 - create a new workbook from scratch
-- save the workbook through `openpyxl`
+- patch worksheet XML directly
 
 When the template changes, re-run the workbook anchor inspection and update only the alias
 or detection helpers needed for the new labels.

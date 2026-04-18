@@ -1,7 +1,6 @@
 from .definitions import get_regulation_choices, get_regulation_definition
-from .excel_export import ExcelExportError, export_summary_report_to_excel
-from .excel_mapping import build_excel_mapping
-from .mapping import build_report_snapshot
+from .engine import build_excel_mapping, build_report_snapshot
+from .exporters.excel import ExcelExportError, export_summary_report_to_excel
 
 __all__ = [
     "ExcelExportError",

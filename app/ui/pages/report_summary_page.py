@@ -13,7 +13,7 @@ from app.report import (
     get_regulation_choices,
     get_regulation_definition,
 )
-from app.report.excel_summary_mapping import SUMMARY_TEMPLATE_PATH
+from app.report.templates import get_report_template_spec
 
 
 class ReportSummaryPage(tk.Frame):
@@ -470,7 +470,7 @@ class ReportSummaryPage(tk.Frame):
 
     def _default_export_filename(self):
         test_id = self._sanitize_filename_part(self.test_id_var.get().strip() or "NO_TEST_ID")
-        template_path = Path(SUMMARY_TEMPLATE_PATH)
+        template_path = Path(get_report_template_spec().get("template_path"))
         stem = template_path.stem
         if stem.lower().endswith("_temp"):
             stem = stem[:-5]
