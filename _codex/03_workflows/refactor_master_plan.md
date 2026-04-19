@@ -478,6 +478,30 @@ If representative files are not available, Phase 5 can only prepare the tooling 
 Actual preprocessing/injury input moves remain blocked until at least one baseline snapshot is
 created and compared.
 
+### Phase 5-B preprocessing classification and compare loop
+Phase 5-B is still not a runtime refactor.
+
+Allowed work:
+- classify `app/services/preprocessing/service.py` function groups
+- document extraction order and risk
+- add folder-level snapshot capture/compare commands
+
+Reference:
+- `_codex/04_modules/preprocessing.md`
+- `_codex/03_workflows/regression_snapshot_workflow.md`
+
+Exit condition:
+- `capture-dir` works on representative input files
+- `compare-dir` can compare matching snapshot sets
+- no app runtime calculation path is changed
+- first Phase 5-C extraction candidate is selected explicitly
+
+Phase 5-B status:
+- Completed after folder-level capture/compare was verified against 5 representative H3_5%F
+  two-dummy saved files.
+- First Phase 5-C candidate is pure channel-role detector helpers. Do not move
+  `apply_filtering_with_derivatives()` in the first Phase 5-C slice.
+
 ## Do not touch first
 아래 영역은 검증 장치 없이 먼저 수정하지 않는다.
 

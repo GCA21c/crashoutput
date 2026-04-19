@@ -36,6 +36,32 @@ python3 tools/capture_regression_snapshot.py capture path/to/sample.pkl
 python3 tools/capture_regression_snapshot.py compare before.json after.json
 ```
 
+폴더 단위 baseline 생성:
+
+```bash
+python3 tools/capture_regression_snapshot.py capture-dir \
+  _codex/09_regression_snapshots/input_files \
+  _codex/09_regression_snapshots/before
+```
+
+refactor 후 같은 입력 파일로 새 snapshot 생성:
+
+```bash
+python3 tools/capture_regression_snapshot.py capture-dir \
+  _codex/09_regression_snapshots/input_files \
+  _codex/09_regression_snapshots/after
+```
+
+폴더 단위 비교:
+
+```bash
+python3 tools/capture_regression_snapshot.py compare-dir \
+  _codex/09_regression_snapshots/before \
+  _codex/09_regression_snapshots/after
+```
+
+`before` / `after` snapshot JSON은 git에 올리지 않는다.
+
 ## Required baseline set
 Phase 5 high-risk refactor 전에는 가능하면 아래 케이스를 각각 저장한다.
 
@@ -81,3 +107,13 @@ snapshot 차이가 있으면 다음 작업을 중단한다.
 2. 계산 값 차이인지, 표시/문서 차이인지 분류한다.
 3. 계산 값, report row order, payload key 차이면 원인 수정 전 다음 phase로 넘어가지 않는다.
 4. 의도된 contract 변경이면 사용자 승인 후 문서와 change log에 기록한다.
+
+## Phase 5-B check loop
+Phase 5-B 이후 실제 helper 이동을 할 때는 아래 순서를 반복한다.
+
+1. 변경 전 `capture-dir`로 `before` 생성
+2. 작은 단위 refactor 수행
+3. 같은 입력 파일로 `after` 생성
+4. `compare-dir` 실행
+5. 차이가 없으면 사용자 프로그램 구동 테스트
+6. 차이가 있으면 원인 분석 후 refactor rollback 또는 사용자 승인

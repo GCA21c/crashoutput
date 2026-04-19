@@ -54,6 +54,7 @@
 | `app/report/exporters/*.py` | report export writers |
 | `app/report/exporters/runtime.py` | Excel export filename, output folder, and OS open helpers |
 | `_codex/04_modules/report.md` | report module maintenance workflow |
+| `_codex/04_modules/preprocessing.md` | preprocessing service split plan and risk map |
 | `_codex/05_reference/excel_export_mapping.md` | Excel export mapping reference |
 
 ## Tools / regression

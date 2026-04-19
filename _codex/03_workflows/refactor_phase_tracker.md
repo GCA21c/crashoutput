@@ -54,6 +54,7 @@
 | Phase 4-I | Done | Phase 4 closure boundary documented; high-risk moves deferred |
 | Phase 4 | Closed | orchestration split complete and user-tested |
 | Phase 5-A | Partial | regression snapshot tool/docs added; actual baseline JSON requires representative saved `.pkl` |
+| Phase 5-B | Done | preprocessing function groups and folder-level snapshot compare workflow verified |
 | Phase 5 | In Progress | Started with regression fixture tooling only |
 
 ## Completed work on this branch
@@ -66,16 +67,31 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-Create baseline JSON from representative saved `.pkl` files before moving high-risk
-preprocessing or injury-input code.
+Phase 5-C can start with the smallest non-math extraction candidate only after user approval.
+Recommended first candidate: pure channel-role detector helpers from
+`app/services/preprocessing/service.py`, while keeping public imports/API stable.
 
 Phase 5-A scope:
 - Added `tools/capture_regression_snapshot.py`.
 - Added `_codex/03_workflows/regression_snapshot_workflow.md`.
 - Added `_codex/09_regression_snapshots/README.md`.
+- Added `_codex/09_regression_snapshots/input_files/` for local representative `.pkl` inputs.
+- Generated local baseline snapshots from a 2-dummy H3_5%F dataset:
+  - `_O`
+  - `_O_F`
+  - `_O_F_T`
+  - `_O_F_T_I`
+  - `_O_F_T_I_R`
 - No calculation logic, filtering math, injury formula, report extraction key, or pickle format change.
-- Actual representative snapshot artifacts are not created yet because no saved dataset file exists
-  in the repository workspace.
+- Snapshot JSON files are local/ignored by git by default.
+
+Phase 5-B scope:
+- Added folder-level `capture-dir` and `compare-dir` commands to `tools/capture_regression_snapshot.py`.
+- Added `_codex/04_modules/preprocessing.md` to classify `app/services/preprocessing/service.py`
+  function groups and extraction risk.
+- Added `_codex/09_regression_snapshots/before/` and `after/` placeholder folders.
+- Verified `capture-dir` and `compare-dir` with the 5 representative H3_5%F two-dummy files.
+- Still no function movement, no calculation logic change, and no app runtime path change.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.

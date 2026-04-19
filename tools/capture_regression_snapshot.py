@@ -45,6 +45,31 @@ REPORT_ROW_KEYS = (
 )
 
 
+def _install_pandas_pickle_compat() -> None:
+    """Allow snapshot capture from saved files with older pandas string indexes."""
+    try:
+        from pandas.core.arrays.string_ import StringArray
+    except Exception:
+        return
+
+    original_setstate = getattr(StringArray, "__setstate__", None)
+    if getattr(original_setstate, "_crash_snapshot_compat", False):
+        return
+
+    def _compat_setstate(self: Any, state: Any) -> None:
+        if isinstance(state, tuple) and len(state) == 2:
+            _, values = state
+            StringArray.__init__(self, values, copy=False)
+            return
+        if original_setstate is not None:
+            original_setstate(self, state)
+            return
+        raise NotImplementedError(state)
+
+    _compat_setstate._crash_snapshot_compat = True  # type: ignore[attr-defined]
+    StringArray.__setstate__ = _compat_setstate
+
+
 def _json_safe(value: Any) -> Any:
     if value is None or isinstance(value, (str, bool, int)):
         return value
@@ -167,6 +192,7 @@ def _report_snapshot_contract(snapshot: dict[str, Any]) -> dict[str, Any]:
 
 
 def capture_snapshot(dataset_path: Path, regulation: str, include_column_digests: bool) -> dict[str, Any]:
+    _install_pandas_pickle_compat()
     loaded = load_dataset_pickle(dataset_path)
     dataframe = loaded.get("dataframe")
     metadata = dict(loaded.get("metadata") or {})
@@ -196,6 +222,10 @@ def write_snapshot(snapshot: dict[str, Any], output_path: Path) -> None:
 
 def _default_output_path(dataset_path: Path) -> Path:
     return REPO_ROOT / "_codex" / "09_regression_snapshots" / f"{dataset_path.stem}_snapshot.json"
+
+
+def _snapshot_name_for_dataset(dataset_path: Path) -> str:
+    return f"{dataset_path.stem}_snapshot.json"
 
 
 def _load_json(path: Path) -> Any:
@@ -256,6 +286,48 @@ def compare_snapshots(before_path: Path, after_path: Path, limit: int) -> int:
     return 1
 
 
+def capture_directory(input_dir: Path, output_dir: Path, regulation: str, include_column_digests: bool) -> int:
+    dataset_paths = sorted(path for path in input_dir.glob("*.pkl") if path.is_file())
+    if not dataset_paths:
+        print(f"No .pkl files found: {input_dir}", file=sys.stderr)
+        return 2
+    output_dir.mkdir(parents=True, exist_ok=True)
+    failures = 0
+    for dataset_path in dataset_paths:
+        output_path = output_dir / _snapshot_name_for_dataset(dataset_path)
+        try:
+            snapshot = capture_snapshot(
+                dataset_path,
+                regulation=regulation,
+                include_column_digests=include_column_digests,
+            )
+        except DatasetStoreError as exc:
+            failures += 1
+            print(f"FAILED {dataset_path}: {exc}", file=sys.stderr)
+            continue
+        write_snapshot(snapshot, output_path)
+        print(f"Snapshot written: {output_path}")
+    return 1 if failures else 0
+
+
+def compare_directories(before_dir: Path, after_dir: Path, limit: int) -> int:
+    before_paths = {path.name: path for path in before_dir.glob("*_snapshot.json") if path.is_file()}
+    after_paths = {path.name: path for path in after_dir.glob("*_snapshot.json") if path.is_file()}
+    exit_code = 0
+    for missing in sorted(before_paths.keys() - after_paths.keys()):
+        print(f"Missing after snapshot: {missing}")
+        exit_code = 1
+    for added in sorted(after_paths.keys() - before_paths.keys()):
+        print(f"Unexpected after snapshot: {added}")
+        exit_code = 1
+    for name in sorted(before_paths.keys() & after_paths.keys()):
+        print(f"Comparing {name}")
+        result = compare_snapshots(before_paths[name], after_paths[name], limit=limit)
+        if result:
+            exit_code = result
+    return exit_code
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Capture or compare regression snapshots.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -274,6 +346,21 @@ def _build_parser() -> argparse.ArgumentParser:
     compare.add_argument("before", type=Path, help="baseline snapshot JSON")
     compare.add_argument("after", type=Path, help="new snapshot JSON")
     compare.add_argument("--limit", type=int, default=50, help="maximum differences to print")
+
+    capture_dir = subparsers.add_parser("capture-dir", help="capture snapshots for every .pkl in a directory")
+    capture_dir.add_argument("input_dir", type=Path, help="directory containing saved CRASH pickle files")
+    capture_dir.add_argument("output_dir", type=Path, help="directory to write snapshot JSON files")
+    capture_dir.add_argument("--regulation", default=DEFAULT_REGULATION, help="report regulation label")
+    capture_dir.add_argument(
+        "--no-column-digests",
+        action="store_true",
+        help="skip per-column value digests for faster structure-only snapshots",
+    )
+
+    compare_dir = subparsers.add_parser("compare-dir", help="compare matching *_snapshot.json files in two directories")
+    compare_dir.add_argument("before_dir", type=Path, help="baseline snapshot directory")
+    compare_dir.add_argument("after_dir", type=Path, help="new snapshot directory")
+    compare_dir.add_argument("--limit", type=int, default=50, help="maximum differences per file to print")
     return parser
 
 
@@ -295,6 +382,15 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "compare":
         return compare_snapshots(args.before, args.after, limit=args.limit)
+    if args.command == "capture-dir":
+        return capture_directory(
+            args.input_dir,
+            args.output_dir,
+            regulation=args.regulation,
+            include_column_digests=not args.no_column_digests,
+        )
+    if args.command == "compare-dir":
+        return compare_directories(args.before_dir, args.after_dir, limit=args.limit)
     return 2
 
 
