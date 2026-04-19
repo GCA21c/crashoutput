@@ -398,6 +398,12 @@ Rollback:
 - Phase 4-G moved DATA FILTERING commit rename helpers and filtering history summary text into
   `app/services/filtering/application.py`. `save_filters()` still owns the commit operation and
   `workbench.apply_processed_dataframe()` call.
+- Phase 4-H moved DATA FILTERING commit metadata/history payload assembly into
+  `build_filter_commit_payload()`. `save_filters()` still owns validation, `_F` commit, refresh, and
+  user completion dialog.
+- Phase 4 stops before moving `save_filters()` itself, `_resolve_standard_series_for_calc()`,
+  `_collect_chest_disp_prefiltered()`, or shell state lifecycle. Those are high-risk and need
+  stronger regression fixtures before Phase 5.
 - These changes intentionally do not touch filtering math, derived channel generation, injury
   formulas, report extraction keys, saved metadata keys, or pickle format names.
 

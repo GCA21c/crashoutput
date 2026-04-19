@@ -35,6 +35,10 @@
   - moved derived-channel reference rename helper into `rename_derived_channel_references()`
   - moved filtering history summary text into `filtering_summary_text()`
   - kept `save_filters()` and `workbench.apply_processed_dataframe()` in the page
+- Closed Phase 4-F/G after user testing passed.
+- Implemented Phase 4-H DATA FILTERING commit payload helper split:
+  - moved commit metadata/history payload assembly into `build_filter_commit_payload()`
+  - kept `save_filters()` validation, `_F` commit, refresh, and completion dialog in the page
 
 ## Why
 - Phase 4 targets orchestration code that was still inside UI pages and shell.
@@ -48,4 +52,7 @@
 - Phase 4-E is a call-route change only and does not change Excel template mapping or workbook writing.
 - Phase 4-F is an apply-map/status helper split only and does not change filtering math or commit behavior.
 - Phase 4-G is a pure helper split for commit metadata renaming and does not change `FILTERING!` commit behavior.
+- Phase 4-H is a payload assembly split only and does not change `FILTERING!` commit behavior.
+- Phase 4 intentionally stops before moving `save_filters()` itself, `_resolve_standard_series_for_calc()`,
+  `_collect_chest_disp_prefiltered()`, or shell state lifecycle because those need stronger regression fixtures.
 - Filtering math, injury calculation, derived channel generation, report extraction keys, saved metadata key names, and pickle format names were not changed.

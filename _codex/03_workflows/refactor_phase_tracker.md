@@ -48,8 +48,9 @@
 | Phase 4-C | Done | user tested shell persistence metadata helper |
 | Phase 4-D | Done | user tested injury derived-channel lookup helper and Index fix |
 | Phase 4-E | Done | user tested REPORT SUMMARY Excel export service route |
-| Phase 4-F | Ready for user test | DATA FILTERING apply-map normalization/status helpers split |
-| Phase 4-G | Ready for user test | DATA FILTERING commit rename/summary pure helpers split |
+| Phase 4-F | Done | user tested DATA FILTERING apply-map normalization/status helpers |
+| Phase 4-G | Done | user tested DATA FILTERING commit rename/summary pure helpers |
+| Phase 4-H | Ready for user test | DATA FILTERING commit metadata/history payload helper split |
 | Phase 4 | In Progress | orchestration split started on `코드최적화p4` |
 | Phase 5 | Blocked | Requires regression coverage and explicit approval |
 
@@ -63,7 +64,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-User test for Phase 4-F/G DATA FILTERING helper split batch.
+User test for Phase 4-H DATA FILTERING commit payload helper split.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.

@@ -84,3 +84,20 @@ def filtering_summary_text(filter_labels, limit=6):
     if len(summary_items) > limit:
         summary += " ..."
     return summary, len(summary_items)
+
+
+def build_filter_commit_payload(final_descriptions, final_units, final_labels, final_colors, final_derived, pending_count):
+    summary, _summary_count = filtering_summary_text(final_labels)
+    metadata_override = {
+        "descriptions": dict(final_descriptions or {}),
+        "units": dict(final_units or {}),
+        "channel_filter_labels": dict(final_labels or {}),
+        "channel_filter_colors": dict(final_colors or {}),
+        "derived_channels": dict(final_derived or {}),
+    }
+    history_entry = {
+        "type": "filtering",
+        "message": f"Filtering applied: {summary}",
+        "display_message": f"Filtering applied: {int(pending_count)} channel(s)",
+    }
+    return metadata_override, history_entry

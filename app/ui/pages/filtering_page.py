@@ -10,8 +10,8 @@ from app.core.isocode import rewrite_filter_code_in_text
 from app.services.filtering.application import (
     auto_set_details,
     auto_set_no_targets_message,
+    build_filter_commit_payload,
     filter_application_summary,
-    filtering_summary_text,
     normalize_channel_filter_map,
     rename_derived_channel_references,
     rename_metadata_keys,
@@ -482,22 +482,17 @@ class FilteringPage(tk.Frame):
         )
 
         self.workbench.channel_filter_labels = dict(final_labels)
-        summary, _summary_count = filtering_summary_text(final_labels)
-
-        metadata_override = {
-            'descriptions': dict(final_desc),
-            'units': dict(final_units),
-            'channel_filter_labels': dict(final_labels),
-            'channel_filter_colors': dict(final_colors),
-            'derived_channels': dict(final_derived),
-        }
+        metadata_override, history_entry = build_filter_commit_payload(
+            final_desc,
+            final_units,
+            final_labels,
+            final_colors,
+            final_derived,
+            pending_count,
+        )
         saved_path = self.workbench.apply_processed_dataframe(
             final_df,
-            {
-                'type': 'filtering',
-                'message': f"Filtering applied: {summary}",
-                'display_message': f"Filtering applied: {pending_count} channel(s)",
-            },
+            history_entry,
             op_suffix="_F",
             metadata_override=metadata_override,
         )
