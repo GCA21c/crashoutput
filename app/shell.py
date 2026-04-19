@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 
 from app.core.io.dataset_store import DATASET_EXT, save_dataset_pickle
 from app.core.isocode import build_channel_metadata_map, build_isocode_metadata
+from app.services.state.persistence import build_dataset_snapshot_metadata
 
 from app.ui.pages.viewer_page import ViewerPage
 from app.ui.pages.offset_page import OffsetPage
@@ -502,24 +503,18 @@ class CrashAnalysisWorkbench(tk.Frame):
         dataframe = self.working_df
         if dataframe is None:
             return
-        metadata = dict(self.dataset_metadata or {})
-        metadata["source_format"] = "PICKLE"
-        metadata["source_file_path"] = self.original_source_path or self.source_file_label
-        metadata["saved_history"] = list(self.history)
-        metadata["saved_history_entries"] = list(self.history_entries)
-        metadata["shared_dummy_config"] = self.get_shared_dummy_config()
-        metadata["time_column"] = self.viewer.time_column or metadata.get("time_column")
-        metadata["units"] = self._current_units(metadata)
-        metadata["descriptions"] = self._current_descriptions(metadata)
-        metadata["channel_filter_labels"] = dict(self.channel_filter_labels or metadata.get("channel_filter_labels", {}) or {})
-        metadata["pre_filter_reference_df"] = (
-            self.pre_filter_reference_df.copy(deep=True)
-            if self.pre_filter_reference_df is not None else None
-        )
-        metadata["pre_filter_reference_time_column"] = (
-            self.pre_filter_reference_time_column
-            or self.viewer.time_column
-            or metadata.get("time_column")
+        metadata = build_dataset_snapshot_metadata(
+            self.dataset_metadata,
+            source_file_path=self.original_source_path or self.source_file_label,
+            history=self.history,
+            history_entries=self.history_entries,
+            shared_dummy_config=self.get_shared_dummy_config(),
+            time_column=self.viewer.time_column,
+            units=self._current_units(self.dataset_metadata),
+            descriptions=self._current_descriptions(self.dataset_metadata),
+            channel_filter_labels=self.channel_filter_labels or (self.dataset_metadata or {}).get("channel_filter_labels", {}) or {},
+            pre_filter_reference_df=self.pre_filter_reference_df,
+            pre_filter_reference_time_column=self.pre_filter_reference_time_column,
         )
         metadata = self._enrich_isocode_metadata(dataframe, metadata)
         save_dataset_pickle(
@@ -693,24 +688,18 @@ class CrashAnalysisWorkbench(tk.Frame):
         save_path = self._build_next_save_path(suffix)
         if not save_path:
             return None
-        metadata = dict(self.dataset_metadata)
-        metadata["source_format"] = "PICKLE"
-        metadata["source_file_path"] = self.original_source_path or self.source_file_label
-        metadata["saved_history"] = list(self.history)
-        metadata["saved_history_entries"] = list(self.history_entries)
-        metadata["shared_dummy_config"] = self.get_shared_dummy_config()
-        metadata["time_column"] = self.viewer.time_column or metadata.get("time_column")
-        metadata["units"] = self._current_units(metadata)
-        metadata["descriptions"] = self._current_descriptions(metadata)
-        metadata["channel_filter_labels"] = dict(self.channel_filter_labels or metadata.get("channel_filter_labels", {}) or {})
-        metadata["pre_filter_reference_df"] = (
-            self.pre_filter_reference_df.copy(deep=True)
-            if self.pre_filter_reference_df is not None else None
-        )
-        metadata["pre_filter_reference_time_column"] = (
-            self.pre_filter_reference_time_column
-            or self.viewer.time_column
-            or metadata.get("time_column")
+        metadata = build_dataset_snapshot_metadata(
+            self.dataset_metadata,
+            source_file_path=self.original_source_path or self.source_file_label,
+            history=self.history,
+            history_entries=self.history_entries,
+            shared_dummy_config=self.get_shared_dummy_config(),
+            time_column=self.viewer.time_column,
+            units=self._current_units(self.dataset_metadata),
+            descriptions=self._current_descriptions(self.dataset_metadata),
+            channel_filter_labels=self.channel_filter_labels or (self.dataset_metadata or {}).get("channel_filter_labels", {}) or {},
+            pre_filter_reference_df=self.pre_filter_reference_df,
+            pre_filter_reference_time_column=self.pre_filter_reference_time_column,
         )
         metadata = self._enrich_isocode_metadata(dataframe, metadata)
         return save_dataset_pickle(
@@ -729,26 +718,21 @@ class CrashAnalysisWorkbench(tk.Frame):
         save_path = self._build_save_path(suffix, prefer_original_source=prefer_original_source)
         if not save_path:
             return None
-        metadata = dict(self.dataset_metadata or {})
+        metadata_source = dict(self.dataset_metadata or {})
         if metadata_override:
-            metadata.update(dict(metadata_override))
-        metadata["source_format"] = "PICKLE"
-        metadata["source_file_path"] = self.original_source_path or self.source_file_label
-        metadata["saved_history"] = list(self.history)
-        metadata["saved_history_entries"] = list(self.history_entries)
-        metadata["shared_dummy_config"] = self.get_shared_dummy_config()
-        metadata["time_column"] = self.viewer.time_column or metadata.get("time_column")
-        metadata["units"] = self._current_units(metadata)
-        metadata["descriptions"] = self._current_descriptions(metadata)
-        metadata["channel_filter_labels"] = dict(self.channel_filter_labels or metadata.get("channel_filter_labels", {}) or {})
-        metadata["pre_filter_reference_df"] = (
-            self.pre_filter_reference_df.copy(deep=True)
-            if self.pre_filter_reference_df is not None else None
-        )
-        metadata["pre_filter_reference_time_column"] = (
-            self.pre_filter_reference_time_column
-            or self.viewer.time_column
-            or metadata.get("time_column")
+            metadata_source.update(dict(metadata_override))
+        metadata = build_dataset_snapshot_metadata(
+            metadata_source,
+            source_file_path=self.original_source_path or self.source_file_label,
+            history=self.history,
+            history_entries=self.history_entries,
+            shared_dummy_config=self.get_shared_dummy_config(),
+            time_column=self.viewer.time_column,
+            units=self._current_units(metadata_source),
+            descriptions=self._current_descriptions(metadata_source),
+            channel_filter_labels=self.channel_filter_labels or metadata_source.get("channel_filter_labels", {}) or {},
+            pre_filter_reference_df=self.pre_filter_reference_df,
+            pre_filter_reference_time_column=self.pre_filter_reference_time_column,
         )
         metadata = self._enrich_isocode_metadata(dataframe, metadata)
         saved_path = save_dataset_pickle(

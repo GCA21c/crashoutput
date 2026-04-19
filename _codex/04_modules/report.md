@@ -326,3 +326,14 @@ Phase 3-J closure status:
   boundary until a later explicitly approved phase.
 - Calculation-adjacent helpers such as peak, unit conversion, time/value masks, and gradients are not
   part of this Phase 3 closure.
+
+## Phase 4 report orchestration split
+- `app/report/service.py` owns REPORT SUMMARY payload/cache assembly helpers:
+  - `summary_rows_for_payload()`
+  - `build_summary_report_payload()`
+  - `update_summary_report_cache()`
+- `app/ui/pages/report_summary_page.py` remains responsible for UI state, Tk variables, user actions,
+  dialogs, and calls into the report service.
+- The report snapshot builder and row extraction contract remain in `app/report/engine.py`.
+- Saved metadata keys such as `report_saved_results.summary_report`, `rows`, `slots`,
+  `report_fields`, and `excel_mapping` are unchanged.

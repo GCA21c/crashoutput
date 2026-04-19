@@ -378,6 +378,20 @@ Rollback:
 - 문제가 있으면 wrapper 내부를 기존 로직으로 되돌린다.
 - 한 번에 한 function family만 이동한다.
 
+### Phase 4-A/B/C implementation record
+- Branch: `코드최적화p4`
+- Phase 4-A moved REPORT SUMMARY payload/cache assembly helpers into `app/report/service.py`.
+  `report_summary_page.py` still owns UI state and calls the report service.
+- Phase 4-B moved DATA FILTERING AUTO SET preset matching into `app/services/filtering/presets.py`.
+  The page still owns pending dataframe state and still calls the existing filtering engine.
+- Phase 4-C moved repeated shell save metadata assembly into `app/services/state/persistence.py`.
+  `shell.py` still owns save paths, pickle writing, ISO enrichment, and loaded dataset state.
+- Phase 4-D moved injury derived-channel lookup into `app/services/injury/input_resolver.py`.
+  `_resolve_standard_series_for_calc()` remains in `injury_page.py` because it is calculation-input
+  critical and includes raw reference alignment and on-demand filtering.
+- These changes intentionally do not touch filtering math, derived channel generation, injury
+  formulas, report extraction keys, saved metadata keys, or pickle format names.
+
 ## Phase 5 - High-risk structural split
 목표:
 - `app/services/preprocessing/service.py`와 dummy / ISO / rule DB를 장기 유지보수 가능한 구조로 분해한다.

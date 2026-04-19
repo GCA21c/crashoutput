@@ -4,7 +4,7 @@
 다음 작업을 시작하기 전 항상 이 문서를 확인한다.
 
 ## Current branch
-- `코드최적화p1_phase3`
+- `코드최적화p4`
 
 ## Global guard
 - 계산 로직 변경 금지
@@ -43,7 +43,11 @@
 | Phase 3-I | Done | user tested REPORT SUMMARY occupant wrapper closure |
 | Phase 3-J | Done | Phase 3 closure boundary documented; calculation-adjacent helpers deferred |
 | Phase 3 | Closed | occupant helper commonization complete and user-tested |
-| Phase 4 | Ready | Requires explicit user approval before starting orchestration split |
+| Phase 4-A | Ready for user test | REPORT SUMMARY payload/cache orchestration moved behind report service |
+| Phase 4-B | Ready for user test | DATA FILTERING AUTO SET matching moved behind filtering preset service |
+| Phase 4-C | Ready for user test | shell persistence metadata assembly moved behind state persistence helper |
+| Phase 4-D | Ready for user test | injury derived-channel lookup moved behind input resolver helper |
+| Phase 4 | In Progress | orchestration split started on `코드최적화p4` |
 | Phase 5 | Blocked | Requires regression coverage and explicit approval |
 
 ## Completed work on this branch
@@ -56,7 +60,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-Wait for explicit user approval before starting Phase 4 orchestration split.
+User test for Phase 4-A/B/C/D orchestration split batch.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.

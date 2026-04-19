@@ -6,8 +6,8 @@ import pandas as pd
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
-from app.core.dummy import get_filter_preset_profile
 from app.core.isocode import rewrite_filter_code_in_text
+from app.services.filtering.presets import build_auto_filter_map
 from app.services.preprocessing.service import FILTER_OPTIONS, apply_filtering_with_derivatives, get_numeric_channels, make_channel_search_text
 
 
@@ -211,99 +211,16 @@ class FilteringPage(tk.Frame):
         metadata = self.workbench._enrich_isocode_metadata(active_df, dict(self.workbench.dataset_metadata or {}))
         return dict(metadata.get("channel_metadata_map") or {})
 
-    def _preset_measurement_family(self, channel, channel_meta):
-        parsed = dict((channel_meta or {}).get("isocode_parsed") or {})
-        data_type = str(parsed.get("data_type_code") or "").strip().upper()
-        sensor = str((channel_meta or {}).get("sensor_family") or parsed.get("sensor_location") or "").strip().lower()
-        main_location = str(parsed.get("main_location_code") or "").strip().upper()
-        if data_type == "AC":
-            return "acceleration"
-        if data_type == "FO":
-            return "force"
-        if data_type == "MO":
-            return "moment"
-        if data_type == "DS":
-            if sensor == "knee" and main_location in ("KNSL", "KNEE"):
-                return "slider_displacement"
-            if sensor == "chest":
-                return "deflection"
-            return "displacement"
-
-        # Fallback is intentionally narrow: some legacy files have incomplete
-        # ISO parse metadata but useful channel descriptions from the loader.
-        text = " ".join((
-            str(channel or ""),
-            str((channel_meta or {}).get("description") or ""),
-            str((channel_meta or {}).get("unit") or ""),
-        )).lower()
-        if "acc" in text or "accel" in text:
-            return "acceleration"
-        if "force" in text or "load" in text:
-            return "force"
-        if "moment" in text:
-            return "moment"
-        if "knee" in text and ("slider" in text or "disp" in text):
-            return "slider_displacement"
-        if "chest" in text and ("def" in text or "disp" in text):
-            return "deflection"
-        return ""
-
-    def _channel_matches_preset_rule(self, channel, channel_meta, slot, rule):
-        parsed = dict((channel_meta or {}).get("isocode_parsed") or {})
-        channel_slot = str((channel_meta or {}).get("dummy_position") or parsed.get("dummy_position_normalized") or "").strip().upper()
-        if channel_slot != slot:
-            return False
-        sensor = str((channel_meta or {}).get("sensor_family") or parsed.get("sensor_location") or "").strip().lower()
-        if sensor != str(rule.get("body_region") or "").strip().lower():
-            return False
-        return self._preset_measurement_family(channel, channel_meta) == str(rule.get("measurement_family") or "").strip().lower()
-
     def _build_auto_filter_map(self):
         config = self.workbench.get_shared_dummy_config()
-        mode = str(config.get("injury_test_mode") or "-").strip().upper()
-        if not config.get("setup_complete") or mode == "-":
-            return {}, ["TEST SETUP이 완료되지 않았습니다."], []
-
         active_df = self._get_active_df()
         viewer = self.workbench.viewer
-        if active_df is None or viewer.time_column is None:
-            return {}, ["먼저 DAT 데이터를 로드하세요."], []
-
-        numeric_channels = set(get_numeric_channels(active_df, viewer.time_column))
-        channel_meta = self._active_channel_metadata()
-        active_positions = [slot for slot in (config.get("active_positions") or []) if str(slot).strip().upper().startswith("B")]
-        slot_meta = dict(config.get("slot_meta") or {})
-        channel_to_filter = {}
-        missing = []
-        unsupported = []
-
-        for slot in active_positions:
-            slot = str(slot).strip().upper()
-            profile_name = str((slot_meta.get(slot) or {}).get("dummy_profile") or "").strip()
-            preset = get_filter_preset_profile(mode, profile_name)
-            if not preset:
-                unsupported.append(f"{slot}:{profile_name or '-'}")
-                continue
-            for rule in preset.get("rules", ()):
-                matched = []
-                for channel in numeric_channels:
-                    meta = dict(channel_meta.get(channel) or {})
-                    if str(meta.get("lineage_type") or "").strip().lower() == "derived":
-                        continue
-                    if self._channel_matches_preset_rule(channel, meta, slot, rule):
-                        matched.append(channel)
-                if not matched:
-                    missing.append(f"{rule.get('body_region', '-').upper()} {rule.get('measurement_family', '-')} for {slot}")
-                    continue
-                for channel in matched:
-                    target_cfc = str(rule.get("target_cfc") or "").strip()
-                    current_cfc = str((channel_meta.get(channel) or {}).get("current_filter_label") or "Raw").strip()
-                    if current_cfc != target_cfc:
-                        channel_to_filter[channel] = target_cfc
-
-        if unsupported:
-            missing.append(f"unsupported preset profile: {', '.join(unsupported)}")
-        return {ch: label for ch, label in channel_to_filter.items() if label}, missing, unsupported
+        return build_auto_filter_map(
+            config,
+            active_df,
+            viewer.time_column,
+            self._active_channel_metadata(),
+        )
 
     def _apply_listbox_item_style(self, index, channel):
         label = str(self.pending_channel_filter_colors.get(channel) or self._get_active_labels().get(channel, "Raw") or "Raw").strip()
