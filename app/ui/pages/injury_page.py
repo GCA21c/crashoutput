@@ -34,6 +34,7 @@ from app.services.injury import (
     calculate_iliac_injury_bundle,
     calculate_tibia_injury_bundle,
 )
+from app.services.injury.input_resolver import find_derived_channel
 from app.core.utils.formatting import SUMMARY_FORMAT_VERSION, fmt_time_ms, fmt_value
 from app.ui.components.multi_dummy_panel import MultiDummyPanel
 from app.ui.components.scrollable_frame import VerticalScrolledFrame
@@ -2592,23 +2593,9 @@ class InjuryPage(tk.Frame):
         return viewer.get_y_axis_label(channel)
 
     def _find_derived_channel(self, source_channel, purpose, role, cfc_value):
-        if not source_channel:
-            return None
         metadata = dict((self.workbench.dataset_metadata or {}).get('derived_channels') or {})
-        target_label = f"CFC {int(cfc_value)}"
         viewer_df = getattr(self.workbench.viewer, 'df', pd.DataFrame())
-        for ch_name, info in metadata.items():
-            if (
-                str(info.get('source_channel')) == str(source_channel)
-                or str(info.get('root_source_channel')) == str(source_channel)
-            ) and (
-                str(info.get('role')) == str(role)
-                and str(info.get('filter_label')) == target_label
-                and str(info.get('purpose')) == str(purpose)
-                and ch_name in viewer_df.columns
-            ):
-                return ch_name
-        return None
+        return find_derived_channel(metadata, getattr(viewer_df, 'columns', []), source_channel, purpose, role, cfc_value)
 
     def _derived_source_channel(self, channel_name):
         channel_name = self._normalize_channel_reference(channel_name)

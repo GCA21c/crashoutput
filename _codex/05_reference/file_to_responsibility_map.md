@@ -19,9 +19,14 @@
 |---|---|
 | `app/services/io/csv_loader.py` | CSV ingest |
 | `app/services/io/dat_loader.py` | DAT ingest |
+| `app/services/filtering/application.py` | DATA FILTERING apply-map normalization, status summary, and commit rename helpers |
+| `app/services/filtering/presets.py` | DATA FILTERING AUTO SET preset matching orchestration |
+| `app/services/preprocessing/offset_preview.py` | DATA OFFSET before-graph preview persistence helpers |
 | `app/services/preprocessing/service.py` | filtering / preprocessing engine |
 | `app/services/injury/common_engines.py` | shared injury helpers |
+| `app/services/injury/input_resolver.py` | injury input channel lookup helper |
 | `app/services/injury/*.py` | module-specific injury logic |
+| `app/services/state/persistence.py` | saved dataset metadata assembly helper |
 
 ## UI pages
 | Path | Responsibility |
@@ -42,6 +47,7 @@
 |---|---|
 | `app/report/engine.py` | summary report snapshot / value extraction |
 | `app/report/occupants.py` | report occupant slot normalization and merge helpers |
+| `app/report/service.py` | summary report payload/cache orchestration helpers |
 | `app/report/registry.py` | report rule/template registry |
 | `app/report/rules/*.py` | regulation-specific report row order and labels |
 | `app/report/templates/*.py` | Excel template anchors, aliases, and export rules |

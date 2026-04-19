@@ -6,8 +6,18 @@ import pandas as pd
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
-from app.core.dummy import get_filter_preset_profile
 from app.core.isocode import rewrite_filter_code_in_text
+from app.services.filtering.application import (
+    auto_set_details,
+    auto_set_no_targets_message,
+    build_filter_commit_payload,
+    filter_application_summary,
+    normalize_channel_filter_map,
+    rename_derived_channel_references,
+    rename_metadata_keys,
+)
+from app.services.filtering.presets import build_auto_filter_map
+from app.services.preprocessing.offset_preview import rename_offset_preview_columns
 from app.services.preprocessing.service import FILTER_OPTIONS, apply_filtering_with_derivatives, get_numeric_channels, make_channel_search_text
 
 
@@ -211,99 +221,16 @@ class FilteringPage(tk.Frame):
         metadata = self.workbench._enrich_isocode_metadata(active_df, dict(self.workbench.dataset_metadata or {}))
         return dict(metadata.get("channel_metadata_map") or {})
 
-    def _preset_measurement_family(self, channel, channel_meta):
-        parsed = dict((channel_meta or {}).get("isocode_parsed") or {})
-        data_type = str(parsed.get("data_type_code") or "").strip().upper()
-        sensor = str((channel_meta or {}).get("sensor_family") or parsed.get("sensor_location") or "").strip().lower()
-        main_location = str(parsed.get("main_location_code") or "").strip().upper()
-        if data_type == "AC":
-            return "acceleration"
-        if data_type == "FO":
-            return "force"
-        if data_type == "MO":
-            return "moment"
-        if data_type == "DS":
-            if sensor == "knee" and main_location in ("KNSL", "KNEE"):
-                return "slider_displacement"
-            if sensor == "chest":
-                return "deflection"
-            return "displacement"
-
-        # Fallback is intentionally narrow: some legacy files have incomplete
-        # ISO parse metadata but useful channel descriptions from the loader.
-        text = " ".join((
-            str(channel or ""),
-            str((channel_meta or {}).get("description") or ""),
-            str((channel_meta or {}).get("unit") or ""),
-        )).lower()
-        if "acc" in text or "accel" in text:
-            return "acceleration"
-        if "force" in text or "load" in text:
-            return "force"
-        if "moment" in text:
-            return "moment"
-        if "knee" in text and ("slider" in text or "disp" in text):
-            return "slider_displacement"
-        if "chest" in text and ("def" in text or "disp" in text):
-            return "deflection"
-        return ""
-
-    def _channel_matches_preset_rule(self, channel, channel_meta, slot, rule):
-        parsed = dict((channel_meta or {}).get("isocode_parsed") or {})
-        channel_slot = str((channel_meta or {}).get("dummy_position") or parsed.get("dummy_position_normalized") or "").strip().upper()
-        if channel_slot != slot:
-            return False
-        sensor = str((channel_meta or {}).get("sensor_family") or parsed.get("sensor_location") or "").strip().lower()
-        if sensor != str(rule.get("body_region") or "").strip().lower():
-            return False
-        return self._preset_measurement_family(channel, channel_meta) == str(rule.get("measurement_family") or "").strip().lower()
-
     def _build_auto_filter_map(self):
         config = self.workbench.get_shared_dummy_config()
-        mode = str(config.get("injury_test_mode") or "-").strip().upper()
-        if not config.get("setup_complete") or mode == "-":
-            return {}, ["TEST SETUP이 완료되지 않았습니다."], []
-
         active_df = self._get_active_df()
         viewer = self.workbench.viewer
-        if active_df is None or viewer.time_column is None:
-            return {}, ["먼저 DAT 데이터를 로드하세요."], []
-
-        numeric_channels = set(get_numeric_channels(active_df, viewer.time_column))
-        channel_meta = self._active_channel_metadata()
-        active_positions = [slot for slot in (config.get("active_positions") or []) if str(slot).strip().upper().startswith("B")]
-        slot_meta = dict(config.get("slot_meta") or {})
-        channel_to_filter = {}
-        missing = []
-        unsupported = []
-
-        for slot in active_positions:
-            slot = str(slot).strip().upper()
-            profile_name = str((slot_meta.get(slot) or {}).get("dummy_profile") or "").strip()
-            preset = get_filter_preset_profile(mode, profile_name)
-            if not preset:
-                unsupported.append(f"{slot}:{profile_name or '-'}")
-                continue
-            for rule in preset.get("rules", ()):
-                matched = []
-                for channel in numeric_channels:
-                    meta = dict(channel_meta.get(channel) or {})
-                    if str(meta.get("lineage_type") or "").strip().lower() == "derived":
-                        continue
-                    if self._channel_matches_preset_rule(channel, meta, slot, rule):
-                        matched.append(channel)
-                if not matched:
-                    missing.append(f"{rule.get('body_region', '-').upper()} {rule.get('measurement_family', '-')} for {slot}")
-                    continue
-                for channel in matched:
-                    target_cfc = str(rule.get("target_cfc") or "").strip()
-                    current_cfc = str((channel_meta.get(channel) or {}).get("current_filter_label") or "Raw").strip()
-                    if current_cfc != target_cfc:
-                        channel_to_filter[channel] = target_cfc
-
-        if unsupported:
-            missing.append(f"unsupported preset profile: {', '.join(unsupported)}")
-        return {ch: label for ch, label in channel_to_filter.items() if label}, missing, unsupported
+        return build_auto_filter_map(
+            config,
+            active_df,
+            viewer.time_column,
+            self._active_channel_metadata(),
+        )
 
     def _apply_listbox_item_style(self, index, channel):
         label = str(self.pending_channel_filter_colors.get(channel) or self._get_active_labels().get(channel, "Raw") or "Raw").strip()
@@ -410,11 +337,7 @@ class FilteringPage(tk.Frame):
             messagebox.showwarning("경고", "먼저 DAT 데이터를 로드하세요.")
             return 0
 
-        channel_to_filter = {
-            str(channel): str(label).strip()
-            for channel, label in dict(channel_to_filter or {}).items()
-            if str(channel) in self.pending_df.columns and str(label).strip()
-        }
+        channel_to_filter = normalize_channel_filter_map(channel_to_filter, self.pending_df.columns)
         if not channel_to_filter:
             return 0
 
@@ -448,15 +371,7 @@ class FilteringPage(tk.Frame):
 
         self.refresh_channels(keep_selection=True)
         self.refresh_plot()
-        counts = {}
-        for label in channel_to_filter.values():
-            counts[label] = counts.get(label, 0) + 1
-        count_text = ", ".join(f"{label} {count}개" for label, count in sorted(counts.items()))
-        channel_names = sorted(channel_to_filter.keys())
-        channel_text = ", ".join(channel_names[:6])
-        if len(channel_names) > 6:
-            channel_text += f" ... 외 {len(channel_names) - 6}개"
-        self.info_var.set(f"{info_prefix}: {len(channel_to_filter)}개 채널 preset 적용 ({count_text}) | {channel_text}. [FILTERING!]을 누르면 작업 데이터에 반영됩니다.")
+        self.info_var.set(filter_application_summary(channel_to_filter, info_prefix))
         return len(channel_to_filter)
 
     def apply_filters(self):
@@ -482,18 +397,12 @@ class FilteringPage(tk.Frame):
         self._sync_pending_if_needed(force=False)
         channel_to_filter, missing, _unsupported = self._build_auto_filter_map()
         if not channel_to_filter:
-            text = "AUTO SET 적용 대상이 없습니다."
-            if missing:
-                text += f" missing: {'; '.join(missing[:8])}"
+            text = auto_set_no_targets_message(missing)
             self.info_var.set(text)
             messagebox.showinfo("AUTO SET", text)
             return
         applied = self._apply_channel_filter_map(channel_to_filter, info_prefix="AUTO SET")
-        details = []
-        if missing:
-            details.append(f"missing: {'; '.join(missing[:8])}")
-        if len(missing) > 8:
-            details.append(f"외 {len(missing) - 8}건")
+        details = auto_set_details(missing)
         if details:
             self.info_var.set(f"AUTO SET applied: {applied} channels | {' | '.join(details)}")
 
@@ -532,37 +441,6 @@ class FilteringPage(tk.Frame):
         self.refresh_plot()
         self.info_var.set(f"{len(selected_channels)}개 채널을 Raw 상태로 되돌렸습니다. 아직 확정 전 미리보기 상태입니다.")
 
-    def _rename_metadata_keys(self, mapping, rename_map):
-        data = dict(mapping or {})
-        if not rename_map:
-            return data
-        out = {}
-        for key, value in data.items():
-            out[rename_map.get(key, key)] = value
-        return out
-
-    def _rename_derived_channel_references(self, derived_channels, rename_map):
-        data = dict(derived_channels or {})
-        if not rename_map:
-            return data
-        out = {}
-        for key, value in data.items():
-            info = dict(value or {})
-            source_channel = str(info.get('source_channel') or '').strip()
-            if source_channel:
-                info['source_channel'] = rename_map.get(source_channel, source_channel)
-            history = []
-            for item in list(info.get('filter_history') or []):
-                entry = dict(item or {})
-                from_channel = str(entry.get('from_channel') or '').strip()
-                if from_channel:
-                    entry['from_channel'] = rename_map.get(from_channel, from_channel)
-                history.append(entry)
-            if history:
-                info['filter_history'] = history
-            out[rename_map.get(key, key)] = info
-        return out
-
     def _apply_isocode_filter_suffixes_for_commit(self, dataframe, descriptions, units, filter_labels, channel_filter_colors, derived_channels):
         rename_map = {}
         raw_map = dict((self.workbench.dataset_metadata or {}).get('isocode_raw_map') or {})
@@ -577,11 +455,11 @@ class FilteringPage(tk.Frame):
                 rename_map[channel] = renamed
         if rename_map:
             dataframe = dataframe.rename(columns=rename_map)
-            descriptions = self._rename_metadata_keys(descriptions, rename_map)
-            units = self._rename_metadata_keys(units, rename_map)
-            filter_labels = self._rename_metadata_keys(filter_labels, rename_map)
-            channel_filter_colors = self._rename_metadata_keys(channel_filter_colors, rename_map)
-            derived_channels = self._rename_derived_channel_references(derived_channels, rename_map)
+            descriptions = rename_metadata_keys(descriptions, rename_map)
+            units = rename_metadata_keys(units, rename_map)
+            filter_labels = rename_metadata_keys(filter_labels, rename_map)
+            channel_filter_colors = rename_metadata_keys(channel_filter_colors, rename_map)
+            derived_channels = rename_derived_channel_references(derived_channels, rename_map)
         return dataframe, descriptions, units, filter_labels, channel_filter_colors, derived_channels, rename_map
 
     def save_filters(self):
@@ -605,25 +483,24 @@ class FilteringPage(tk.Frame):
         )
 
         self.workbench.channel_filter_labels = dict(final_labels)
-        summary_items = [f"{ch}={label}" for ch, label in final_labels.items() if label != "Raw"]
-        summary = ", ".join(summary_items[:6])
-        if len(summary_items) > 6:
-            summary += " ..."
-
-        metadata_override = {
-            'descriptions': dict(final_desc),
-            'units': dict(final_units),
-            'channel_filter_labels': dict(final_labels),
-            'channel_filter_colors': dict(final_colors),
-            'derived_channels': dict(final_derived),
+        metadata_override, history_entry = build_filter_commit_payload(
+            final_desc,
+            final_units,
+            final_labels,
+            final_colors,
+            final_derived,
+            pending_count,
+        )
+        preview_metadata = {
+            key: value
+            for key, value in dict(self.workbench.dataset_metadata or {}).items()
+            if str(key).startswith("offset_preview_")
         }
+        preview_metadata = rename_offset_preview_columns(preview_metadata, rename_map)
+        metadata_override.update(preview_metadata)
         saved_path = self.workbench.apply_processed_dataframe(
             final_df,
-            {
-                'type': 'filtering',
-                'message': f"Filtering applied: {summary}",
-                'display_message': f"Filtering applied: {pending_count} channel(s)",
-            },
+            history_entry,
             op_suffix="_F",
             metadata_override=metadata_override,
         )

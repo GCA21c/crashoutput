@@ -48,6 +48,12 @@ If a missing target CFC path is rebuilt from an already filtered channel:
 ## Persistence rule
 - when saving a pickle, `pre_filter_reference_df` and its time-column metadata must be saved too
 - when reopening a pickle, the same reference baseline must be restored
+- `DATA OFFSET` may also save `offset_preview_before_df` and `offset_preview_after_df`
+  for the UI-only "before/after offset" graph overlay. These are not raw reference baselines
+  and must not be used by filtering or injury calculations.
+- when filtering renames channel columns with CFC suffixes, the UI-only
+  offset preview columns must be renamed with the same `rename_map` so `_O_F`
+  files can still show the before-offset overlay.
 
 ## Review points for future changes
 - Does the code rebuild from `pre_filter_reference_df` when target CFC is missing?

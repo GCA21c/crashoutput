@@ -4,9 +4,11 @@ from tkinter import messagebox, ttk
 from app.report import (
     ExcelExportError,
     build_report_snapshot,
-    export_summary_report_to_excel,
+    build_summary_report_payload,
+    export_summary_report,
     get_regulation_choices,
     get_regulation_definition,
+    update_summary_report_cache,
 )
 from app.report.exporters.runtime import open_export_file, unique_export_path
 from app.report.occupants import (
@@ -338,50 +340,15 @@ class ReportSummaryPage(tk.Frame):
 
     def _build_report_payload(self):
         snapshot = self._snapshot or build_report_snapshot(self.workbench.dataset_metadata, self.regulation_var.get())
-        rows = []
-        for row in snapshot.get("rows", []):
-            rows.append({
-                "slot": row.get("slot"),
-                "slot_label": row.get("slot_label"),
-                "dummy_name": row.get("dummy_name"),
-                "dummy_profile": row.get("dummy_profile"),
-                "section_key": row.get("section_key"),
-                "region": row.get("region"),
-                "result_key": row.get("result_key"),
-                "label": row.get("label"),
-                "result_uid": row.get("result_uid"),
-                "value": row.get("value"),
-                "unit": row.get("unit"),
-                "limit": row.get("limit"),
-                "status": row.get("status"),
-                "comparison": row.get("comparison"),
-                "value_source": row.get("value_source"),
-                "value_path": row.get("value_path"),
-                "limit_source": row.get("limit_source"),
-            })
-        return {
-            "report_type": "summary_report",
-            "regulation": snapshot.get("regulation_name") or self.regulation_var.get(),
-            "report_fields": self._report_fields(),
-            "slots": list(snapshot.get("slots") or []),
-            "rows": rows,
-            "excel_mapping": dict(snapshot.get("excel_mapping") or {}),
-        }
+        return build_summary_report_payload(snapshot, self._report_fields(), self.regulation_var.get())
 
     def _cache_report_state_in_memory(self):
-        metadata = dict(getattr(self.workbench, "dataset_metadata", {}) or {})
-        report_saved = dict(metadata.get("report_saved_results") or {})
-        existing = dict(report_saved.get("summary_report") or {})
-        existing["regulation"] = self.regulation_var.get()
-        existing["report_fields"] = self._report_fields()
-        if self._snapshot:
-            existing["slots"] = list(self._snapshot.get("slots") or [])
-            existing["rows"] = list(self._build_report_payload().get("rows") or [])
-            existing["excel_mapping"] = dict(self._snapshot.get("excel_mapping") or {})
-            existing["report_type"] = "summary_report"
-        report_saved["summary_report"] = existing
-        metadata["report_saved_results"] = report_saved
-        self.workbench.dataset_metadata = metadata
+        self.workbench.dataset_metadata = update_summary_report_cache(
+            getattr(self.workbench, "dataset_metadata", {}) or {},
+            self.regulation_var.get(),
+            self._report_fields(),
+            snapshot=self._snapshot,
+        )
 
     def _on_regulation_changed(self, _event=None):
         self._cache_report_state_in_memory()
@@ -484,7 +451,7 @@ class ReportSummaryPage(tk.Frame):
             return
         output_path = self._unique_export_path()
         try:
-            result = export_summary_report_to_excel(
+            result = export_summary_report(
                 self._snapshot,
                 self._report_fields(),
                 output_path,

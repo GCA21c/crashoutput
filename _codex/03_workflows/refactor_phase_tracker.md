@@ -4,7 +4,7 @@
 다음 작업을 시작하기 전 항상 이 문서를 확인한다.
 
 ## Current branch
-- `코드최적화p1_phase3`
+- `코드최적화p4`
 
 ## Global guard
 - 계산 로직 변경 금지
@@ -43,8 +43,17 @@
 | Phase 3-I | Done | user tested REPORT SUMMARY occupant wrapper closure |
 | Phase 3-J | Done | Phase 3 closure boundary documented; calculation-adjacent helpers deferred |
 | Phase 3 | Closed | occupant helper commonization complete and user-tested |
-| Phase 4 | Ready | Requires explicit user approval before starting orchestration split |
-| Phase 5 | Blocked | Requires regression coverage and explicit approval |
+| Phase 4-A | Done | user tested REPORT SUMMARY payload/cache orchestration service |
+| Phase 4-B | Done | user tested DATA FILTERING AUTO SET matching service |
+| Phase 4-C | Done | user tested shell persistence metadata helper |
+| Phase 4-D | Done | user tested injury derived-channel lookup helper and Index fix |
+| Phase 4-E | Done | user tested REPORT SUMMARY Excel export service route |
+| Phase 4-F | Done | user tested DATA FILTERING apply-map normalization/status helpers |
+| Phase 4-G | Done | user tested DATA FILTERING commit rename/summary pure helpers |
+| Phase 4-H | Done | user tested DATA FILTERING commit payload helper and OFFSET preview fixes |
+| Phase 4-I | Done | Phase 4 closure boundary documented; high-risk moves deferred |
+| Phase 4 | Closed | orchestration split complete and user-tested |
+| Phase 5 | Blocked | Requires regression fixtures and explicit approval |
 
 ## Completed work on this branch
 - Added `app/report/exporters/runtime.py`.
@@ -56,7 +65,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-Wait for explicit user approval before starting Phase 4 orchestration split.
+Wait for explicit user approval before starting Phase 5 regression fixture work.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.

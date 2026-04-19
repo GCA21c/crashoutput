@@ -7,6 +7,11 @@ import pandas as pd
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
+from app.services.preprocessing.offset_preview import (
+    copy_offset_after_preview_from_metadata,
+    copy_offset_preview_from_metadata,
+    offset_preview_metadata,
+)
 from app.services.preprocessing.service import OFFSET_SAMPLE_OPTIONS, apply_offset, find_time0_row, get_numeric_channels, get_offset_sample_rows, get_time_numeric
 
 
@@ -19,9 +24,26 @@ class OffsetPage(tk.Frame):
         self.time0_info_var = tk.StringVar(value="Time0: -")
         self.info_var = tk.StringVar(value="데이터를 로드한 뒤 페이지를 열어주세요.")
         self.before_df = None
+        self.after_df = None
         self.show_before_var = tk.BooleanVar(value=True)
         self._display_to_channel = {}
         self._build_ui()
+
+    def _metadata_before_df(self):
+        return copy_offset_preview_from_metadata(getattr(self.workbench, "dataset_metadata", {}) or {})
+
+    def _metadata_after_df(self):
+        return copy_offset_after_preview_from_metadata(getattr(self.workbench, "dataset_metadata", {}) or {})
+
+    def _ensure_before_df_loaded(self):
+        if self.before_df is not None:
+            return
+        self.before_df = self._metadata_before_df()
+
+    def _ensure_after_df_loaded(self):
+        if self.after_df is not None:
+            return
+        self.after_df = self._metadata_after_df()
 
     def _build_ui(self):
         header = tk.Frame(self, bg="#ffffff")
@@ -115,6 +137,7 @@ class OffsetPage(tk.Frame):
 
     def reset_session_state(self):
         self.before_df = None
+        self.after_df = None
         self._display_to_channel = {}
         self.preview_channel_var.set('')
         self.time0_info_var.set('Time0: -')
@@ -128,7 +151,9 @@ class OffsetPage(tk.Frame):
         self.canvas.draw_idle()
 
     def on_show(self):
-        self.refresh_channels(force_default=True)
+        self._ensure_before_df_loaded()
+        self._ensure_after_df_loaded()
+        self.refresh_channels(force_default=False)
         self.refresh_plot()
 
     def refresh_channels(self, force_default=False):
@@ -183,7 +208,8 @@ class OffsetPage(tk.Frame):
             self.canvas.draw_idle()
             return
 
-        x_all = get_time_numeric(viewer.df, viewer.time_column)
+        after_df = self.after_df if self.after_df is not None and channel in self.after_df.columns else viewer.df
+        x_all = get_time_numeric(after_df, viewer.time_column)
 
         if self.show_before_var.get() and self.before_df is not None and channel in self.before_df.columns:
             x_before = get_time_numeric(self.before_df, viewer.time_column)
@@ -215,7 +241,7 @@ class OffsetPage(tk.Frame):
                 self.ax.axvspan(t0, t1, alpha=0.18, color="#93c5fd", zorder=2, label="Offset Sample Range")
             self.ax.axvline(time0_t, linestyle="-", linewidth=1.0, color="#444444", zorder=3, label="Time0")
 
-        y_after = pd.to_numeric(viewer.df[channel], errors="coerce").to_numpy(dtype=float)
+        y_after = pd.to_numeric(after_df[channel], errors="coerce").to_numpy(dtype=float)
         valid_after = np.isfinite(x_all) & np.isfinite(y_after)
         if np.any(valid_after):
             self.ax.plot(
@@ -261,10 +287,12 @@ class OffsetPage(tk.Frame):
         if not offsets:
             messagebox.showwarning("경고", "적용 가능한 채널이 없거나 샘플 구간이 부족합니다.")
             return
+        self.after_df = out.copy(deep=True)
 
         summary = ", ".join(f"{viewer.get_channel_display_name(ch)}={val:.6g}" for ch, val in list(offsets.items())[:6])
         if len(offsets) > 6:
             summary += " ..."
+        metadata_override = offset_preview_metadata(self.before_df, self.after_df)
         saved_path = self.workbench.apply_processed_dataframe(
             out,
             {
@@ -273,6 +301,7 @@ class OffsetPage(tk.Frame):
                 'display_message': f"Offset applied: all numeric channels, first {sample_count} samples from data start to Time0",
             },
             op_suffix="_O",
+            metadata_override=metadata_override,
             update_pre_filter_reference=True,
         )
         self.refresh_channels()
