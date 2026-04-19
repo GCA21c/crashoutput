@@ -404,6 +404,11 @@ Rollback:
 - Phase 4 stops before moving `save_filters()` itself, `_resolve_standard_series_for_calc()`,
   `_collect_chest_disp_prefiltered()`, or shell state lifecycle. Those are high-risk and need
   stronger regression fixtures before Phase 5.
+- Phase 4-I closure:
+  - Phase 4 is closed after user testing of report, filtering, persistence, injury lookup, and
+    OFFSET preview behavior.
+  - High-risk moves are intentionally deferred to Phase 5 after regression fixtures are available.
+  - Phase 5 must start with fixture/snapshot creation, not direct engine movement.
 - These changes intentionally do not touch filtering math, derived channel generation, injury
   formulas, report extraction keys, saved metadata keys, or pickle format names.
 

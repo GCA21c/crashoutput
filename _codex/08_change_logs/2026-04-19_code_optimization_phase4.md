@@ -52,6 +52,10 @@
   - DATA OFFSET plotting uses the stored after-offset preview when available, instead of the
     filtered current dataframe
   - DATA FILTERING renames both preview dataframes with the same CFC suffix rename map
+- Closed Phase 4-H and DATA OFFSET preview fixes after user testing passed.
+- Closed Phase 4:
+  - no further orchestration moves in this phase
+  - high-risk moves are deferred until Phase 5 regression fixtures exist
 
 ## Why
 - Phase 4 targets orchestration code that was still inside UI pages and shell.

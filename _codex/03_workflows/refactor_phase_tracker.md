@@ -50,9 +50,10 @@
 | Phase 4-E | Done | user tested REPORT SUMMARY Excel export service route |
 | Phase 4-F | Done | user tested DATA FILTERING apply-map normalization/status helpers |
 | Phase 4-G | Done | user tested DATA FILTERING commit rename/summary pure helpers |
-| Phase 4-H | Ready for user test | DATA FILTERING commit metadata/history payload helper split |
-| Phase 4 | In Progress | orchestration split started on `코드최적화p4` |
-| Phase 5 | Blocked | Requires regression coverage and explicit approval |
+| Phase 4-H | Done | user tested DATA FILTERING commit payload helper and OFFSET preview fixes |
+| Phase 4-I | Done | Phase 4 closure boundary documented; high-risk moves deferred |
+| Phase 4 | Closed | orchestration split complete and user-tested |
+| Phase 5 | Blocked | Requires regression fixtures and explicit approval |
 
 ## Completed work on this branch
 - Added `app/report/exporters/runtime.py`.
@@ -64,7 +65,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-User test for Phase 4-H DATA FILTERING commit payload helper split.
+Wait for explicit user approval before starting Phase 5 regression fixture work.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.
