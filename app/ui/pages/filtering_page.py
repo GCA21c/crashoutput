@@ -17,6 +17,7 @@ from app.services.filtering.application import (
     rename_metadata_keys,
 )
 from app.services.filtering.presets import build_auto_filter_map
+from app.services.preprocessing.offset_preview import OFFSET_PREVIEW_METADATA_KEY, rename_offset_preview_columns
 from app.services.preprocessing.service import FILTER_OPTIONS, apply_filtering_with_derivatives, get_numeric_channels, make_channel_search_text
 
 
@@ -490,6 +491,13 @@ class FilteringPage(tk.Frame):
             final_derived,
             pending_count,
         )
+        preview_metadata = {
+            key: value
+            for key, value in dict(self.workbench.dataset_metadata or {}).items()
+            if key == OFFSET_PREVIEW_METADATA_KEY
+        }
+        preview_metadata = rename_offset_preview_columns(preview_metadata, rename_map)
+        metadata_override.update(preview_metadata)
         saved_path = self.workbench.apply_processed_dataframe(
             final_df,
             history_entry,

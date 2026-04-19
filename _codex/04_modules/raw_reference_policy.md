@@ -51,6 +51,9 @@ If a missing target CFC path is rebuilt from an already filtered channel:
 - `DATA OFFSET` may also save `offset_preview_before_df` for the UI-only "before offset"
   graph overlay. This is not a raw reference baseline and must not be used by filtering or
   injury calculations.
+- when filtering renames channel columns with CFC suffixes, the UI-only
+  `offset_preview_before_df` columns must be renamed with the same `rename_map` so `_O_F`
+  files can still show the before-offset overlay.
 
 ## Review points for future changes
 - Does the code rebuild from `pre_filter_reference_df` when target CFC is missing?

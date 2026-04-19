@@ -21,6 +21,7 @@
 | `app/services/io/dat_loader.py` | DAT ingest |
 | `app/services/filtering/application.py` | DATA FILTERING apply-map normalization, status summary, and commit rename helpers |
 | `app/services/filtering/presets.py` | DATA FILTERING AUTO SET preset matching orchestration |
+| `app/services/preprocessing/offset_preview.py` | DATA OFFSET before-graph preview persistence helpers |
 | `app/services/preprocessing/service.py` | filtering / preprocessing engine |
 | `app/services/injury/common_engines.py` | shared injury helpers |
 | `app/services/injury/input_resolver.py` | injury input channel lookup helper |

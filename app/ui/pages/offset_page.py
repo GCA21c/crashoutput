@@ -7,10 +7,8 @@ import pandas as pd
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
+from app.services.preprocessing.offset_preview import copy_offset_preview_from_metadata, offset_preview_metadata
 from app.services.preprocessing.service import OFFSET_SAMPLE_OPTIONS, apply_offset, find_time0_row, get_numeric_channels, get_offset_sample_rows, get_time_numeric
-
-
-OFFSET_PREVIEW_METADATA_KEY = "offset_preview_before_df"
 
 
 class OffsetPage(tk.Frame):
@@ -27,14 +25,7 @@ class OffsetPage(tk.Frame):
         self._build_ui()
 
     def _metadata_before_df(self):
-        metadata = dict(getattr(self.workbench, "dataset_metadata", {}) or {})
-        before = metadata.get(OFFSET_PREVIEW_METADATA_KEY)
-        if before is None:
-            return None
-        try:
-            return before.copy(deep=True)
-        except Exception:
-            return None
+        return copy_offset_preview_from_metadata(getattr(self.workbench, "dataset_metadata", {}) or {})
 
     def _ensure_before_df_loaded(self):
         if self.before_df is not None:
@@ -284,9 +275,7 @@ class OffsetPage(tk.Frame):
         summary = ", ".join(f"{viewer.get_channel_display_name(ch)}={val:.6g}" for ch, val in list(offsets.items())[:6])
         if len(offsets) > 6:
             summary += " ..."
-        metadata_override = {
-            OFFSET_PREVIEW_METADATA_KEY: self.before_df.copy(deep=True),
-        }
+        metadata_override = offset_preview_metadata(self.before_df)
         saved_path = self.workbench.apply_processed_dataframe(
             out,
             {
