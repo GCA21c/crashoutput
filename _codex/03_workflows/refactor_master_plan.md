@@ -502,6 +502,21 @@ Phase 5-B status:
 - First Phase 5-C candidate is pure channel-role detector helpers. Do not move
   `apply_filtering_with_derivatives()` in the first Phase 5-C slice.
 
+### Phase 5-C channel role detector extraction
+First implemented extraction candidate:
+- `app/services/preprocessing/channel_roles.py`
+
+Moved only pure string helpers:
+- channel role detectors
+- required CFC lookup for derived role
+- derived-channel name helpers
+
+Compatibility:
+- `app/services/preprocessing/service.py` keeps the same imported helper names available.
+
+Validation:
+- Phase 5 `compare-dir` must match all representative snapshots before user runtime test.
+
 ## Do not touch first
 아래 영역은 검증 장치 없이 먼저 수정하지 않는다.
 

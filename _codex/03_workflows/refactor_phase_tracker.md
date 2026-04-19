@@ -55,6 +55,7 @@
 | Phase 4 | Closed | orchestration split complete and user-tested |
 | Phase 5-A | Partial | regression snapshot tool/docs added; actual baseline JSON requires representative saved `.pkl` |
 | Phase 5-B | Done | preprocessing function groups and folder-level snapshot compare workflow verified |
+| Phase 5-C | Partial | channel role detector helper extraction implemented; awaiting user runtime test |
 | Phase 5 | In Progress | Started with regression fixture tooling only |
 
 ## Completed work on this branch
@@ -67,9 +68,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-Phase 5-C can start with the smallest non-math extraction candidate only after user approval.
-Recommended first candidate: pure channel-role detector helpers from
-`app/services/preprocessing/service.py`, while keeping public imports/API stable.
+Wait for user runtime test after Phase 5-C channel role detector extraction.
 
 Phase 5-A scope:
 - Added `tools/capture_regression_snapshot.py`.
@@ -92,6 +91,15 @@ Phase 5-B scope:
 - Added `_codex/09_regression_snapshots/before/` and `after/` placeholder folders.
 - Verified `capture-dir` and `compare-dir` with the 5 representative H3_5%F two-dummy files.
 - Still no function movement, no calculation logic change, and no app runtime path change.
+
+Phase 5-C scope:
+- Added `app/services/preprocessing/channel_roles.py`.
+- Moved pure string-based channel role detection and derived-channel naming helpers out of
+  `app/services/preprocessing/service.py`.
+- `service.py` imports the moved names to preserve existing import paths.
+- Verified Phase 5 snapshot compare loop after the move: all 5 representative snapshots match.
+- Did not move `apply_filtering_with_derivatives()`, `apply_filtering()`, CFC filter kernel,
+  End Points extension, HIC/3ms/VC/Nij/femur calculation functions.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.

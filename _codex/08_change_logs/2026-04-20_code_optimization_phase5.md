@@ -8,6 +8,7 @@
 - Added snapshot-tool-only pandas StringArray pickle compatibility for previously saved files.
 - Added folder-level snapshot capture/compare commands for Phase 5-B.
 - Documented preprocessing service function groups and extraction risk.
+- Extracted preprocessing channel role detector helpers into a dedicated module for Phase 5-C.
 
 ## Why
 - Phase 5 will touch higher-risk boundaries around preprocessing, injury preparation, and
@@ -17,6 +18,8 @@
 ## Files
 - `.gitignore`
 - `tools/capture_regression_snapshot.py`
+- `app/services/preprocessing/channel_roles.py`
+- `app/services/preprocessing/service.py`
 - `_codex/03_workflows/regression_snapshot_workflow.md`
 - `_codex/04_modules/preprocessing.md`
 - `_codex/09_regression_snapshots/README.md`
@@ -26,3 +29,4 @@
 - No runtime application path changed.
 - Snapshot files may contain metadata and numeric digests from saved test data; review before sharing.
 - Actual `.pkl` input files and generated snapshot JSON files are ignored by git by default.
+- Phase 5-C keeps `service.py` as the compatibility import surface for moved detector helpers.

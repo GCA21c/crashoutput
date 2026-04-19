@@ -14,6 +14,18 @@ from app.core.dummy import (
     get_chest_dummy_profile,
     get_femur_dummy_profile,
 )
+from app.services.preprocessing.channel_roles import (
+    _safe_text,
+    detect_chest_channel_role,
+    detect_femur_channel_role,
+    detect_head_channel_role,
+    detect_injury_channel_purpose_and_role,
+    detect_neck_channel_role,
+    derived_role_required_cfc,
+    make_derived_channel_name,
+    make_neck_derived_channel_name,
+    neck_role_required_cfc,
+)
 from app.services.injury.common_engines import compute_3ms_bundle, compute_vc_engine_bundle
 
 FILTER_OPTIONS = ("Raw", "CFC 60", "CFC 180", "CFC 600", "CFC 1000")
@@ -194,128 +206,6 @@ def parse_cfc_filter_label(filter_label):
         return int(text) if text else None
     except Exception:
         return None
-
-
-def _safe_text(*parts):
-    return " ".join(str(p or "") for p in parts).lower()
-
-
-def detect_head_channel_role(channel_name, description="", unit=""):
-    text = _safe_text(channel_name, description, unit)
-    if "head" not in text or ("acc" not in text and "acceler" not in text):
-        return None
-    if any(tag in text for tag in (" x ", " ax", "ax ", "acc x", "accx", " acx", "_x", "xa")):
-        return "x"
-    if any(tag in text for tag in (" y ", " ay", "ay ", "acc y", "accy", " acy", "_y", "ya")):
-        return "y"
-    if any(tag in text for tag in (" z ", " az", "az ", "acc z", "accz", " acz", "_z", "za")):
-        return "z"
-    return None
-
-
-def detect_chest_channel_role(channel_name, description="", unit=""):
-    text = _safe_text(channel_name, description, unit)
-    if not any(tag in text for tag in ("chest", "chst", "thor", "stern", "rib")):
-        return None
-    if any(tag in text for tag in ("disp", "defl", "deflection", " ds", "dsx", "dc0", "distance")):
-        return "disp"
-    if "acc" in text or "acceler" in text:
-        if any(tag in text for tag in (" x ", " ax", "ax ", "acc x", "accx", " acx", "_x", "xa")):
-            return "x"
-        if any(tag in text for tag in (" y ", " ay", "ay ", "acc y", "accy", " acy", "_y", "ya")):
-            return "y"
-        if any(tag in text for tag in (" z ", " az", "az ", "acc z", "accz", " acz", "_z", "za")):
-            return "z"
-    return None
-
-
-def detect_femur_channel_role(channel_name, description="", unit=""):
-    text = _safe_text(channel_name, description, unit)
-    if not any(tag in text for tag in ("femur", "femr", "thigh", "upper leg", "leg load", "axial force")):
-        return None
-    if any(tag in text for tag in (" left ", "_l", " lf", "l fem", "lfem", "feml", "driver")):
-        return "left"
-    if any(tag in text for tag in (" right ", "_r", " rf", "r fem", "rfem", "femr", "passenger")):
-        return "right"
-    return None
-
-
-def derived_role_required_cfc(purpose, role):
-    purpose = str(purpose or "")
-    role = str(role or "")
-    if purpose == "neck_injury":
-        return neck_role_required_cfc(role)
-    if purpose == "head_injury":
-        # HEAD X/Y/Z용 별도 CFC1000 파생 채널은 더 이상 생성하지 않는다.
-        # DATA FILTERING에서 지정한 필터 등급을 원본 채널 메타데이터로 추적한다.
-        return tuple()
-    if purpose == "chest_injury":
-        # CHEST displacement는 전처리 이력 추적을 위해 SAE J1727용 CFC600 보조 채널을 유지한다.
-        # 단, 반드시 원본(raw-aligned) displacement에서 직접 재필터링한 경로만 생성해야 하며,
-        # 이미 CFC180 등으로 전처리된 선택 채널을 다시 CFC600으로 거는 이중 필터링은 허용하지 않는다.
-        if role == "disp":
-            return (600,)
-        return tuple()
-    if purpose == "femur_injury":
-        return tuple()
-    return tuple()
-
-
-def detect_injury_channel_purpose_and_role(channel_name, description="", unit=""):
-    role = detect_neck_channel_role(channel_name, description, unit)
-    if role is not None:
-        return "neck_injury", role
-    role = detect_head_channel_role(channel_name, description, unit)
-    if role is not None:
-        return "head_injury", role
-    role = detect_chest_channel_role(channel_name, description, unit)
-    if role is not None:
-        return "chest_injury", role
-    role = detect_femur_channel_role(channel_name, description, unit)
-    if role is not None:
-        return "femur_injury", role
-    return None, None
-
-
-def make_derived_channel_name(source_channel, purpose, role, cfc_value):
-    purpose_tag = str(purpose or "derived").replace("_injury", "").upper()
-    return f"{source_channel}__{purpose_tag}_{str(role).upper()}_CFC{int(cfc_value)}"
-
-
-def detect_neck_channel_role(channel_name, description="", unit=""):
-    text = _safe_text(channel_name, description, unit)
-    if "neck" not in text:
-        return None
-    if any(tag in text for tag in (" mocy", "occipital condyle", " moment y", " my ", "_my", "my_", "flex", "ext")):
-        return "my"
-    if any(tag in text for tag in (" force z", " fz ", "_fz", "fz_", "axial")):
-        return "fz"
-    if any(tag in text for tag in (" force x", " fx ", "_fx", "fx_", "shear")):
-        return "fx"
-    return None
-
-
-def neck_role_required_cfc(role):
-    """Return only the *additional* Neck CFC channels that may be needed later.
-
-    The main DATA FILTERING step already applies the user-selected CFC directly to the
-    original Neck channels. For the current workflow, users typically preprocess:
-      - Fx/Fy/Fz -> CFC1000
-      - Mx/My/Mz -> CFC600
-
-    So we should not create duplicate derivative channels with the same effective CFC,
-    such as Fx-CFC1000, Fz-CFC1000, or My-CFC600. The only commonly needed extra
-    paths for Neck injury calculation are the alternate CFC600 force channels.
-    """
-    if role in ("fz", "fx"):
-        return (600,)
-    if role == "my":
-        return tuple()
-    return tuple()
-
-
-def make_neck_derived_channel_name(source_channel, role, cfc_value):
-    return f"{source_channel}__NECK_{str(role).upper()}_CFC{int(cfc_value)}"
 
 
 def _safe_columns_to_set(columns_like):

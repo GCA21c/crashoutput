@@ -43,3 +43,35 @@ Not allowed:
 `apply_filtering_with_derivatives()`, `_apply_cfc_filter_segment()`,
 `compute_hic_details()`, `compute_3ms_*`, `compute_chest_metrics()`, and
 `compute_neck_nij_metrics()` remain high-risk and must not be moved first.
+
+## Phase 5-C channel role detector extraction
+Implemented first extraction:
+
+- new module: `app/services/preprocessing/channel_roles.py`
+- moved pure string/role helpers:
+  - `_safe_text`
+  - `detect_head_channel_role`
+  - `detect_chest_channel_role`
+  - `detect_femur_channel_role`
+  - `detect_neck_channel_role`
+  - `neck_role_required_cfc`
+  - `derived_role_required_cfc`
+  - `detect_injury_channel_purpose_and_role`
+  - `make_derived_channel_name`
+  - `make_neck_derived_channel_name`
+
+Compatibility:
+- `app/services/preprocessing/service.py` imports these names from the new module, so existing
+  imports from `service.py` remain valid.
+
+Not changed:
+- `apply_filtering_with_derivatives()`
+- `apply_filtering()`
+- CFC filter kernel
+- End Points extension
+- HIC / 3ms / VC / Nij / femur calculation functions
+
+Required verification:
+- `capture-dir` after the move
+- `compare-dir` against the Phase 5 baseline
+- user startup and representative DATA FILTERING / INJURY entry test
