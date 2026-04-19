@@ -517,6 +517,24 @@ Compatibility:
 Validation:
 - Phase 5 `compare-dir` must match all representative snapshots before user runtime test.
 
+### Phase 5-D numeric/time helper extraction
+Second implemented extraction candidate:
+- `app/services/preprocessing/timing.py`
+
+Moved only low-level dataframe/time helpers:
+- `get_numeric_channels`
+- `get_time_numeric`
+- `find_time0_row`
+- `get_sample_rate`
+
+Compatibility:
+- `app/services/preprocessing/service.py` keeps public helper names available.
+- `_get_sample_rate` remains available from `service.py` for older imports.
+
+Validation:
+- import compatibility for filtering page, offset page, viewer module
+- Phase 5 `compare-dir` must match all representative snapshots before user runtime test.
+
 ## Do not touch first
 아래 영역은 검증 장치 없이 먼저 수정하지 않는다.
 

@@ -26,6 +26,12 @@ from app.services.preprocessing.channel_roles import (
     make_neck_derived_channel_name,
     neck_role_required_cfc,
 )
+from app.services.preprocessing.timing import (
+    find_time0_row,
+    get_numeric_channels,
+    get_sample_rate as _get_sample_rate,
+    get_time_numeric,
+)
 from app.services.injury.common_engines import compute_3ms_bundle, compute_vc_engine_bundle
 
 FILTER_OPTIONS = ("Raw", "CFC 60", "CFC 180", "CFC 600", "CFC 1000")
@@ -36,42 +42,6 @@ FILTER_EXTENSION_MODE = "End Points"
 CHEST_CRITERIA_PRESETS = CHEST_DUMMY_PROFILES
 NECK_CRITERIA_PRESETS = NECK_DUMMY_PROFILES
 FEMUR_CRITERIA_PRESETS = FEMUR_DUMMY_PROFILES
-
-# Crash CFC filtering is implemented in the SAE J211 phaseless 4-pole
-# low-pass direction, with class-specific cutoff handling and stable
-# edge treatment for post-processing use.
-def get_numeric_channels(df, time_column=None):
-    channels = []
-    for col in df.columns:
-        if time_column is not None and col == time_column:
-            continue
-        arr = pd.to_numeric(df[col], errors="coerce").to_numpy()
-        if np.isfinite(arr).any():
-            channels.append(col)
-    return channels
-
-
-def get_time_numeric(df, time_column):
-    return pd.to_numeric(df[time_column], errors="coerce").to_numpy()
-
-
-def find_time0_row(df, time_column):
-    time_arr = get_time_numeric(df, time_column)
-    valid_rows = np.flatnonzero(np.isfinite(time_arr))
-    if valid_rows.size == 0:
-        return None
-    times = time_arr[valid_rows]
-    exact = np.flatnonzero(np.isclose(times, 0.0, atol=1e-12))
-    if exact.size:
-        return int(valid_rows[exact[0]])
-    # Prefer the first non-negative sample when time never hits exact zero,
-    # which is usually how trigger alignment is interpreted in crash tools.
-    nonneg = np.flatnonzero(times >= 0.0)
-    if nonneg.size:
-        return int(valid_rows[nonneg[0]])
-    nearest = int(np.argmin(np.abs(times)))
-    return int(valid_rows[nearest])
-
 
 def trim_dataframe(df, time_column, start_time, end_time):
     """Trim rows by time while keeping the existing time values untouched.
@@ -94,21 +64,6 @@ def trim_dataframe(df, time_column, start_time, end_time):
     within_range = numeric_mask & (time_arr >= start_time) & (time_arr <= end_time)
     keep_mask = (~numeric_mask) | within_range
     return df.loc[keep_mask].reset_index(drop=True).copy()
-
-
-def _get_sample_rate(time_arr):
-    x_valid = np.asarray(time_arr, dtype=float)
-    x_valid = x_valid[np.isfinite(x_valid)]
-    if x_valid.size < 3:
-        return None
-    diffs = np.diff(x_valid)
-    diffs = diffs[np.isfinite(diffs) & (diffs > 0)]
-    if diffs.size == 0:
-        return None
-    dt = float(np.median(diffs))
-    if dt <= 0:
-        return None
-    return 1.0 / dt
 
 
 _CFC_SF = {

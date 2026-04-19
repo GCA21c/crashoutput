@@ -55,7 +55,8 @@
 | Phase 4 | Closed | orchestration split complete and user-tested |
 | Phase 5-A | Partial | regression snapshot tool/docs added; actual baseline JSON requires representative saved `.pkl` |
 | Phase 5-B | Done | preprocessing function groups and folder-level snapshot compare workflow verified |
-| Phase 5-C | Partial | channel role detector helper extraction implemented; awaiting user runtime test |
+| Phase 5-C | Done | channel role detector helper extraction implemented and user-tested |
+| Phase 5-D | Partial | numeric/time helper extraction implemented; awaiting user runtime test |
 | Phase 5 | In Progress | Started with regression fixture tooling only |
 
 ## Completed work on this branch
@@ -68,7 +69,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-Wait for user runtime test after Phase 5-C channel role detector extraction.
+Wait for user runtime test after Phase 5-D numeric/time helper extraction.
 
 Phase 5-A scope:
 - Added `tools/capture_regression_snapshot.py`.
@@ -98,7 +99,17 @@ Phase 5-C scope:
   `app/services/preprocessing/service.py`.
 - `service.py` imports the moved names to preserve existing import paths.
 - Verified Phase 5 snapshot compare loop after the move: all 5 representative snapshots match.
+- User tested runtime behavior as normal after the move.
 - Did not move `apply_filtering_with_derivatives()`, `apply_filtering()`, CFC filter kernel,
+  End Points extension, HIC/3ms/VC/Nij/femur calculation functions.
+
+Phase 5-D scope:
+- Added `app/services/preprocessing/timing.py`.
+- Moved numeric channel, time numeric, Time0 row, and sample-rate helpers out of
+  `app/services/preprocessing/service.py`.
+- `service.py` keeps `_get_sample_rate` as an import alias for compatibility.
+- Verified import compatibility and Phase 5 snapshot compare loop: all 5 representative snapshots match.
+- Did not move trimming/offset commit functions, filtering functions, CFC filter kernel,
   End Points extension, HIC/3ms/VC/Nij/femur calculation functions.
 
 Phase 1-C decisions:
