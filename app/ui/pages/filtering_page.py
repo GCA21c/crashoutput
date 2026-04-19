@@ -7,6 +7,12 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
 from app.core.isocode import rewrite_filter_code_in_text
+from app.services.filtering.application import (
+    auto_set_details,
+    auto_set_no_targets_message,
+    filter_application_summary,
+    normalize_channel_filter_map,
+)
 from app.services.filtering.presets import build_auto_filter_map
 from app.services.preprocessing.service import FILTER_OPTIONS, apply_filtering_with_derivatives, get_numeric_channels, make_channel_search_text
 
@@ -327,11 +333,7 @@ class FilteringPage(tk.Frame):
             messagebox.showwarning("경고", "먼저 DAT 데이터를 로드하세요.")
             return 0
 
-        channel_to_filter = {
-            str(channel): str(label).strip()
-            for channel, label in dict(channel_to_filter or {}).items()
-            if str(channel) in self.pending_df.columns and str(label).strip()
-        }
+        channel_to_filter = normalize_channel_filter_map(channel_to_filter, self.pending_df.columns)
         if not channel_to_filter:
             return 0
 
@@ -365,15 +367,7 @@ class FilteringPage(tk.Frame):
 
         self.refresh_channels(keep_selection=True)
         self.refresh_plot()
-        counts = {}
-        for label in channel_to_filter.values():
-            counts[label] = counts.get(label, 0) + 1
-        count_text = ", ".join(f"{label} {count}개" for label, count in sorted(counts.items()))
-        channel_names = sorted(channel_to_filter.keys())
-        channel_text = ", ".join(channel_names[:6])
-        if len(channel_names) > 6:
-            channel_text += f" ... 외 {len(channel_names) - 6}개"
-        self.info_var.set(f"{info_prefix}: {len(channel_to_filter)}개 채널 preset 적용 ({count_text}) | {channel_text}. [FILTERING!]을 누르면 작업 데이터에 반영됩니다.")
+        self.info_var.set(filter_application_summary(channel_to_filter, info_prefix))
         return len(channel_to_filter)
 
     def apply_filters(self):
@@ -399,18 +393,12 @@ class FilteringPage(tk.Frame):
         self._sync_pending_if_needed(force=False)
         channel_to_filter, missing, _unsupported = self._build_auto_filter_map()
         if not channel_to_filter:
-            text = "AUTO SET 적용 대상이 없습니다."
-            if missing:
-                text += f" missing: {'; '.join(missing[:8])}"
+            text = auto_set_no_targets_message(missing)
             self.info_var.set(text)
             messagebox.showinfo("AUTO SET", text)
             return
         applied = self._apply_channel_filter_map(channel_to_filter, info_prefix="AUTO SET")
-        details = []
-        if missing:
-            details.append(f"missing: {'; '.join(missing[:8])}")
-        if len(missing) > 8:
-            details.append(f"외 {len(missing) - 8}건")
+        details = auto_set_details(missing)
         if details:
             self.info_var.set(f"AUTO SET applied: {applied} channels | {' | '.join(details)}")
 

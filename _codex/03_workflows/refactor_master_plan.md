@@ -392,6 +392,9 @@ Rollback:
 - Phase 4-D follow-up fixed pandas `Index` handling in the input resolver helper.
 - Phase 4-E routed REPORT SUMMARY Excel export calls through `app/report/service.py` while keeping
   UI exception handling and success follow-up in `report_summary_page.py`.
+- Phase 4-F moved DATA FILTERING apply-map normalization and status-message summary helpers into
+  `app/services/filtering/application.py`. The page still owns pending dataframe mutation and still
+  calls `apply_filtering_with_derivatives()`.
 - These changes intentionally do not touch filtering math, derived channel generation, injury
   formulas, report extraction keys, saved metadata keys, or pickle format names.
 

@@ -24,6 +24,12 @@
   - added `export_summary_report()` service entry point
   - changed `report_summary_page.py` to call the report service instead of the Excel writer directly
   - kept UI error handling, status update, completion dialog, and file open behavior in the page
+- Closed Phase 4-E after user testing passed.
+- Implemented Phase 4-F DATA FILTERING apply helper split:
+  - added `app/services/filtering/application.py`
+  - moved channel/filter map normalization into `normalize_channel_filter_map()`
+  - moved filter application info text and AUTO SET detail text helpers out of the page
+  - kept pending dataframe mutation and filtering engine invocation in `filtering_page.py`
 
 ## Why
 - Phase 4 targets orchestration code that was still inside UI pages and shell.
@@ -35,4 +41,5 @@
 - Persistence metadata assembly affects saved pickle contents, so Save / `_R` reload / processed-stage save paths need user testing.
 - Injury input resolver changes are intentionally limited to derived-channel lookup; raw alignment and on-demand CFC preparation remain in the page.
 - Phase 4-E is a call-route change only and does not change Excel template mapping or workbook writing.
+- Phase 4-F is an apply-map/status helper split only and does not change filtering math or commit behavior.
 - Filtering math, injury calculation, derived channel generation, report extraction keys, saved metadata key names, and pickle format names were not changed.
