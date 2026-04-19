@@ -39,6 +39,10 @@
 - Implemented Phase 4-H DATA FILTERING commit payload helper split:
   - moved commit metadata/history payload assembly into `build_filter_commit_payload()`
   - kept `save_filters()` validation, `_F` commit, refresh, and completion dialog in the page
+- Fixed DATA OFFSET preview overlay state:
+  - stored the pre-offset preview dataframe under `offset_preview_before_df` when committing `_O`
+  - restored that preview dataframe when reopening `_O` files
+  - stopped forcing the preview channel back to the first channel on every OFFSET page show
 
 ## Why
 - Phase 4 targets orchestration code that was still inside UI pages and shell.
@@ -53,6 +57,7 @@
 - Phase 4-F is an apply-map/status helper split only and does not change filtering math or commit behavior.
 - Phase 4-G is a pure helper split for commit metadata renaming and does not change `FILTERING!` commit behavior.
 - Phase 4-H is a payload assembly split only and does not change `FILTERING!` commit behavior.
+- DATA OFFSET preview persistence is UI-only and does not change offset calculation or `pre_filter_reference_df`.
 - Phase 4 intentionally stops before moving `save_filters()` itself, `_resolve_standard_series_for_calc()`,
   `_collect_chest_disp_prefiltered()`, or shell state lifecycle because those need stronger regression fixtures.
 - Filtering math, injury calculation, derived channel generation, report extraction keys, saved metadata key names, and pickle format names were not changed.

@@ -10,6 +10,9 @@ from matplotlib.figure import Figure
 from app.services.preprocessing.service import OFFSET_SAMPLE_OPTIONS, apply_offset, find_time0_row, get_numeric_channels, get_offset_sample_rows, get_time_numeric
 
 
+OFFSET_PREVIEW_METADATA_KEY = "offset_preview_before_df"
+
+
 class OffsetPage(tk.Frame):
     def __init__(self, parent, workbench):
         super().__init__(parent, bg="#ffffff")
@@ -22,6 +25,21 @@ class OffsetPage(tk.Frame):
         self.show_before_var = tk.BooleanVar(value=True)
         self._display_to_channel = {}
         self._build_ui()
+
+    def _metadata_before_df(self):
+        metadata = dict(getattr(self.workbench, "dataset_metadata", {}) or {})
+        before = metadata.get(OFFSET_PREVIEW_METADATA_KEY)
+        if before is None:
+            return None
+        try:
+            return before.copy(deep=True)
+        except Exception:
+            return None
+
+    def _ensure_before_df_loaded(self):
+        if self.before_df is not None:
+            return
+        self.before_df = self._metadata_before_df()
 
     def _build_ui(self):
         header = tk.Frame(self, bg="#ffffff")
@@ -128,7 +146,8 @@ class OffsetPage(tk.Frame):
         self.canvas.draw_idle()
 
     def on_show(self):
-        self.refresh_channels(force_default=True)
+        self._ensure_before_df_loaded()
+        self.refresh_channels(force_default=False)
         self.refresh_plot()
 
     def refresh_channels(self, force_default=False):
@@ -265,6 +284,9 @@ class OffsetPage(tk.Frame):
         summary = ", ".join(f"{viewer.get_channel_display_name(ch)}={val:.6g}" for ch, val in list(offsets.items())[:6])
         if len(offsets) > 6:
             summary += " ..."
+        metadata_override = {
+            OFFSET_PREVIEW_METADATA_KEY: self.before_df.copy(deep=True),
+        }
         saved_path = self.workbench.apply_processed_dataframe(
             out,
             {
@@ -273,6 +295,7 @@ class OffsetPage(tk.Frame):
                 'display_message': f"Offset applied: all numeric channels, first {sample_count} samples from data start to Time0",
             },
             op_suffix="_O",
+            metadata_override=metadata_override,
             update_pre_filter_reference=True,
         )
         self.refresh_channels()
