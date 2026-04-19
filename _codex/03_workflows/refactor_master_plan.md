@@ -415,6 +415,7 @@ Rollback:
 ## Phase 5 - High-risk structural split
 목표:
 - `app/services/preprocessing/service.py`와 dummy / ISO / rule DB를 장기 유지보수 가능한 구조로 분해한다.
+- 직접 분해 전에 regression snapshot 기준선을 먼저 만든다.
 
 수정 후보:
 - `app/services/preprocessing/service.py`
@@ -449,12 +450,33 @@ Validation:
 - dummy factor lookup diff
 - ISO parsed map diff
 - existing pickle load/save diff
+- `tools/capture_regression_snapshot.py` capture/compare 결과 diff
 
 Rollback:
 - 기존 `preprocessing/service.py`를 compatibility facade로 유지한다.
 - public function name은 유지한다.
 - 내부 import만 새 모듈로 돌린다.
 - 파일 전체 이동 금지, function group 단위로 이동한다.
+
+### Phase 5-A regression fixture gate
+Phase 5-A starts with fixture tooling, not code movement.
+
+Tool:
+- `tools/capture_regression_snapshot.py`
+
+Workflow:
+- `_codex/03_workflows/regression_snapshot_workflow.md`
+
+Required baseline before high-risk moves:
+- representative saved `.pkl` after load only
+- `_O`
+- `_O_F`
+- injury-calculated `_O_F_I` or equivalent
+- REPORT SUMMARY saved `_R`
+
+If representative files are not available, Phase 5 can only prepare the tooling and documents.
+Actual preprocessing/injury input moves remain blocked until at least one baseline snapshot is
+created and compared.
 
 ## Do not touch first
 아래 영역은 검증 장치 없이 먼저 수정하지 않는다.

@@ -56,6 +56,13 @@
 | `_codex/04_modules/report.md` | report module maintenance workflow |
 | `_codex/05_reference/excel_export_mapping.md` | Excel export mapping reference |
 
+## Tools / regression
+| Path | Responsibility |
+|---|---|
+| `tools/capture_regression_snapshot.py` | saved pickle regression snapshot capture and JSON comparison |
+| `_codex/03_workflows/regression_snapshot_workflow.md` | Phase 5 regression snapshot workflow |
+| `_codex/09_regression_snapshots/` | optional local regression snapshot artifacts |
+
 ## UI components
 | Path | Responsibility |
 |---|---|

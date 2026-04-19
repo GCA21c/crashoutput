@@ -4,7 +4,7 @@
 다음 작업을 시작하기 전 항상 이 문서를 확인한다.
 
 ## Current branch
-- `코드최적화p4`
+- `코드최적화p5`
 
 ## Global guard
 - 계산 로직 변경 금지
@@ -53,7 +53,8 @@
 | Phase 4-H | Done | user tested DATA FILTERING commit payload helper and OFFSET preview fixes |
 | Phase 4-I | Done | Phase 4 closure boundary documented; high-risk moves deferred |
 | Phase 4 | Closed | orchestration split complete and user-tested |
-| Phase 5 | Blocked | Requires regression fixtures and explicit approval |
+| Phase 5-A | Partial | regression snapshot tool/docs added; actual baseline JSON requires representative saved `.pkl` |
+| Phase 5 | In Progress | Started with regression fixture tooling only |
 
 ## Completed work on this branch
 - Added `app/report/exporters/runtime.py`.
@@ -65,7 +66,16 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-Wait for explicit user approval before starting Phase 5 regression fixture work.
+Create baseline JSON from representative saved `.pkl` files before moving high-risk
+preprocessing or injury-input code.
+
+Phase 5-A scope:
+- Added `tools/capture_regression_snapshot.py`.
+- Added `_codex/03_workflows/regression_snapshot_workflow.md`.
+- Added `_codex/09_regression_snapshots/README.md`.
+- No calculation logic, filtering math, injury formula, report extraction key, or pickle format change.
+- Actual representative snapshot artifacts are not created yet because no saved dataset file exists
+  in the repository workspace.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.
