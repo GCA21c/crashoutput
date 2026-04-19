@@ -47,6 +47,11 @@
   - moved offset preview metadata helpers into `app/services/preprocessing/offset_preview.py`
   - when DATA FILTERING renames channels with CFC suffixes, the UI-only offset preview dataframe
     now receives the same column rename map
+- Matched `_O_F` DATA OFFSET overlay to the original OFFSET overlay:
+  - DATA OFFSET now stores both `offset_preview_before_df` and `offset_preview_after_df`
+  - DATA OFFSET plotting uses the stored after-offset preview when available, instead of the
+    filtered current dataframe
+  - DATA FILTERING renames both preview dataframes with the same CFC suffix rename map
 
 ## Why
 - Phase 4 targets orchestration code that was still inside UI pages and shell.
@@ -64,6 +69,7 @@
 - DATA OFFSET preview persistence is UI-only and does not change offset calculation or `pre_filter_reference_df`.
 - DATA OFFSET preview column rename after filtering is UI-only and does not change filtered values,
   filtering math, or raw-reference policy.
+- DATA OFFSET after-preview persistence is UI-only and does not change current working data.
 - Phase 4 intentionally stops before moving `save_filters()` itself, `_resolve_standard_series_for_calc()`,
   `_collect_chest_disp_prefiltered()`, or shell state lifecycle because those need stronger regression fixtures.
 - Filtering math, injury calculation, derived channel generation, report extraction keys, saved metadata key names, and pickle format names were not changed.
