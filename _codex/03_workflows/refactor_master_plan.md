@@ -389,6 +389,9 @@ Rollback:
 - Phase 4-D moved injury derived-channel lookup into `app/services/injury/input_resolver.py`.
   `_resolve_standard_series_for_calc()` remains in `injury_page.py` because it is calculation-input
   critical and includes raw reference alignment and on-demand filtering.
+- Phase 4-D follow-up fixed pandas `Index` handling in the input resolver helper.
+- Phase 4-E routed REPORT SUMMARY Excel export calls through `app/report/service.py` while keeping
+  UI exception handling and success follow-up in `report_summary_page.py`.
 - These changes intentionally do not touch filtering math, derived channel generation, injury
   formulas, report extraction keys, saved metadata keys, or pickle format names.
 

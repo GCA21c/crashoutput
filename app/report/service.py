@@ -1,6 +1,7 @@
 """Report orchestration helpers used by UI pages."""
 
 from app.report.engine import build_report_snapshot
+from app.report.exporters.excel import export_summary_report_to_excel
 
 
 def summary_rows_for_payload(snapshot):
@@ -59,3 +60,7 @@ def update_summary_report_cache(metadata, regulation_name, report_fields, snapsh
     report_saved["summary_report"] = existing
     metadata["report_saved_results"] = report_saved
     return metadata
+
+
+def export_summary_report(snapshot, report_fields, output_path):
+    return export_summary_report_to_excel(snapshot, report_fields, output_path)

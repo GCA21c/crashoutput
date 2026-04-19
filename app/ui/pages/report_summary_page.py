@@ -5,7 +5,7 @@ from app.report import (
     ExcelExportError,
     build_report_snapshot,
     build_summary_report_payload,
-    export_summary_report_to_excel,
+    export_summary_report,
     get_regulation_choices,
     get_regulation_definition,
     update_summary_report_cache,
@@ -451,7 +451,7 @@ class ReportSummaryPage(tk.Frame):
             return
         output_path = self._unique_export_path()
         try:
-            result = export_summary_report_to_excel(
+            result = export_summary_report(
                 self._snapshot,
                 self._report_fields(),
                 output_path,

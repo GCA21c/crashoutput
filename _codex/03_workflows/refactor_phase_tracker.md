@@ -43,10 +43,11 @@
 | Phase 3-I | Done | user tested REPORT SUMMARY occupant wrapper closure |
 | Phase 3-J | Done | Phase 3 closure boundary documented; calculation-adjacent helpers deferred |
 | Phase 3 | Closed | occupant helper commonization complete and user-tested |
-| Phase 4-A | Ready for user test | REPORT SUMMARY payload/cache orchestration moved behind report service |
-| Phase 4-B | Ready for user test | DATA FILTERING AUTO SET matching moved behind filtering preset service |
-| Phase 4-C | Ready for user test | shell persistence metadata assembly moved behind state persistence helper |
-| Phase 4-D | Ready for user test | injury derived-channel lookup moved behind input resolver helper |
+| Phase 4-A | Done | user tested REPORT SUMMARY payload/cache orchestration service |
+| Phase 4-B | Done | user tested DATA FILTERING AUTO SET matching service |
+| Phase 4-C | Done | user tested shell persistence metadata helper |
+| Phase 4-D | Done | user tested injury derived-channel lookup helper and Index fix |
+| Phase 4-E | Ready for user test | REPORT SUMMARY Excel export call routed through report service |
 | Phase 4 | In Progress | orchestration split started on `코드최적화p4` |
 | Phase 5 | Blocked | Requires regression coverage and explicit approval |
 
@@ -60,7 +61,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-User test for Phase 4-A/B/C/D orchestration split batch.
+User test for Phase 4-E REPORT SUMMARY Excel export service route.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.

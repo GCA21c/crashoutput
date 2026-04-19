@@ -18,6 +18,12 @@
   - added `app/services/injury/input_resolver.py`
   - moved derived-channel lookup into `find_derived_channel()`
   - kept `_resolve_standard_series_for_calc()` in `injury_page.py`
+- Fixed Phase 4-D input resolver pandas `Index` handling after user calculation test.
+- Closed Phase 4-A/B/C/D after user testing passed.
+- Implemented Phase 4-E REPORT SUMMARY Excel export route:
+  - added `export_summary_report()` service entry point
+  - changed `report_summary_page.py` to call the report service instead of the Excel writer directly
+  - kept UI error handling, status update, completion dialog, and file open behavior in the page
 
 ## Why
 - Phase 4 targets orchestration code that was still inside UI pages and shell.
@@ -28,4 +34,5 @@
 - AUTO SET matching can affect which channels are preset, so the page wrapper must be tested with representative TEST SETUP data.
 - Persistence metadata assembly affects saved pickle contents, so Save / `_R` reload / processed-stage save paths need user testing.
 - Injury input resolver changes are intentionally limited to derived-channel lookup; raw alignment and on-demand CFC preparation remain in the page.
+- Phase 4-E is a call-route change only and does not change Excel template mapping or workbook writing.
 - Filtering math, injury calculation, derived channel generation, report extraction keys, saved metadata key names, and pickle format names were not changed.

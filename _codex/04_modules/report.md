@@ -332,8 +332,11 @@ Phase 3-J closure status:
   - `summary_rows_for_payload()`
   - `build_summary_report_payload()`
   - `update_summary_report_cache()`
+  - `export_summary_report()`
 - `app/ui/pages/report_summary_page.py` remains responsible for UI state, Tk variables, user actions,
   dialogs, and calls into the report service.
+- Excel export writer implementation remains in `app/report/exporters/excel.py`; the report service
+  provides the orchestration entry point used by the UI page.
 - The report snapshot builder and row extraction contract remain in `app/report/engine.py`.
 - Saved metadata keys such as `report_saved_results.summary_report`, `rows`, `slots`,
   `report_fields`, and `excel_mapping` are unchanged.
