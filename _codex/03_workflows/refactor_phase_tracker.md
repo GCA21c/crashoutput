@@ -56,7 +56,7 @@
 | Phase 5-A | Partial | regression snapshot tool/docs added; actual baseline JSON requires representative saved `.pkl` |
 | Phase 5-B | Done | preprocessing function groups and folder-level snapshot compare workflow verified |
 | Phase 5-C | Done | channel role detector helper extraction implemented and user-tested |
-| Phase 5-D | Partial | numeric/time helper extraction implemented; awaiting user runtime test |
+| Phase 5-D | Done | numeric/time helper extraction implemented and user-tested |
 | Phase 5 | In Progress | Started with regression fixture tooling only |
 
 ## Completed work on this branch
@@ -69,7 +69,10 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-Wait for user runtime test after Phase 5-D numeric/time helper extraction.
+Phase 5-E can start after user approval. Recommended scope: move trimming/offset helper
+functions (`trim_dataframe`, `get_offset_sample_rows`, `apply_offset`) to a dedicated
+module while preserving `service.py` compatibility imports and validating `_O` / `_O_F`
+snapshots.
 
 Phase 5-A scope:
 - Added `tools/capture_regression_snapshot.py`.
@@ -109,6 +112,7 @@ Phase 5-D scope:
   `app/services/preprocessing/service.py`.
 - `service.py` keeps `_get_sample_rate` as an import alias for compatibility.
 - Verified import compatibility and Phase 5 snapshot compare loop: all 5 representative snapshots match.
+- User tested runtime behavior as normal after the move.
 - Did not move trimming/offset commit functions, filtering functions, CFC filter kernel,
   End Points extension, HIC/3ms/VC/Nij/femur calculation functions.
 
