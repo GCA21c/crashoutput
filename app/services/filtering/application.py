@@ -39,3 +39,48 @@ def auto_set_details(missing):
     if len(missing) > 8:
         details.append(f"외 {len(missing) - 8}건")
     return details
+
+
+def rename_metadata_keys(mapping, rename_map):
+    data = dict(mapping or {})
+    if not rename_map:
+        return data
+    return {
+        rename_map.get(key, key): value
+        for key, value in data.items()
+    }
+
+
+def rename_derived_channel_references(derived_channels, rename_map):
+    data = dict(derived_channels or {})
+    if not rename_map:
+        return data
+    out = {}
+    for key, value in data.items():
+        info = dict(value or {})
+        source_channel = str(info.get("source_channel") or "").strip()
+        if source_channel:
+            info["source_channel"] = rename_map.get(source_channel, source_channel)
+        history = []
+        for item in list(info.get("filter_history") or []):
+            entry = dict(item or {})
+            from_channel = str(entry.get("from_channel") or "").strip()
+            if from_channel:
+                entry["from_channel"] = rename_map.get(from_channel, from_channel)
+            history.append(entry)
+        if history:
+            info["filter_history"] = history
+        out[rename_map.get(key, key)] = info
+    return out
+
+
+def filtering_summary_text(filter_labels, limit=6):
+    summary_items = [
+        f"{channel}={label}"
+        for channel, label in dict(filter_labels or {}).items()
+        if label != "Raw"
+    ]
+    summary = ", ".join(summary_items[:limit])
+    if len(summary_items) > limit:
+        summary += " ..."
+    return summary, len(summary_items)

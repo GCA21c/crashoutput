@@ -30,6 +30,11 @@
   - moved channel/filter map normalization into `normalize_channel_filter_map()`
   - moved filter application info text and AUTO SET detail text helpers out of the page
   - kept pending dataframe mutation and filtering engine invocation in `filtering_page.py`
+- Implemented Phase 4-G DATA FILTERING commit helper split:
+  - moved metadata key rename helper into `rename_metadata_keys()`
+  - moved derived-channel reference rename helper into `rename_derived_channel_references()`
+  - moved filtering history summary text into `filtering_summary_text()`
+  - kept `save_filters()` and `workbench.apply_processed_dataframe()` in the page
 
 ## Why
 - Phase 4 targets orchestration code that was still inside UI pages and shell.
@@ -42,4 +47,5 @@
 - Injury input resolver changes are intentionally limited to derived-channel lookup; raw alignment and on-demand CFC preparation remain in the page.
 - Phase 4-E is a call-route change only and does not change Excel template mapping or workbook writing.
 - Phase 4-F is an apply-map/status helper split only and does not change filtering math or commit behavior.
+- Phase 4-G is a pure helper split for commit metadata renaming and does not change `FILTERING!` commit behavior.
 - Filtering math, injury calculation, derived channel generation, report extraction keys, saved metadata key names, and pickle format names were not changed.

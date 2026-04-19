@@ -395,6 +395,9 @@ Rollback:
 - Phase 4-F moved DATA FILTERING apply-map normalization and status-message summary helpers into
   `app/services/filtering/application.py`. The page still owns pending dataframe mutation and still
   calls `apply_filtering_with_derivatives()`.
+- Phase 4-G moved DATA FILTERING commit rename helpers and filtering history summary text into
+  `app/services/filtering/application.py`. `save_filters()` still owns the commit operation and
+  `workbench.apply_processed_dataframe()` call.
 - These changes intentionally do not touch filtering math, derived channel generation, injury
   formulas, report extraction keys, saved metadata keys, or pickle format names.
 

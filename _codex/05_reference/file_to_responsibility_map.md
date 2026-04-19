@@ -19,7 +19,7 @@
 |---|---|
 | `app/services/io/csv_loader.py` | CSV ingest |
 | `app/services/io/dat_loader.py` | DAT ingest |
-| `app/services/filtering/application.py` | DATA FILTERING apply-map normalization and status summary helpers |
+| `app/services/filtering/application.py` | DATA FILTERING apply-map normalization, status summary, and commit rename helpers |
 | `app/services/filtering/presets.py` | DATA FILTERING AUTO SET preset matching orchestration |
 | `app/services/preprocessing/service.py` | filtering / preprocessing engine |
 | `app/services/injury/common_engines.py` | shared injury helpers |
