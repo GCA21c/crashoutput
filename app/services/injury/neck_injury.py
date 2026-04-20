@@ -31,7 +31,7 @@ def _series_extrema_detail(time_s, values):
 def _format_value_at_line(label, value, time_s, unit=''):
     value_text = fmt_value(value, unit, unit_style='suffix')
     time_text = fmt_time_ms(time_s)
-    return f"{label:<4}: {value_text} at {time_text}" if time_text != '-' else f"{label:<4}: {value_text}"
+    return f"{label}: {value_text} at {time_text}" if time_text != '-' else f"{label}: {value_text}"
 
 
 def _format_neck_axis_block(display_name, detail, unit='', max_label='Max', min_label='Min'):
