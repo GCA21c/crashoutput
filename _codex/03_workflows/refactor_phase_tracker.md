@@ -58,7 +58,7 @@
 | Phase 5-C | Done | channel role detector helper extraction implemented and user-tested |
 | Phase 5-D | Done | numeric/time helper extraction implemented and user-tested |
 | Phase 5-E | Done | offset/trimming helper extraction implemented and user-tested |
-| Phase 5-F | Partial | viewer/channel search helper extraction implemented; awaiting user runtime test |
+| Phase 5-F | Done | viewer/channel search helper extraction implemented and user-tested |
 | Phase 5 | In Progress | Started with regression fixture tooling only |
 
 ## Completed work on this branch
@@ -71,7 +71,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-Wait for user runtime test after Phase 5-F viewer/channel search helper extraction.
+Wait for user runtime test after DATA FILTERING display-only channel prefix improvement.
 
 Phase 5-A scope:
 - Added `tools/capture_regression_snapshot.py`.
@@ -134,8 +134,18 @@ Phase 5-F scope:
 - `service.py` keeps `make_channel_search_text`, `infer_channel_group_key`,
   `auto_detect_injury_channels`, and `_find_resultant_or_axis` import compatibility.
 - Verified import compatibility and Phase 5 snapshot compare loop: all 5 representative snapshots match.
+- User tested runtime behavior as normal after the move.
 - Did not move filtering functions, CFC filter kernel, End Points extension,
   HIC/3ms/VC/Nij/femur calculation functions.
+
+DATA FILTERING display prefix scope:
+- Added DAT load-time display-order metadata in `app/services/io/dat_loader.py`.
+- DATA FILTERING list rows may display `002:B1:` style prefixes through `app/ui/pages/filtering_page.py`.
+- Prefixes are display-only and are not written into dataframe column names, ISO rewrite keys,
+  filter-label keys, descriptions, units, derived-channel keys, report payloads, or saved injury data.
+- DAT sample `1.zip` confirmed Time=`001` and the first data channel=`002` using DAT header block order.
+- Existing saved `.pkl` regression snapshots still match because this display metadata is absent from
+  older saves and falls back to view-only dataframe order.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.

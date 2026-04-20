@@ -13,8 +13,8 @@ from app.services.filtering.application import (
     build_filter_commit_payload,
     filter_application_summary,
     normalize_channel_filter_map,
-    rename_derived_channel_references,
     rename_metadata_keys,
+    rename_derived_channel_references,
 )
 from app.services.filtering.presets import build_auto_filter_map
 from app.services.preprocessing.offset_preview import rename_offset_preview_columns
@@ -197,7 +197,46 @@ class FilteringPage(tk.Frame):
     def _display_name(self, viewer, channel):
         label = self._get_active_labels().get(channel, "Raw")
         desc = self.pending_descriptions.get(channel) or viewer.get_channel_display_name(channel)
-        return f"{desc}   [{channel}]   [{label}]"
+        prefix = self._display_prefix(channel)
+        return f"{prefix}{desc}   [{channel}]   [{label}]"
+
+    def _display_prefix(self, channel):
+        return f"{self._display_index_token(channel)}:{self._display_dummy_token(channel)}:"
+
+    def _display_index_token(self, channel):
+        metadata = dict(self.workbench.dataset_metadata or {})
+        index_map = dict(metadata.get("dat_channel_index_map") or {})
+        direct = index_map.get(channel)
+        if direct is not None:
+            try:
+                return f"{int(direct):03d}"
+            except Exception:
+                pass
+        derived_channels = dict(self.pending_derived_channels or metadata.get("derived_channels") or {})
+        if channel in derived_channels:
+            return "CALC"
+        columns = list(getattr(self._get_active_df(), "columns", []) or [])
+        if channel in columns:
+            try:
+                return f"{columns.index(channel) + 1:03d}"
+            except Exception:
+                pass
+        return "---"
+
+    def _display_dummy_token(self, channel):
+        metadata = dict(self.workbench.dataset_metadata or {})
+        channel_meta = dict((metadata.get("channel_metadata_map") or {}).get(channel) or {})
+        dummy = str(channel_meta.get("dummy_position") or "").strip().upper()
+        if dummy:
+            return dummy
+        parsed = dict((metadata.get("isocode_parsed_map") or {}).get(channel) or {})
+        dummy = str(parsed.get("dummy_position_normalized") or parsed.get("dummy_position") or "").strip().upper()
+        if dummy:
+            return dummy
+        text = str(channel or "").strip().upper()
+        if len(text) >= 2 and text[0] == "B" and text[1].isdigit():
+            return text[:2]
+        return "--"
 
     def _selected_filter_label(self, channels):
         if not channels:
@@ -275,9 +314,10 @@ class FilteringPage(tk.Frame):
         channels = get_numeric_channels(active_df, viewer.time_column)
         pattern = self.search_var.get().strip().lower()
         for channel in channels:
-            if pattern and pattern not in make_channel_search_text(viewer, channel):
-                continue
             display = self._display_name(viewer, channel)
+            search_text = f"{make_channel_search_text(viewer, channel)} {display}".lower()
+            if pattern and pattern not in search_text:
+                continue
             self.channel_to_display[channel] = display
             self.display_to_channel[display] = channel
             self.visible_display_items.append(display)
@@ -491,6 +531,12 @@ class FilteringPage(tk.Frame):
             final_derived,
             pending_count,
         )
+        for key in ("dat_channel_index_map", "dat_channel_file_map", "dat_channel_file_index_map"):
+            if key in dict(self.workbench.dataset_metadata or {}):
+                metadata_override[key] = rename_metadata_keys(
+                    (self.workbench.dataset_metadata or {}).get(key),
+                    rename_map,
+                )
         preview_metadata = {
             key: value
             for key, value in dict(self.workbench.dataset_metadata or {}).items()
