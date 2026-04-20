@@ -564,6 +564,121 @@ Required next-step policy:
 - keep `service.py` compatibility imports until the full calculation-side split is explicitly
   approved
 
+## Phase 5-J-1 HIC / 3ms boundary review
+Performed as documentation-only before any remaining calculation-side move.
+
+Current HIC / 3ms owners still in `app/services/preprocessing/service.py`:
+- `_cumtrapz`
+- `_prepare_hic_series`
+- `_integral_at_query`
+- `_value_at_query`
+- `_update_best_hic`
+- `compute_hic_details`
+- `_level_exceedance_intervals`
+- `_clip_exceedance_detail`
+- `compute_3ms_one_peak_exceedance_details`
+- `compute_3ms_multiple_peak_exceedance_details`
+- `compute_hic`
+- `compute_3ms_clip_details`
+- `compute_3ms_clip`
+- `compute_3ms_one_peak_details`
+
+Current callers:
+- `app/services/injury/head_injury.py`
+  - imports `compute_hic_details`
+  - imports `compute_3ms_bundle` from `app/services/injury/common_engines.py`
+- `app/services/injury/pelvis_injury.py`
+  - imports `compute_3ms_bundle` from `app/services/injury/common_engines.py`
+- `app/services/injury/common_engines.py`
+  - lazily imports:
+    - `compute_3ms_one_peak_exceedance_details`
+    - `compute_3ms_multiple_peak_exceedance_details`
+- `app/services/preprocessing/service.py`
+  - `compute_injury_metrics()` calls `compute_hic()` and `compute_3ms_clip()`
+  - `compute_chest_metrics()` calls `compute_3ms_clip_details()` for axis and VC clips
+
+High-risk coupling points:
+- `compute_3ms_bundle()` in `common_engines.py` depends on lazy imports from `service.py`
+- `compute_3ms_clip()` intentionally returns the one-peak exceedance value, not the exact fixed-window
+  clip helper result
+- `compute_3ms_clip_details()` and exceedance-based 3ms helpers coexist with different semantics
+- `compute_hic_details()` shares interpolation/integration helpers with 3ms clip logic
+- user option `use_high_res_cumulative_3ms` affects cumulative 3ms behavior and must remain stable
+
+Do not move together in one slice:
+- HIC interpolation/integration helpers and 3ms exceedance helpers
+- exact 3ms clip helpers and exceedance helpers
+- `common_engines.py` lazy-import contract and `service.py` implementations
+
+First permitted next runtime slice after this review:
+- move only HIC / 3ms pure math helpers into a dedicated module while keeping all existing
+  public names re-exported from `service.py`
+- do not change:
+  - `compute_3ms_bundle()` call shape
+  - `compute_3ms_clip()` meaning
+  - `compute_hic_details()` return payload shape
+  - `use_high_res_cumulative_3ms` behavior
+
+Required verification for any Phase 5-J runtime move:
+- `py_compile` for `service.py`, `app/services/injury/common_engines.py`,
+  `app/services/injury/head_injury.py`, `app/services/injury/pelvis_injury.py`,
+  and `app/ui/pages/injury_page.py`
+- `capture-dir` and `compare-dir` against the current Phase 5 baseline
+- user tests:
+  - HEAD HIC15 / HIC36
+  - HEAD one-peak / multiple-peak / res-peak 3ms
+  - PELVIS one-peak / multiple-peak / res-peak 3ms
+  - CHEST axis 3ms and VC clip rows
+  - REPORT SUMMARY and Excel export after injury save
+
+## Phase 5-J-2 HIC / 3ms math extraction
+Implemented first HIC / 3ms runtime move:
+
+- new module: `app/services/injury/hic_3ms_math.py`
+- moved helpers:
+  - `cumtrapz`
+  - `prepare_hic_series`
+  - `integral_at_query`
+  - `value_at_query`
+  - `update_best_hic`
+  - `compute_hic_details`
+  - `level_exceedance_intervals`
+  - `clip_exceedance_detail`
+  - `compute_3ms_one_peak_exceedance_details`
+  - `estimate_constant_dt`
+  - `compute_3ms_multiple_peak_exceedance_details`
+  - `compute_hic`
+  - `compute_3ms_clip_details`
+  - `compute_3ms_clip`
+  - `compute_3ms_one_peak_details`
+
+Compatibility:
+- `app/services/preprocessing/service.py` imports the moved helpers and preserves legacy names:
+  - `_cumtrapz`
+  - `_prepare_hic_series`
+  - `_integral_at_query`
+  - `_value_at_query`
+  - `_update_best_hic`
+  - `_level_exceedance_intervals`
+  - `_clip_exceedance_detail`
+  - `_estimate_constant_dt`
+  - and the public HIC / 3ms function names
+
+Not changed:
+- HIC formula
+- exact-3ms clip helper meaning
+- one-peak / multiple-peak exceedance helper meaning
+- `use_high_res_cumulative_3ms` option behavior
+- `compute_3ms_bundle()` lazy-import contract
+- report payload keys
+
+Required verification:
+- `py_compile` for `hic_3ms_math.py`, `service.py`, `common_engines.py`, injury modules,
+  and `injury_page.py`
+- `capture-dir` after the move
+- `compare-dir` against the Phase 5 baseline
+- user tests listed in the Phase 5-J-1 boundary
+
 ## PELVIS acceleration input CFC policy
 PELVIS acceleration channels use CFC1000 for AUTO SET and INJURY input preparation.
 This follows the SAE J211-1 Table 1 ATD channel recommendation for pelvis

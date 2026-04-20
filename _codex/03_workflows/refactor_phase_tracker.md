@@ -69,6 +69,8 @@
 | Phase 5-I-5 | Done | chest unit helper extraction implemented; pending user test |
 | Phase 5-I-6 | Done | Nij math helper extraction implemented; pending user test |
 | Phase 5-I-7 | Done | Phase 5-I closure boundary documented; no runtime code change |
+| Phase 5-J-1 | Done | HIC / 3ms high-risk boundary documented; no runtime code change |
+| Phase 5-J-2 | Done | HIC / 3ms math module extraction implemented; pending user test |
 | Phase 5 | In Progress | Started with regression fixture tooling only |
 
 ## Completed work on this branch
@@ -85,8 +87,7 @@ Phase 5-I-2 and the PELVIS CFC1000 policy correction are user-tested. Continue f
 approved Phase 5 step.
 
 Current working step:
-- Phase 5-I helper sequence is closed at the low-risk boundary.
-- The next approved step must start as a new high-risk calculation-side slice.
+- Phase 5-J-2 HIC / 3ms math extraction is implemented and waiting for user runtime test.
 
 Deferred after code optimization:
 - DAT loader `215` handling issue is confirmed and intentionally deferred until the current
@@ -281,6 +282,18 @@ Phase 5-I-7 scope:
 - Documented the Phase 5-I closure boundary in `_codex/04_modules/preprocessing.md`.
 - Confirmed that the remaining calculation-side functions are no longer low-risk helper moves.
 - Left runtime code unchanged.
+
+Phase 5-J-1 scope:
+- Documented the HIC / 3ms call boundary in `_codex/04_modules/preprocessing.md`.
+- Fixed the next runtime step as a dedicated high-risk HIC / 3ms slice.
+- Left runtime code unchanged.
+
+Phase 5-J-2 scope:
+- Added `app/services/injury/hic_3ms_math.py`.
+- Moved HIC / 3ms math helpers out of `app/services/preprocessing/service.py`.
+- `service.py` keeps all legacy helper names and public HIC / 3ms names available through imports.
+- Did not intentionally change HIC formula, 3ms helper meaning, `compute_3ms_bundle()` call shape,
+  `use_high_res_cumulative_3ms` behavior, report keys, IARV, or pass/fail logic.
 
 PELVIS acceleration CFC policy adjustment:
 - SAE J211-1 Table 1 check confirmed ATD pelvis acceleration is CFC1000.
