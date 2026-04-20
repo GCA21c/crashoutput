@@ -215,7 +215,9 @@ class FilteringPage(tk.Frame):
         derived_channels = dict(self.pending_derived_channels or metadata.get("derived_channels") or {})
         if channel in derived_channels:
             return "CALC"
-        columns = list(getattr(self._get_active_df(), "columns", []) or [])
+        active_df = self._get_active_df()
+        columns_obj = getattr(active_df, "columns", None)
+        columns = list(columns_obj) if columns_obj is not None else []
         if channel in columns:
             try:
                 return f"{columns.index(channel) + 1:03d}"
