@@ -13,6 +13,7 @@
 - Extracted preprocessing offset/trimming helpers into dedicated modules for Phase 5-E.
 - Extracted viewer/channel search helpers into a dedicated module for Phase 5-F.
 - Added DAT channel-order metadata and display-only channel prefixes for DATA FILTERING.
+- Extracted filter source / raw-alignment helper functions into a dedicated module for Phase 5-G.
 
 ## Why
 - Phase 5 will touch higher-risk boundaries around preprocessing, injury preparation, and
@@ -27,6 +28,7 @@
 - `app/services/preprocessing/offset.py`
 - `app/services/preprocessing/series_ops.py`
 - `app/services/preprocessing/channel_search.py`
+- `app/services/preprocessing/filter_sources.py`
 - `app/services/preprocessing/service.py`
 - `app/services/io/dat_loader.py`
 - `app/ui/pages/filtering_page.py`
@@ -44,3 +46,4 @@
 - Phase 5-E keeps offset/trimming helper names available from `service.py` for compatibility.
 - Phase 5-F keeps viewer/channel search helper names available from `service.py` for compatibility.
 - DATA FILTERING prefixes such as `002:B1:` are display-only and are not used as data keys.
+- Phase 5-G keeps filter source helper names available from `service.py` for compatibility.

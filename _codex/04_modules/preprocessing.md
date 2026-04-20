@@ -165,3 +165,37 @@ Required verification:
 - `compare-dir` against the Phase 5 baseline
 - user startup, DATA VIEWER channel list, DATA FILTERING channel search/grouping, and
   representative INJURY entry test
+
+## Phase 5-G filter source helper extraction
+Implemented fifth extraction:
+
+- new module: `app/services/preprocessing/filter_sources.py`
+- moved helpers:
+  - `parse_cfc_filter_label`
+  - `safe_columns_to_set`
+  - `resolve_root_source_channel`
+  - `extract_aligned_original_numeric_series`
+  - `resolve_effective_time_column`
+  - `resolve_filter_source_series`
+
+Compatibility:
+- `app/services/preprocessing/service.py` imports the moved helpers and preserves legacy names:
+  - `parse_cfc_filter_label`
+  - `_safe_columns_to_set`
+  - `_resolve_root_source_channel`
+  - `_extract_aligned_original_numeric_series`
+  - `_resolve_effective_time_column`
+  - `_resolve_filter_source_series`
+
+Not changed:
+- raw-aligned source selection semantics
+- double-filtering prevention behavior
+- `apply_filtering_with_derivatives()` orchestration body
+- CFC filter kernel and End Points extension
+- HIC / 3ms / VC / Nij / femur calculation functions
+
+Required verification:
+- import compatibility for injury and filtering pages
+- `capture-dir` after the move
+- `compare-dir` against the Phase 5 baseline
+- user startup, DATA FILTERING apply/commit, AUTO SET, and representative INJURY entry test

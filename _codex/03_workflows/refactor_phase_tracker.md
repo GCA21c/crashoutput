@@ -59,6 +59,7 @@
 | Phase 5-D | Done | numeric/time helper extraction implemented and user-tested |
 | Phase 5-E | Done | offset/trimming helper extraction implemented and user-tested |
 | Phase 5-F | Done | viewer/channel search helper extraction implemented and user-tested |
+| Phase 5-G | Partial | filter source helper extraction implemented; awaiting user runtime test |
 | Phase 5 | In Progress | Started with regression fixture tooling only |
 
 ## Completed work on this branch
@@ -71,7 +72,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-Continue Phase 5 after user-tested DATA FILTERING display-only channel prefix improvement.
+Wait for user runtime test after Phase 5-G filter source helper extraction.
 
 Phase 5-A scope:
 - Added `tools/capture_regression_snapshot.py`.
@@ -148,6 +149,16 @@ DATA FILTERING display prefix scope:
   older saves and falls back to view-only dataframe order.
 - Fixed a DATA FILTERING display fallback crash caused by evaluating a pandas `Index` as a boolean.
 - User tested the display prefix and fallback fix as normal.
+
+Phase 5-G scope:
+- Added `app/services/preprocessing/filter_sources.py`.
+- Moved CFC label parsing, safe column-set conversion, root source resolution, effective time-column
+  resolution, raw-aligned source extraction, and filter source-series resolution out of
+  `app/services/preprocessing/service.py`.
+- `service.py` keeps `parse_cfc_filter_label` and legacy private helper names available through imports.
+- Verified import compatibility and Phase 5 snapshot compare loop: all 5 representative snapshots match.
+- Did not move `apply_filtering_with_derivatives()`, `apply_filtering()`, CFC filter kernel,
+  End Points extension, HIC/3ms/VC/Nij/femur calculation functions.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.
