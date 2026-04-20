@@ -165,7 +165,7 @@ class InjuryPage(tk.Frame):
         self.hic15_var = tk.StringVar(value="HIC15")
         self.hic36_var = tk.StringVar(value="HIC36")
         self.clip3_var = tk.StringVar(value="3ms Clip")
-        self.use_high_res_cumulative_3ms_var = tk.BooleanVar(value=True)
+        self.use_high_res_cumulative_3ms_var = tk.BooleanVar(value=False)
         self.head_dummy_profile_var = tk.StringVar(value=HEAD_PROFILE_OPTIONS[0] if HEAD_PROFILE_OPTIONS else "")
 
         self.nij_fx_var = tk.StringVar()
