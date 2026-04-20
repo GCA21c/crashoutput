@@ -61,7 +61,7 @@
 | Phase 5-F | Done | viewer/channel search helper extraction implemented and user-tested |
 | Phase 5-G | Done | filter source helper extraction implemented and user-tested |
 | Phase 5-H-1 | Done | CFC/filtering kernel call path reviewed and documented; no runtime code change |
-| Phase 5-H-2 | Partial | CFC kernel module extraction implemented; awaiting user runtime test |
+| Phase 5-H-2 | Done | CFC kernel module extraction implemented and user-tested |
 | Phase 5 | In Progress | Started with regression fixture tooling only |
 
 ## Completed work on this branch
@@ -74,7 +74,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-Wait for user runtime test after Phase 5-H-2 CFC kernel module extraction.
+Continue Phase 5 after user-tested Phase 5-H-2 CFC kernel module extraction.
 
 Phase 5-A scope:
 - Added `tools/capture_regression_snapshot.py`.
@@ -185,6 +185,8 @@ Phase 5-H-2 scope:
   available through imports.
 - Verified direct import compatibility and Phase 5 snapshot compare loop: all 5 representative
   snapshots match.
+- User tested DATA VIEWER preview filtering, DATA FILTERING manual apply/commit, AUTO SET,
+  INJURY entry, saved `.pkl` reopen, and double-filtering guard behavior as normal.
 - Did not change CFC math, End Points behavior, `filtfilt` arguments, manual filtering
   orchestration, derived-channel routing, or injury formulas.
 
