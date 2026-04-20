@@ -699,6 +699,87 @@ Required verification:
 - `py_compile` for `legacy_metrics.py`, `service.py`, and affected viewer modules
 - user tests: DATA VIEWER legacy metric path if still exposed
 
+## Phase 5-J-4 neck payload helper extraction
+Implemented a low-risk neck-save helper move:
+
+- new module: `app/services/injury/neck_payloads.py`
+- moved helpers:
+  - `build_neck_injury_channels`
+  - `build_neck_injury_channel_metadata`
+
+Compatibility:
+- `app/services/preprocessing/service.py` imports the moved helpers and keeps the same public names.
+
+Not changed:
+- neck calculation body
+- saved channel names
+- saved descriptions / units / filter-label metadata
+- report payload keys
+
+Required verification:
+- `py_compile` for `neck_payloads.py`, `service.py`, and `injury_page.py`
+- user tests: NECK save/reopen and `_I` calculated channel persistence
+
+## Phase 5-J-5 remaining injury-body boundary review
+Performed as documentation-only before any further calculation-side move.
+
+Current high-risk calculation bodies still owned by `app/services/preprocessing/service.py`:
+- `compute_neck_nij_metrics()`
+- `compute_chest_metrics()`
+- `compute_femur_metrics()`
+
+Current callers:
+- `app/services/injury/chest_injury.py`
+  - imports `compute_chest_metrics`
+- `app/services/injury/neck_injury.py`
+  - imports `compute_neck_nij_metrics`
+- `app/services/injury/femur_injury.py`
+  - imports `compute_femur_metrics`
+- `app/services/preprocessing/service.py`
+  - still assembles report/save payloads that depend on these result dict shapes
+
+High-risk coupling points:
+- `compute_neck_nij_metrics()` combines:
+  - unit normalization
+  - optional internal CFC600 preparation
+  - criterion DB lookup
+  - Nij force/moment series build
+  - saved calculated-channel payload assembly inputs
+- `compute_chest_metrics()` combines:
+  - acceleration/displacement unit conversion
+  - target-CFC source selection
+  - axis/resultant 3ms extraction
+  - VC paired-series generation
+  - nested gradient handling
+  - report-facing result key assembly
+- `compute_femur_metrics()` combines:
+  - unit normalization
+  - absolute/signed peak handling
+  - left/right symmetric payload assembly
+  - report-facing result key assembly
+
+Do not move together in one slice:
+- neck/chest/femur calculation bodies
+- nested VC helpers inside `compute_chest_metrics()`
+- result dict shape changes and service compatibility cleanup
+
+First permitted next runtime slice after this review:
+- move only one calculation body at a time
+- keep public names re-exported from `service.py`
+- preserve result dict keys, saved metadata keys, report payload keys, and caller signatures
+
+Preferred order:
+1. `compute_femur_metrics()` first
+2. `compute_neck_nij_metrics()` second
+3. `compute_chest_metrics()` last
+
+Required verification for any remaining Phase 5-J runtime move:
+- `py_compile` for `service.py`, moved module, and direct caller injury module
+- user tests for the affected body plus:
+  - save/reopen
+  - SUMMARY REPORT
+  - Excel export when that body feeds report rows
+
 ## PELVIS acceleration input CFC policy
 PELVIS acceleration channels use CFC1000 for AUTO SET and INJURY input preparation.
 This follows the SAE J211-1 Table 1 ATD channel recommendation for pelvis

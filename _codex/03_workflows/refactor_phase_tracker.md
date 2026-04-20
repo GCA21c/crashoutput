@@ -72,6 +72,8 @@
 | Phase 5-J-1 | Done | HIC / 3ms high-risk boundary documented; no runtime code change |
 | Phase 5-J-2 | Done | HIC / 3ms math module extraction implemented; pending user test |
 | Phase 5-J-3 | Done | legacy injury metrics wrapper extraction implemented; pending user test |
+| Phase 5-J-4 | Done | neck payload helper extraction implemented; pending user test |
+| Phase 5-J-5 | Done | remaining injury-body boundary documented; no runtime code change |
 | Phase 5 | In Progress | Started with regression fixture tooling only |
 
 ## Completed work on this branch
@@ -88,7 +90,7 @@ Phase 5-I-2 and the PELVIS CFC1000 policy correction are user-tested. Continue f
 approved Phase 5 step.
 
 Current working step:
-- Phase 5-J-3 legacy injury metrics wrapper extraction is implemented and waiting for user runtime test.
+- Phase 5-J-4 neck payload helper extraction is implemented and waiting for user runtime test.
 
 Deferred after code optimization:
 - DAT loader `215` handling issue is confirmed and intentionally deferred until the current
@@ -301,6 +303,26 @@ Phase 5-J-3 scope:
 - Moved `compute_injury_metrics()` out of `app/services/preprocessing/service.py`.
 - `service.py` imports the moved helper and keeps the same public name.
 - Did not change any HIC / 3ms / Nij formula, viewer label, report key, IARV, or pass/fail logic.
+
+Phase 5-J-4 scope:
+- Added `app/services/injury/neck_payloads.py`.
+- Moved `build_neck_injury_channels()` and `build_neck_injury_channel_metadata()` out of
+  `app/services/preprocessing/service.py`.
+- `service.py` imports the moved helpers and keeps the same public names.
+- Did not change neck formulas, saved channel names, metadata labels, report keys, IARV, or
+  pass/fail logic.
+
+Phase 5-J-5 scope:
+- Documented the remaining high-risk calculation bodies still in
+  `app/services/preprocessing/service.py`:
+  - `compute_femur_metrics()`
+  - `compute_neck_nij_metrics()`
+  - `compute_chest_metrics()`
+- Recorded caller modules, coupling points, and the preferred move order:
+  1. femur
+  2. neck
+  3. chest
+- Explicitly kept this slice documentation-only with no runtime code change.
 
 PELVIS acceleration CFC policy adjustment:
 - SAE J211-1 Table 1 check confirmed ATD pelvis acceleration is CFC1000.
