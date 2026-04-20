@@ -801,6 +801,29 @@ Required verification:
 - `py_compile` for `femur_metrics.py`, `service.py`, and `femur_injury.py`
 - user tests: FEMUR calculate, SUMMARY REPORT, and save/reopen
 
+## Phase 5-J-7 neck calculation body extraction
+Implemented the second remaining injury-body runtime move:
+
+- new module: `app/services/injury/neck_metrics.py`
+- moved helper:
+  - `compute_neck_nij_metrics`
+
+Compatibility:
+- `app/services/preprocessing/service.py` imports the moved helper and keeps the same public name.
+
+Not changed:
+- neck unit normalization rule
+- optional CFC600 preparation behavior
+- MOCy correction rule
+- Nij case sign logic
+- result dict keys
+- report payload keys
+- IARV / limit / pass-fail logic
+
+Required verification:
+- `py_compile` for `neck_metrics.py`, `service.py`, and `neck_injury.py`
+- user tests: NECK calculate, SUMMARY REPORT, save/reopen, and calculated-channel persistence
+
 ## PELVIS acceleration input CFC policy
 PELVIS acceleration channels use CFC1000 for AUTO SET and INJURY input preparation.
 This follows the SAE J211-1 Table 1 ATD channel recommendation for pelvis

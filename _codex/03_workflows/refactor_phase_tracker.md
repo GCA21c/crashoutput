@@ -75,6 +75,7 @@
 | Phase 5-J-4 | Done | neck payload helper extraction implemented; pending user test |
 | Phase 5-J-5 | Done | remaining injury-body boundary documented; no runtime code change |
 | Phase 5-J-6 | Done | femur calculation body extraction implemented; pending user test |
+| Phase 5-J-7 | Done | neck calculation body extraction implemented; pending user test |
 | Phase 5 | In Progress | Started with regression fixture tooling only |
 
 ## Completed work on this branch
@@ -330,6 +331,13 @@ Phase 5-J-6 scope:
 - Moved `compute_femur_metrics()` out of `app/services/preprocessing/service.py`.
 - `service.py` imports the moved helper and keeps the same public name.
 - Did not change femur formulas, result dict keys, report keys, IARV, or pass/fail logic.
+
+Phase 5-J-7 scope:
+- Added `app/services/injury/neck_metrics.py`.
+- Moved `compute_neck_nij_metrics()` out of `app/services/preprocessing/service.py`.
+- `service.py` imports the moved helper and keeps the same public name.
+- Did not change neck unit normalization, CFC600 preparation, MOCy correction, Nij sign logic,
+  result dict keys, report keys, IARV, or pass/fail logic.
 
 PELVIS acceleration CFC policy adjustment:
 - SAE J211-1 Table 1 check confirmed ATD pelvis acceleration is CFC1000.
