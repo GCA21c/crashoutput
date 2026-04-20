@@ -32,3 +32,23 @@ RAW reference 정의와 baseline 규칙은 반드시 `raw_reference_policy.md`�
 - naming convention이 유지되는가
 - injury path와 preprocessing path가 같은 기준을 보는가
 - AUTO SET preset DB가 더미 프로필별 record를 분리해서 참조하는가
+
+## DATA FILTERING channel display prefix
+DATA FILTERING channel list rows may show a display-only prefix:
+
+```text
+002:B1:Head Acceleration X   [B1HEADCG00HFACXP]   [Raw]
+```
+
+Rules:
+- `002:B1:` is only a UI label prefix.
+- It must never be written into dataframe column names, filter-label keys, ISO rewrite keys,
+  descriptions, units, derived-channel keys, report payloads, or saved injury data.
+- DAT files store the display number in `metadata["dat_channel_index_map"]` at load time using
+  DAT header block order. Time is `001`; data channels follow the DAT header order.
+- `metadata["dat_channel_file_map"]` and `metadata["dat_channel_file_index_map"]` keep CHN file
+  information for reference only. CHN file numbers are not used as the primary display number
+  because some voltage/current channels can share the same `Ch###` prefix.
+- If a channel is calculated/derived and has no DAT index, the display number uses `CALC`.
+  Existing saved files without DAT index metadata can fall back to current dataframe order for
+  display only.

@@ -117,6 +117,16 @@ def _decimal_places_from_text(value_text: str, max_places: int = 12) -> int:
     return max(0, min(max_places, len(text.split('.', 1)[1].rstrip('0'))))
 
 
+def _parse_chn_file_index(chn_name: str):
+    match = re.search(r"Ch(\d+)\.(\d+)\.chn$", str(chn_name or ""), flags=re.IGNORECASE)
+    if not match:
+        return None
+    return {
+        "channel": int(match.group(1)),
+        "subchannel": int(match.group(2)),
+    }
+
+
 def _build_implicit_channel(block, count):
     # Time-like implicit channels in some DAT exports use 240=start and 241=step,
     # but DAS program DAT samples consistently expose time through 271/272.
@@ -195,9 +205,12 @@ def load_dat_file(dat_path):
     units = {}
     lengths = {}
     actual_lengths = {}
+    dat_channel_indices = []
+    dat_channel_files = []
+    dat_channel_file_indices = []
     time_col_name = None
 
-    for block in blocks:
+    for block_index, block in enumerate(blocks, start=1):
         count = _safe_int(block.get("220", 0), 0)
         if count <= 0:
             continue
@@ -211,6 +224,7 @@ def load_dat_file(dat_path):
             values = _build_implicit_channel(block, count)
             actual_count = int(count)
             column_name = "Time" if time_col_name is None else channel_name
+            chn_name = ""
             if time_col_name is None:
                 time_col_name = column_name
         else:
@@ -223,6 +237,9 @@ def load_dat_file(dat_path):
 
         raw_names.append(column_name)
         raw_columns.append(values)
+        dat_channel_indices.append(int(block_index))
+        dat_channel_files.append(chn_name)
+        dat_channel_file_indices.append(_parse_chn_file_index(chn_name))
         descriptions[column_name] = description or column_name
         units[column_name] = unit
         lengths[column_name] = int(count)
@@ -238,11 +255,25 @@ def load_dat_file(dat_path):
     unique_units = {}
     unique_lengths = {}
     unique_actual_lengths = {}
-    for raw_name, unique_name in zip(raw_names, unique_names):
+    unique_dat_channel_index_map = {}
+    unique_dat_channel_file_map = {}
+    unique_dat_channel_file_index_map = {}
+    for raw_name, unique_name, dat_index, chn_name, chn_index in zip(
+        raw_names,
+        unique_names,
+        dat_channel_indices,
+        dat_channel_files,
+        dat_channel_file_indices,
+    ):
         unique_descriptions[unique_name] = descriptions.get(raw_name, raw_name)
         unique_units[unique_name] = units.get(raw_name, "")
         unique_lengths[unique_name] = int(lengths.get(raw_name, 0) or 0)
         unique_actual_lengths[unique_name] = int(actual_lengths.get(raw_name, 0) or 0)
+        unique_dat_channel_index_map[unique_name] = int(dat_index)
+        if chn_name:
+            unique_dat_channel_file_map[unique_name] = chn_name
+        if chn_index:
+            unique_dat_channel_file_index_map[unique_name] = dict(chn_index)
 
     if time_col_name:
         for raw_name, unique_name in zip(raw_names, unique_names):
@@ -268,5 +299,8 @@ def load_dat_file(dat_path):
         "time_column": time_col_name,
         "standard_label": _extract_standard_label(text),
         "source_format": "DAT",
+        "dat_channel_index_map": unique_dat_channel_index_map,
+        "dat_channel_file_map": unique_dat_channel_file_map,
+        "dat_channel_file_index_map": unique_dat_channel_file_index_map,
     }
     return df, metadata

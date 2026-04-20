@@ -113,9 +113,10 @@ into `resources/templates/FMVSS208 Sumy_temp.xlsx`.
 
 The export flow is:
 1. `report_summary_page.py` ensures `Valuation` has populated `_snapshot`.
-2. `app/report/exporters/runtime.py` resolves the output filename, execution folder,
-   duplicate filename, and OS file-open behavior.
-3. The export file is saved to the application execution folder.
+2. `report_summary_page.py` opens a save-file dialog so the user can choose the output
+   folder and filename. The dialog suggests the runtime default filename from
+   `app/report/exporters/runtime.py`.
+3. The export file is saved to the user-selected path.
 4. `app/report/exporters/excel.py` uses `openpyxl` to inspect anchors, write values to
    existing template cells, and save the workbook. The exporter does not patch worksheet
    XML directly because that can leave stale workbook internals such as `calcChain.xml`.
@@ -162,11 +163,11 @@ Export filename rule:
 - extension: template extension
 - example: `FMVSS208 Sumy_ABC123.xlsx`
 - empty Test ID: `NO_TEST_ID`
-- duplicate filenames: append `_01`, `_02`, etc.
-- export folder: executable folder for packaged runs, repository root for source runs.
-  If that folder is not writable, the exporter falls back to the user's Documents folder.
-  It must not use the process current working directory because Windows shortcuts may set
-  it to `C:\Windows\System32`.
+- export folder: chosen by the user in the save-file dialog.
+- suggested initial folder: executable folder for packaged runs, repository root for source runs.
+  If that folder is not writable, the dialog starts from the user's Documents folder where possible.
+  The suggestion must not use the process current working directory because Windows shortcuts may
+  set it to `C:\Windows\System32`.
 
 After the completion dialog is acknowledged, the UI opens the saved workbook with the OS
 default file association. Windows uses `os.startfile`; macOS and Linux use `open` and
@@ -175,6 +176,15 @@ default file association. Windows uses `os.startfile`; macOS and Linux use `open
 ## Snapshot regression check
 Before and after report refactors, compare the output of `app/report/engine.py`
 `build_report_snapshot(metadata, regulation_name)`.
+
+Phase 5 and later refactors should use:
+
+- `tools/capture_regression_snapshot.py`
+- `_codex/03_workflows/regression_snapshot_workflow.md`
+
+The tool reads saved `.pkl` files through `app/core/io/dataset_store.py`, captures dataframe
+shape/column digests, metadata structure, report snapshot rows, and saved summary report
+structure, then writes a JSON baseline under `_codex/09_regression_snapshots/` by default.
 
 The minimum fields that must remain identical for a no-behavior-change refactor are:
 - `regulation_name`

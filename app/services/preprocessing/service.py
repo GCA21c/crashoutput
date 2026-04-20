@@ -1,5 +1,3 @@
-import re
-from functools import lru_cache
 import numpy as np
 import pandas as pd
 
@@ -14,6 +12,40 @@ from app.core.dummy import (
     get_chest_dummy_profile,
     get_femur_dummy_profile,
 )
+from app.services.preprocessing.channel_roles import (
+    _safe_text,
+    detect_chest_channel_role,
+    detect_femur_channel_role,
+    detect_head_channel_role,
+    detect_injury_channel_purpose_and_role,
+    detect_neck_channel_role,
+    derived_role_required_cfc,
+    make_derived_channel_name,
+    make_neck_derived_channel_name,
+    neck_role_required_cfc,
+)
+from app.services.preprocessing.timing import (
+    find_time0_row,
+    get_numeric_channels,
+    get_sample_rate as _get_sample_rate,
+    get_time_numeric,
+)
+from app.services.preprocessing.offset import apply_offset, get_offset_sample_rows, trim_dataframe
+from app.services.preprocessing.series_ops import replace_with_numeric_series as _replace_with_numeric_series
+from app.services.preprocessing.channel_search import (
+    auto_detect_injury_channels,
+    find_resultant_or_axis as _find_resultant_or_axis,
+    infer_channel_group_key,
+    make_channel_search_text,
+)
+from app.services.preprocessing.filter_sources import (
+    extract_aligned_original_numeric_series as _extract_aligned_original_numeric_series,
+    parse_cfc_filter_label,
+    resolve_effective_time_column as _resolve_effective_time_column,
+    resolve_filter_source_series as _resolve_filter_source_series,
+    resolve_root_source_channel as _resolve_root_source_channel,
+    safe_columns_to_set as _safe_columns_to_set,
+)
 from app.services.injury.common_engines import compute_3ms_bundle, compute_vc_engine_bundle
 
 FILTER_OPTIONS = ("Raw", "CFC 60", "CFC 180", "CFC 600", "CFC 1000")
@@ -24,80 +56,6 @@ FILTER_EXTENSION_MODE = "End Points"
 CHEST_CRITERIA_PRESETS = CHEST_DUMMY_PROFILES
 NECK_CRITERIA_PRESETS = NECK_DUMMY_PROFILES
 FEMUR_CRITERIA_PRESETS = FEMUR_DUMMY_PROFILES
-
-# Crash CFC filtering is implemented in the SAE J211 phaseless 4-pole
-# low-pass direction, with class-specific cutoff handling and stable
-# edge treatment for post-processing use.
-def get_numeric_channels(df, time_column=None):
-    channels = []
-    for col in df.columns:
-        if time_column is not None and col == time_column:
-            continue
-        arr = pd.to_numeric(df[col], errors="coerce").to_numpy()
-        if np.isfinite(arr).any():
-            channels.append(col)
-    return channels
-
-
-def get_time_numeric(df, time_column):
-    return pd.to_numeric(df[time_column], errors="coerce").to_numpy()
-
-
-def find_time0_row(df, time_column):
-    time_arr = get_time_numeric(df, time_column)
-    valid_rows = np.flatnonzero(np.isfinite(time_arr))
-    if valid_rows.size == 0:
-        return None
-    times = time_arr[valid_rows]
-    exact = np.flatnonzero(np.isclose(times, 0.0, atol=1e-12))
-    if exact.size:
-        return int(valid_rows[exact[0]])
-    # Prefer the first non-negative sample when time never hits exact zero,
-    # which is usually how trigger alignment is interpreted in crash tools.
-    nonneg = np.flatnonzero(times >= 0.0)
-    if nonneg.size:
-        return int(valid_rows[nonneg[0]])
-    nearest = int(np.argmin(np.abs(times)))
-    return int(valid_rows[nearest])
-
-
-def trim_dataframe(df, time_column, start_time, end_time):
-    """Trim rows by time while keeping the existing time values untouched.
-
-    Behavior:
-    - Remove only rows outside the requested numeric time range.
-    - Preserve the original Time values exactly as stored in the dataframe.
-    - Do not re-zero, rescale, or regenerate the Time column.
-    - Keep non-numeric metadata/header rows.
-
-    This stays intentionally simple so trimming does not introduce any hidden
-    time-unit side effects.
-    """
-    start_time = float(start_time)
-    end_time = float(end_time)
-    if end_time < start_time:
-        start_time, end_time = end_time, start_time
-    time_arr = get_time_numeric(df, time_column)
-    numeric_mask = np.isfinite(time_arr)
-    within_range = numeric_mask & (time_arr >= start_time) & (time_arr <= end_time)
-    keep_mask = (~numeric_mask) | within_range
-    return df.loc[keep_mask].reset_index(drop=True).copy()
-
-
-def _get_sample_rate(time_arr):
-    x_valid = np.asarray(time_arr, dtype=float)
-    x_valid = x_valid[np.isfinite(x_valid)]
-    if x_valid.size < 3:
-        return None
-    diffs = np.diff(x_valid)
-    diffs = diffs[np.isfinite(diffs) & (diffs > 0)]
-    if diffs.size == 0:
-        return None
-    dt = float(np.median(diffs))
-    if dt <= 0:
-        return None
-    return 1.0 / dt
-
 
 _CFC_SF = {
     60: 2.0775,
@@ -163,273 +121,6 @@ def _apply_cfc_filter_segment(y_segment, fs, cfc_value):
         return filtered[:len(y_segment)]
     except Exception:
         return y_segment.copy()
-
-
-def _replace_with_numeric_series(out, channel_name, values):
-    """Preserve original CSV structure and metadata rows.
-
-    Some crash CSV files keep channel description / unit information as ordinary
-    rows near the top of the dataframe. Replacing the full column with a pure
-    float dtype destroys those rows and later causes channel names such as
-    ``Unnamed: 1`` to appear instead of the original descriptions.
-
-    To avoid that, keep the original column as an object series and only
-    overwrite rows where the new numeric values are finite.
-    """
-    original = out[channel_name].copy()
-    result = original.astype(object)
-    numeric_values = np.asarray(values, dtype=float)
-    finite_mask = np.isfinite(numeric_values)
-    if finite_mask.any():
-        result.iloc[np.flatnonzero(finite_mask)] = numeric_values[finite_mask].tolist()
-    out[channel_name] = result
-
-
-@lru_cache(maxsize=64)
-def parse_cfc_filter_label(filter_label):
-    if filter_label is None:
-        return None
-    try:
-        text = str(filter_label).upper().replace("CFC", "").strip()
-        return int(text) if text else None
-    except Exception:
-        return None
-
-
-def _safe_text(*parts):
-    return " ".join(str(p or "") for p in parts).lower()
-
-
-def detect_head_channel_role(channel_name, description="", unit=""):
-    text = _safe_text(channel_name, description, unit)
-    if "head" not in text or ("acc" not in text and "acceler" not in text):
-        return None
-    if any(tag in text for tag in (" x ", " ax", "ax ", "acc x", "accx", " acx", "_x", "xa")):
-        return "x"
-    if any(tag in text for tag in (" y ", " ay", "ay ", "acc y", "accy", " acy", "_y", "ya")):
-        return "y"
-    if any(tag in text for tag in (" z ", " az", "az ", "acc z", "accz", " acz", "_z", "za")):
-        return "z"
-    return None
-
-
-def detect_chest_channel_role(channel_name, description="", unit=""):
-    text = _safe_text(channel_name, description, unit)
-    if not any(tag in text for tag in ("chest", "chst", "thor", "stern", "rib")):
-        return None
-    if any(tag in text for tag in ("disp", "defl", "deflection", " ds", "dsx", "dc0", "distance")):
-        return "disp"
-    if "acc" in text or "acceler" in text:
-        if any(tag in text for tag in (" x ", " ax", "ax ", "acc x", "accx", " acx", "_x", "xa")):
-            return "x"
-        if any(tag in text for tag in (" y ", " ay", "ay ", "acc y", "accy", " acy", "_y", "ya")):
-            return "y"
-        if any(tag in text for tag in (" z ", " az", "az ", "acc z", "accz", " acz", "_z", "za")):
-            return "z"
-    return None
-
-
-def detect_femur_channel_role(channel_name, description="", unit=""):
-    text = _safe_text(channel_name, description, unit)
-    if not any(tag in text for tag in ("femur", "femr", "thigh", "upper leg", "leg load", "axial force")):
-        return None
-    if any(tag in text for tag in (" left ", "_l", " lf", "l fem", "lfem", "feml", "driver")):
-        return "left"
-    if any(tag in text for tag in (" right ", "_r", " rf", "r fem", "rfem", "femr", "passenger")):
-        return "right"
-    return None
-
-
-def derived_role_required_cfc(purpose, role):
-    purpose = str(purpose or "")
-    role = str(role or "")
-    if purpose == "neck_injury":
-        return neck_role_required_cfc(role)
-    if purpose == "head_injury":
-        # HEAD X/Y/Z용 별도 CFC1000 파생 채널은 더 이상 생성하지 않는다.
-        # DATA FILTERING에서 지정한 필터 등급을 원본 채널 메타데이터로 추적한다.
-        return tuple()
-    if purpose == "chest_injury":
-        # CHEST displacement는 전처리 이력 추적을 위해 SAE J1727용 CFC600 보조 채널을 유지한다.
-        # 단, 반드시 원본(raw-aligned) displacement에서 직접 재필터링한 경로만 생성해야 하며,
-        # 이미 CFC180 등으로 전처리된 선택 채널을 다시 CFC600으로 거는 이중 필터링은 허용하지 않는다.
-        if role == "disp":
-            return (600,)
-        return tuple()
-    if purpose == "femur_injury":
-        return tuple()
-    return tuple()
-
-
-def detect_injury_channel_purpose_and_role(channel_name, description="", unit=""):
-    role = detect_neck_channel_role(channel_name, description, unit)
-    if role is not None:
-        return "neck_injury", role
-    role = detect_head_channel_role(channel_name, description, unit)
-    if role is not None:
-        return "head_injury", role
-    role = detect_chest_channel_role(channel_name, description, unit)
-    if role is not None:
-        return "chest_injury", role
-    role = detect_femur_channel_role(channel_name, description, unit)
-    if role is not None:
-        return "femur_injury", role
-    return None, None
-
-
-def make_derived_channel_name(source_channel, purpose, role, cfc_value):
-    purpose_tag = str(purpose or "derived").replace("_injury", "").upper()
-    return f"{source_channel}__{purpose_tag}_{str(role).upper()}_CFC{int(cfc_value)}"
-
-
-def detect_neck_channel_role(channel_name, description="", unit=""):
-    text = _safe_text(channel_name, description, unit)
-    if "neck" not in text:
-        return None
-    if any(tag in text for tag in (" mocy", "occipital condyle", " moment y", " my ", "_my", "my_", "flex", "ext")):
-        return "my"
-    if any(tag in text for tag in (" force z", " fz ", "_fz", "fz_", "axial")):
-        return "fz"
-    if any(tag in text for tag in (" force x", " fx ", "_fx", "fx_", "shear")):
-        return "fx"
-    return None
-
-
-def neck_role_required_cfc(role):
-    """Return only the *additional* Neck CFC channels that may be needed later.
-
-    The main DATA FILTERING step already applies the user-selected CFC directly to the
-    original Neck channels. For the current workflow, users typically preprocess:
-      - Fx/Fy/Fz -> CFC1000
-      - Mx/My/Mz -> CFC600
-
-    So we should not create duplicate derivative channels with the same effective CFC,
-    such as Fx-CFC1000, Fz-CFC1000, or My-CFC600. The only commonly needed extra
-    paths for Neck injury calculation are the alternate CFC600 force channels.
-    """
-    if role in ("fz", "fx"):
-        return (600,)
-    if role == "my":
-        return tuple()
-    return tuple()
-
-
-def make_neck_derived_channel_name(source_channel, role, cfc_value):
-    return f"{source_channel}__NECK_{str(role).upper()}_CFC{int(cfc_value)}"
-
-
-def _safe_columns_to_set(columns_like):
-    if columns_like is None:
-        return set()
-    try:
-        if isinstance(columns_like, pd.Index):
-            return set(columns_like.tolist())
-    except Exception:
-        pass
-    if isinstance(columns_like, (list, tuple, set)):
-        return set(columns_like)
-    try:
-        return set(list(columns_like))
-    except Exception:
-        return {columns_like} if columns_like else set()
-
-
-def _resolve_root_source_channel(channel_name, derived_channels=None, original_columns=None):
-    derived_channels = dict(derived_channels or {})
-    original_columns = _safe_columns_to_set(original_columns)
-    current = str(channel_name or '')
-    seen = set()
-    while current and current not in seen:
-        if current in original_columns:
-            return current
-        seen.add(current)
-        meta = dict(derived_channels.get(current) or {})
-        next_source = str(meta.get('root_source_channel') or meta.get('raw_source_channel') or meta.get('source_channel') or '').strip()
-        if not next_source or next_source == current:
-            break
-        current = next_source
-    return current or channel_name
-
-
-
-def _extract_aligned_original_numeric_series(current_df, current_time_column, original_df, original_time_column, source_channel):
-    if current_df is None or current_time_column is None or original_df is None or source_channel not in original_df.columns:
-        return None
-    if original_time_column is None or original_time_column not in original_df.columns:
-        return None
-
-    current_time = get_time_numeric(current_df, current_time_column)
-    source_time = get_time_numeric(original_df, original_time_column)
-    source_values = pd.to_numeric(original_df[source_channel], errors='coerce').to_numpy(dtype=float)
-
-    out = np.full(len(current_df), np.nan, dtype=float)
-    valid_source = np.isfinite(source_time) & np.isfinite(source_values)
-    valid_current = np.isfinite(current_time)
-    if np.count_nonzero(valid_source) < 2 or not np.any(valid_current):
-        return out
-
-    xs = source_time[valid_source]
-    ys = source_values[valid_source]
-    order = np.argsort(xs)
-    xs = xs[order]
-    ys = ys[order]
-    uniq, uniq_idx = np.unique(xs, return_index=True)
-    xs = uniq
-    ys = ys[uniq_idx]
-    if xs.size < 2:
-        return out
-
-    target = current_time[valid_current]
-    inside = (target >= xs[0]) & (target <= xs[-1])
-    if np.any(inside):
-        interp = np.interp(target[inside], xs, ys)
-        idx = np.flatnonzero(valid_current)
-        out[idx[inside]] = interp
-    return out
-
-
-
-def _resolve_effective_time_column(df, preferred_time_column=None):
-    if df is None or getattr(df, "columns", None) is None:
-        return None
-    if preferred_time_column and preferred_time_column in df.columns:
-        return preferred_time_column
-    for candidate in ("Time", "time", "TIME"):
-        if candidate in df.columns:
-            return candidate
-    for col in df.columns:
-        text = str(col).strip().lower()
-        if text == "time" or text.startswith("time(") or text.startswith("time ["):
-            return col
-    return None
-
-
-def _resolve_filter_source_series(current_df, current_time_column, channel_name, original_df=None, original_time_column=None, derived_channels=None):
-    effective_current_time_column = _resolve_effective_time_column(current_df, current_time_column)
-    effective_original_time_column = _resolve_effective_time_column(original_df, original_time_column or current_time_column)
-    original_columns = getattr(original_df, 'columns', []) if original_df is not None else []
-    root_source_channel = _resolve_root_source_channel(channel_name, derived_channels=derived_channels, original_columns=original_columns)
-    aligned = _extract_aligned_original_numeric_series(
-        current_df,
-        effective_current_time_column,
-        original_df,
-        effective_original_time_column,
-        root_source_channel,
-    )
-    if aligned is not None and np.any(np.isfinite(aligned)):
-        return {
-            'values': np.asarray(aligned, dtype=float),
-            'root_source_channel': root_source_channel,
-            'created_from_raw': True,
-            'source_mode': 'original_raw_aligned',
-        }
-    fallback = pd.to_numeric(current_df[channel_name], errors='coerce').to_numpy(dtype=float)
-    return {
-        'values': np.asarray(fallback, dtype=float),
-        'root_source_channel': root_source_channel,
-        'created_from_raw': False,
-        'source_mode': 'current_channel_fallback',
-    }
 
 
 def apply_filtering_with_derivatives(
@@ -611,93 +302,6 @@ def apply_filtering(df, time_column, channel_to_filter):
     return out
 
 
-def get_offset_sample_rows(df, time_column, sample_count, time0_row=None, include_time0=True):
-    """Return offset rows from data start toward Time0.
-
-    New baseline rule:
-    - build the candidate region from the first valid numeric time sample
-      through Time0
-    - then take up to ``sample_count`` rows from the *start* of that region
-
-    This replaces the old "last n samples before Time0" behavior.
-    """
-    time_arr = get_time_numeric(df, time_column)
-    numeric_rows = np.flatnonzero(np.isfinite(time_arr))
-    if numeric_rows.size == 0:
-        return np.asarray([], dtype=int)
-
-    if time0_row is None:
-        time0_row = find_time0_row(df, time_column)
-    if time0_row is None:
-        return np.asarray([], dtype=int)
-
-    side = "right" if include_time0 else "left"
-    end_pos = int(np.searchsorted(numeric_rows, time0_row, side=side))
-    if end_pos <= 0:
-        return np.asarray([], dtype=int)
-
-    sample_count = max(0, int(sample_count))
-    if sample_count <= 0:
-        return np.asarray([], dtype=int)
-
-    return numeric_rows[:min(end_pos, sample_count)]
-
-
-
-def apply_offset(df, time_column, channel_names, sample_count, time0_row=None):
-    """Apply baseline offset to every requested numeric channel.
-
-    The preview/reference channel in the UI is only for visualization. This
-    function subtracts each channel's own mean offset from that channel across
-    the whole valid numeric region, excluding only the Time column.
-
-    Offset mean basis:
-    - start at the first valid numeric sample in the dataset
-    - include rows up to Time0
-    - use up to the first ``sample_count`` rows in that start-to-Time0 region
-    """
-    out = df.copy(deep=True)
-    sample_rows = get_offset_sample_rows(out, time_column, sample_count, time0_row=time0_row, include_time0=True)
-    if sample_rows.size == 0:
-        return out, {}
-
-    offsets = {}
-    for channel_name in channel_names:
-        y = pd.to_numeric(out[channel_name], errors="coerce").to_numpy(dtype=float)
-        valid_sample_rows = sample_rows[np.isfinite(y[sample_rows])]
-        if valid_sample_rows.size == 0:
-            continue
-        mean_value = float(np.mean(y[valid_sample_rows]))
-        if not np.isfinite(mean_value):
-            continue
-        offsets[channel_name] = mean_value
-        corrected = y.copy()
-        finite_rows = np.flatnonzero(np.isfinite(corrected))
-        corrected[finite_rows] = corrected[finite_rows] - mean_value
-        _replace_with_numeric_series(out, channel_name, corrected)
-
-    return out, offsets
-
-
-def make_channel_search_text(viewer, channel_name):
-    label = viewer.get_channel_display_name(channel_name)
-    return f"{channel_name} {label}".lower()
-
-
-def infer_channel_group_key(viewer, channel_name):
-    label = viewer.get_channel_display_name(channel_name).strip() or str(channel_name)
-    text = f"{channel_name} {label}"
-    text = re.sub(r"\[[^\]]*\]", " ", text)
-    tokens = re.findall(r"[A-Za-z]+", text.upper())
-    if not tokens:
-        return "ETC"
-    filtered = [tok for tok in tokens if tok not in {"X", "Y", "Z", "LEFT", "RIGHT", "RAW", "TIME", "SEC", "MS"}]
-    if filtered:
-        return filtered[0]
-    return tokens[0]
-
-
-
 def _series_to_float(arr):
     values = np.asarray(arr, dtype=float)
     return values[np.isfinite(values)]
@@ -709,41 +313,6 @@ def _convert_accel_to_g(values, unit_text=""):
     if "m/s" in unit or "ms-2" in unit or "mps2" in unit:
         return vals / 9.80665
     return vals
-
-
-def _find_resultant_or_axis(viewer, keywords):
-    candidates = []
-    for col in viewer.get_numeric_channel_names(exclude_time=True):
-        name = str(col).lower()
-        label = str(viewer.get_channel_display_name(col)).lower()
-        unit = str(viewer.get_y_axis_label(col)).lower()
-        text = f"{name} {label} {unit}"
-        score = 0
-        for kw in keywords:
-            if kw in text:
-                score += 3
-        if "res" in text or "resultant" in text or "mag" in text:
-            score += 2
-        if score > 0:
-            candidates.append((score, col))
-    candidates.sort(key=lambda x: (-x[0], str(x[1])))
-    return candidates[0][1] if candidates else None
-
-
-def auto_detect_injury_channels(viewer):
-    found = {}
-    head = _find_resultant_or_axis(viewer, ["head", "cg", "acc"])
-    if head:
-        found["Head Acceleration"] = head
-
-    # neck force / moment heuristics
-    for col in viewer.get_numeric_channel_names(exclude_time=True):
-        text = f"{col} {viewer.get_channel_display_name(col)} {viewer.get_y_axis_label(col)}".lower()
-        if "neck" in text and ("fx" in text or "force x" in text or "axial" in text):
-            found.setdefault("Neck Fx", col)
-        if "neck" in text and ("my" in text or "moment y" in text or "flex" in text or "ext" in text):
-            found.setdefault("Neck My", col)
-    return found
 
 
 def _cumtrapz(y, x):

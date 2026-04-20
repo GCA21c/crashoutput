@@ -4,7 +4,7 @@
 다음 작업을 시작하기 전 항상 이 문서를 확인한다.
 
 ## Current branch
-- `코드최적화p4`
+- `코드최적화p5`
 
 ## Global guard
 - 계산 로직 변경 금지
@@ -53,7 +53,15 @@
 | Phase 4-H | Done | user tested DATA FILTERING commit payload helper and OFFSET preview fixes |
 | Phase 4-I | Done | Phase 4 closure boundary documented; high-risk moves deferred |
 | Phase 4 | Closed | orchestration split complete and user-tested |
-| Phase 5 | Blocked | Requires regression fixtures and explicit approval |
+| Phase 5-A | Partial | regression snapshot tool/docs added; actual baseline JSON requires representative saved `.pkl` |
+| Phase 5-B | Done | preprocessing function groups and folder-level snapshot compare workflow verified |
+| Phase 5-C | Done | channel role detector helper extraction implemented and user-tested |
+| Phase 5-D | Done | numeric/time helper extraction implemented and user-tested |
+| Phase 5-E | Done | offset/trimming helper extraction implemented and user-tested |
+| Phase 5-F | Done | viewer/channel search helper extraction implemented and user-tested |
+| Phase 5-G | Done | filter source helper extraction implemented and user-tested |
+| Phase 5-H-1 | Done | CFC/filtering kernel call path reviewed and documented; no runtime code change |
+| Phase 5 | In Progress | Started with regression fixture tooling only |
 
 ## Completed work on this branch
 - Added `app/report/exporters/runtime.py`.
@@ -65,7 +73,109 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-Wait for explicit user approval before starting Phase 5 regression fixture work.
+Decide whether to proceed to Phase 5-H-2 CFC kernel module extraction. Risk is HIGH, so keep it
+as a separate user-tested slice if approved.
+
+Phase 5-A scope:
+- Added `tools/capture_regression_snapshot.py`.
+- Added `_codex/03_workflows/regression_snapshot_workflow.md`.
+- Added `_codex/09_regression_snapshots/README.md`.
+- Added `_codex/09_regression_snapshots/input_files/` for local representative `.pkl` inputs.
+- Generated local baseline snapshots from a 2-dummy H3_5%F dataset:
+  - `_O`
+  - `_O_F`
+  - `_O_F_T`
+  - `_O_F_T_I`
+  - `_O_F_T_I_R`
+- No calculation logic, filtering math, injury formula, report extraction key, or pickle format change.
+- Snapshot JSON files are local/ignored by git by default.
+
+Phase 5-B scope:
+- Added folder-level `capture-dir` and `compare-dir` commands to `tools/capture_regression_snapshot.py`.
+- Added `_codex/04_modules/preprocessing.md` to classify `app/services/preprocessing/service.py`
+  function groups and extraction risk.
+- Added `_codex/09_regression_snapshots/before/` and `after/` placeholder folders.
+- Verified `capture-dir` and `compare-dir` with the 5 representative H3_5%F two-dummy files.
+- Still no function movement, no calculation logic change, and no app runtime path change.
+
+Phase 5-C scope:
+- Added `app/services/preprocessing/channel_roles.py`.
+- Moved pure string-based channel role detection and derived-channel naming helpers out of
+  `app/services/preprocessing/service.py`.
+- `service.py` imports the moved names to preserve existing import paths.
+- Verified Phase 5 snapshot compare loop after the move: all 5 representative snapshots match.
+- User tested runtime behavior as normal after the move.
+- Did not move `apply_filtering_with_derivatives()`, `apply_filtering()`, CFC filter kernel,
+  End Points extension, HIC/3ms/VC/Nij/femur calculation functions.
+
+Phase 5-D scope:
+- Added `app/services/preprocessing/timing.py`.
+- Moved numeric channel, time numeric, Time0 row, and sample-rate helpers out of
+  `app/services/preprocessing/service.py`.
+- `service.py` keeps `_get_sample_rate` as an import alias for compatibility.
+- Verified import compatibility and Phase 5 snapshot compare loop: all 5 representative snapshots match.
+- User tested runtime behavior as normal after the move.
+- Did not move trimming/offset commit functions, filtering functions, CFC filter kernel,
+  End Points extension, HIC/3ms/VC/Nij/femur calculation functions.
+
+Phase 5-E scope:
+- Added `app/services/preprocessing/offset.py`.
+- Added `app/services/preprocessing/series_ops.py`.
+- Moved trim, offset sample-row, offset apply, and shared numeric series write helpers out of
+  `app/services/preprocessing/service.py`.
+- `service.py` keeps `trim_dataframe`, `get_offset_sample_rows`, `apply_offset`, and
+  `_replace_with_numeric_series` import compatibility.
+- Verified import compatibility and Phase 5 snapshot compare loop: all 5 representative snapshots match.
+- User tested runtime behavior as normal after the move.
+- Did not move filtering functions, CFC filter kernel, End Points extension,
+  HIC/3ms/VC/Nij/femur calculation functions.
+
+Phase 5-F scope:
+- Added `app/services/preprocessing/channel_search.py`.
+- Moved viewer-based channel search, channel grouping, resultant auto-pick, and simple injury
+  auto-detection helpers out of `app/services/preprocessing/service.py`.
+- `service.py` keeps `make_channel_search_text`, `infer_channel_group_key`,
+  `auto_detect_injury_channels`, and `_find_resultant_or_axis` import compatibility.
+- Verified import compatibility and Phase 5 snapshot compare loop: all 5 representative snapshots match.
+- User tested runtime behavior as normal after the move.
+- Did not move filtering functions, CFC filter kernel, End Points extension,
+  HIC/3ms/VC/Nij/femur calculation functions.
+
+DATA FILTERING display prefix scope:
+- Added DAT load-time display-order metadata in `app/services/io/dat_loader.py`.
+- DATA FILTERING list rows may display `002:B1:` style prefixes through `app/ui/pages/filtering_page.py`.
+- Prefixes are display-only and are not written into dataframe column names, ISO rewrite keys,
+  filter-label keys, descriptions, units, derived-channel keys, report payloads, or saved injury data.
+- DAT sample `1.zip` confirmed Time=`001` and the first data channel=`002` using DAT header block order.
+- Existing saved `.pkl` regression snapshots still match because this display metadata is absent from
+  older saves and falls back to view-only dataframe order.
+- Fixed a DATA FILTERING display fallback crash caused by evaluating a pandas `Index` as a boolean.
+- User tested the display prefix and fallback fix as normal.
+
+Phase 5-G scope:
+- Added `app/services/preprocessing/filter_sources.py`.
+- Moved CFC label parsing, safe column-set conversion, root source resolution, effective time-column
+  resolution, raw-aligned source extraction, and filter source-series resolution out of
+  `app/services/preprocessing/service.py`.
+- `service.py` keeps `parse_cfc_filter_label` and legacy private helper names available through imports.
+- Verified import compatibility and Phase 5 snapshot compare loop: all 5 representative snapshots match.
+- User tested runtime behavior as normal after the move.
+- Did not move `apply_filtering_with_derivatives()`, `apply_filtering()`, CFC filter kernel,
+  End Points extension, HIC/3ms/VC/Nij/femur calculation functions.
+
+REPORT SUMMARY Excel export save-dialog adjustment:
+- Changed Excel export to open a save-file dialog before writing the workbook.
+- The suggested filename still uses the existing template-name plus sanitized Test ID rule.
+- The initial folder still uses the runtime helper that avoids `C:\Windows\System32` current-working-folder issues.
+- The generated workbook is still opened after the completion dialog is acknowledged.
+- User tested the Excel export save-dialog flow as normal.
+
+Phase 5-H-1 scope:
+- Reviewed CFC/filtering kernel call paths without moving code.
+- Documented active callers in `app/ui/pages/filtering_page.py`, `app/ui/viewer_module.py`,
+  `app/ui/pages/injury_page.py`, and internal `service.py` injury helpers.
+- Documented current double-filtering guards and the next high-risk boundary.
+- No calculation logic, filtering math, source alignment, or runtime code changed in this slice.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.
