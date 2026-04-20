@@ -68,6 +68,7 @@
 | Phase 5-I-4 | Done | femur force helper extraction implemented; pending user test |
 | Phase 5-I-5 | Done | chest unit helper extraction implemented; pending user test |
 | Phase 5-I-6 | Done | Nij math helper extraction implemented; pending user test |
+| Phase 5-I-7 | Done | Phase 5-I closure boundary documented; no runtime code change |
 | Phase 5 | In Progress | Started with regression fixture tooling only |
 
 ## Completed work on this branch
@@ -84,7 +85,8 @@ Phase 5-I-2 and the PELVIS CFC1000 policy correction are user-tested. Continue f
 approved Phase 5 step.
 
 Current working step:
-- Phase 5-I-6 Nij math helper extraction is implemented and waiting for user runtime test.
+- Phase 5-I helper sequence is closed at the low-risk boundary.
+- The next approved step must start as a new high-risk calculation-side slice.
 
 Deferred after code optimization:
 - DAT loader `215` handling issue is confirmed and intentionally deferred until the current
@@ -274,6 +276,11 @@ Phase 5-I-6 scope:
   `app/services/preprocessing/service.py`.
 - `service.py` imports the moved helpers and keeps the same public names.
 - Did not change Nij coefficients, sign logic, neck formulas, report keys, IARV, or pass/fail logic.
+
+Phase 5-I-7 scope:
+- Documented the Phase 5-I closure boundary in `_codex/04_modules/preprocessing.md`.
+- Confirmed that the remaining calculation-side functions are no longer low-risk helper moves.
+- Left runtime code unchanged.
 
 PELVIS acceleration CFC policy adjustment:
 - SAE J211-1 Table 1 check confirmed ATD pelvis acceleration is CFC1000.

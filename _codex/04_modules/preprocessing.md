@@ -545,6 +545,25 @@ Required verification:
 - `compare-dir` against the Phase 5 baseline
 - user tests: NECK force/moment/Nij results
 
+## Phase 5-I closure boundary
+After Phase 5-I-6, the remaining `service.py` injury-side functions are no longer small helper
+extractions. They are calculation bodies or calculation-adjacent orchestrators:
+
+- HIC / 3ms internals
+- `compute_chest_metrics()`
+- `compute_neck_nij_metrics()`
+- `compute_femur_metrics()`
+- legacy `compute_injury_metrics()` wrapper
+
+Do not continue moving those functions inside the same low-risk helper sequence.
+
+Required next-step policy:
+- treat the next slice as a new high-risk Phase 5-J boundary
+- require representative regression snapshot comparison before any move
+- require user runtime checks for HEAD / CHEST / NECK / FEMUR / REPORT after each approved slice
+- keep `service.py` compatibility imports until the full calculation-side split is explicitly
+  approved
+
 ## PELVIS acceleration input CFC policy
 PELVIS acceleration channels use CFC1000 for AUTO SET and INJURY input preparation.
 This follows the SAE J211-1 Table 1 ATD channel recommendation for pelvis
