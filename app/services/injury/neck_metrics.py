@@ -205,10 +205,10 @@ def compute_neck_nij_metrics(time_s, fz_n, my_nm, apply_cfc600=True, criterion_k
         'case_label': case_label_full,
         'peak_tension_fz': peak_tension_val,
         'peak_compression_fz_raw': peak_compression_val,
-        'peak_compression_fz': (abs(peak_compression_val) if peak_compression_val is not None else None),
+        'peak_compression_fz': peak_compression_val,
         'joint_peak_tension_fz': joint_peak_tension_val,
         'joint_peak_compression_fz_raw': joint_peak_compression_val,
-        'joint_peak_compression_fz': (abs(joint_peak_compression_val) if joint_peak_compression_val is not None else None),
+        'joint_peak_compression_fz': joint_peak_compression_val,
         'peak_flexion_my': peak_flexion_val,
         'peak_extension_my': peak_extension_val,
         'peak_tension_idx_force_valid': peak_tension_idx,
@@ -269,4 +269,3 @@ def compute_neck_nij_metrics(time_s, fz_n, my_nm, apply_cfc600=True, criterion_k
         }
     }
     return metrics
-
