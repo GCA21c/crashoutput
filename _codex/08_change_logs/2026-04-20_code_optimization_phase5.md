@@ -16,6 +16,7 @@
 - Extracted filter source / raw-alignment helper functions into a dedicated module for Phase 5-G.
 - Changed REPORT SUMMARY Excel export to let users choose the output path before saving.
 - Documented CFC/filtering kernel call paths and high-risk boundary for Phase 5-H-1.
+- Extracted the CFC filter kernel into a dedicated preprocessing module for Phase 5-H-2.
 
 ## Why
 - Phase 5 will touch higher-risk boundaries around preprocessing, injury preparation, and
@@ -31,6 +32,7 @@
 - `app/services/preprocessing/series_ops.py`
 - `app/services/preprocessing/channel_search.py`
 - `app/services/preprocessing/filter_sources.py`
+- `app/services/preprocessing/cfc_filter.py`
 - `app/services/preprocessing/service.py`
 - `app/services/io/dat_loader.py`
 - `app/ui/pages/filtering_page.py`
@@ -53,3 +55,4 @@
 - DATA FILTERING prefixes such as `002:B1:` are display-only and are not used as data keys.
 - Phase 5-G keeps filter source helper names available from `service.py` for compatibility.
 - REPORT SUMMARY Excel export still opens the generated workbook after the completion dialog.
+- Phase 5-H-2 keeps CFC kernel helper names available from `service.py` for compatibility.

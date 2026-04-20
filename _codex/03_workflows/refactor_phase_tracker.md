@@ -4,7 +4,7 @@
 다음 작업을 시작하기 전 항상 이 문서를 확인한다.
 
 ## Current branch
-- `코드최적화p5`
+- `코드최적회p5-2`
 
 ## Global guard
 - 계산 로직 변경 금지
@@ -61,6 +61,7 @@
 | Phase 5-F | Done | viewer/channel search helper extraction implemented and user-tested |
 | Phase 5-G | Done | filter source helper extraction implemented and user-tested |
 | Phase 5-H-1 | Done | CFC/filtering kernel call path reviewed and documented; no runtime code change |
+| Phase 5-H-2 | Partial | CFC kernel module extraction implemented; awaiting user runtime test |
 | Phase 5 | In Progress | Started with regression fixture tooling only |
 
 ## Completed work on this branch
@@ -73,8 +74,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-Decide whether to proceed to Phase 5-H-2 CFC kernel module extraction. Risk is HIGH, so keep it
-as a separate user-tested slice if approved.
+Wait for user runtime test after Phase 5-H-2 CFC kernel module extraction.
 
 Phase 5-A scope:
 - Added `tools/capture_regression_snapshot.py`.
@@ -176,6 +176,17 @@ Phase 5-H-1 scope:
   `app/ui/pages/injury_page.py`, and internal `service.py` injury helpers.
 - Documented current double-filtering guards and the next high-risk boundary.
 - No calculation logic, filtering math, source alignment, or runtime code changed in this slice.
+
+Phase 5-H-2 scope:
+- Added `app/services/preprocessing/cfc_filter.py`.
+- Moved `FILTER_EXTENSION_MODE`, SAE J211 CFC coefficient helper, End Points extension helper,
+  segment-level CFC filter helper, and `apply_cfc_filter_to_series()` out of `service.py`.
+- `service.py` keeps the legacy private helper names and public `apply_cfc_filter_to_series`
+  available through imports.
+- Verified direct import compatibility and Phase 5 snapshot compare loop: all 5 representative
+  snapshots match.
+- Did not change CFC math, End Points behavior, `filtfilt` arguments, manual filtering
+  orchestration, derived-channel routing, or injury formulas.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.

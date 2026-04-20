@@ -264,3 +264,47 @@ Potential next slice:
   - snapshot `capture-dir` / `compare-dir`
   - user tests: DATA VIEWER preview filter, DATA FILTERING manual apply/commit, AUTO SET,
     HEAD/CHEST/NECK injury entry, and saved `.pkl` reopen
+
+## Phase 5-H-2 CFC kernel module extraction
+Implemented with compatibility imports:
+
+- new module: `app/services/preprocessing/cfc_filter.py`
+- moved kernel functions and constants:
+  - `FILTER_EXTENSION_MODE`
+  - `_CFC_SF`
+  - `cfc_coefficients_sae_j211`
+  - `end_points_extend`
+  - `apply_cfc_filter_segment`
+  - `apply_cfc_filter_to_series`
+
+Compatibility:
+- `app/services/preprocessing/service.py` imports the moved functions and preserves legacy names:
+  - `_cfc_coefficients_sae_j211`
+  - `_end_points_extend`
+  - `_apply_cfc_filter_segment`
+  - `apply_cfc_filter_to_series`
+  - `FILTER_EXTENSION_MODE`
+- Existing imports from `service.py` remain valid for:
+  - `app/ui/viewer_module.py`
+  - `app/ui/pages/injury_page.py`
+  - `app/ui/pages/filtering_page.py`
+  - injury service modules
+
+Not changed:
+- SAE J211 coefficient math
+- End Points extension behavior
+- `filtfilt` arguments
+- CFC class handling
+- contiguous valid-group filtering behavior
+- manual filtering orchestration
+- derived-channel routing / double-filtering guards
+- HIC / 3ms / VC / Nij / femur calculation functions
+
+Required verification:
+- `py_compile` for `cfc_filter.py`, `service.py`, `viewer_module.py`, `filtering_page.py`,
+  and `injury_page.py`
+- direct import compatibility for legacy names from `service.py`
+- `capture-dir` after the move
+- `compare-dir` against the Phase 5 baseline
+- user tests: DATA VIEWER preview filter, DATA FILTERING manual apply/commit, AUTO SET,
+  HEAD/CHEST/NECK injury entry, and saved `.pkl` reopen
