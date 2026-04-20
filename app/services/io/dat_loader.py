@@ -175,14 +175,6 @@ def _read_chn_channel(chn_path: Path, block, count):
         padded[:read_count] = values
         values = padded
 
-    novalue = block.get("215", "").strip()
-    if novalue != "":
-        try:
-            novalue_num = float(novalue)
-            values[np.isclose(values, novalue_num, atol=0.0)] = 0.0
-        except Exception:
-            pass
-
     scale = _safe_float(block.get("241", 1.0), 1.0)
     offset = _safe_float(block.get("240", 0.0), 0.0)
     values = offset + values * scale
@@ -208,6 +200,7 @@ def load_dat_file(dat_path):
     dat_channel_indices = []
     dat_channel_files = []
     dat_channel_file_indices = []
+    dat_channel_novalue_headers = []
     time_col_name = None
 
     for block_index, block in enumerate(blocks, start=1):
@@ -240,6 +233,7 @@ def load_dat_file(dat_path):
         dat_channel_indices.append(int(block_index))
         dat_channel_files.append(chn_name)
         dat_channel_file_indices.append(_parse_chn_file_index(chn_name))
+        dat_channel_novalue_headers.append(block.get("215", "").strip())
         descriptions[column_name] = description or column_name
         units[column_name] = unit
         lengths[column_name] = int(count)
@@ -258,12 +252,14 @@ def load_dat_file(dat_path):
     unique_dat_channel_index_map = {}
     unique_dat_channel_file_map = {}
     unique_dat_channel_file_index_map = {}
-    for raw_name, unique_name, dat_index, chn_name, chn_index in zip(
+    unique_dat_channel_novalue_map = {}
+    for raw_name, unique_name, dat_index, chn_name, chn_index, novalue_header in zip(
         raw_names,
         unique_names,
         dat_channel_indices,
         dat_channel_files,
         dat_channel_file_indices,
+        dat_channel_novalue_headers,
     ):
         unique_descriptions[unique_name] = descriptions.get(raw_name, raw_name)
         unique_units[unique_name] = units.get(raw_name, "")
@@ -274,6 +270,8 @@ def load_dat_file(dat_path):
             unique_dat_channel_file_map[unique_name] = chn_name
         if chn_index:
             unique_dat_channel_file_index_map[unique_name] = dict(chn_index)
+        if novalue_header != "":
+            unique_dat_channel_novalue_map[unique_name] = novalue_header
 
     if time_col_name:
         for raw_name, unique_name in zip(raw_names, unique_names):
@@ -302,5 +300,6 @@ def load_dat_file(dat_path):
         "dat_channel_index_map": unique_dat_channel_index_map,
         "dat_channel_file_map": unique_dat_channel_file_map,
         "dat_channel_file_index_map": unique_dat_channel_file_index_map,
+        "dat_channel_novalue_map": unique_dat_channel_novalue_map,
     }
     return df, metadata

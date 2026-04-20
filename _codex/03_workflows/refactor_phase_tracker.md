@@ -92,13 +92,17 @@
 Phase 5 code-optimization runtime work is closed.
 
 Next non-refactor follow-up candidates:
-1. DAT loader `215` handling policy fix
-2. viewer keyboard navigation numpy truth-value warning fix
-3. optional final regression snapshot comparison before branch merge
+1. viewer keyboard navigation numpy truth-value warning fix
+2. optional final regression snapshot comparison before branch merge
 
 Deferred after code optimization:
-- DAT loader `215` handling issue is confirmed and intentionally deferred until the current
-  code-optimization sequence is closed.
+- DAT loader `215` handling issue was confirmed during Phase 5 and has now been patched after the
+  code-optimization sequence closed.
+- Current loader policy: preserve imported raw samples as-is and keep DAT header `215` values only
+  as channel metadata (`dat_channel_novalue_map`) for inspection.
+- The previous blanket `-1 -> 0` rewrite is no longer active.
+- The notes below are retained as the original reproduction/evidence trail for why the fix was
+  required.
 - On `raw_dat_check.zip`, the current loader treats DAT header `215=-1` as a no-value sentinel
   and rewrites matching raw integer samples to `0` before scale/offset conversion.
 - This rewrite is now treated as a high-risk loader policy bug because raw imported samples must
