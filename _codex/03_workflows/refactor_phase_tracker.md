@@ -64,20 +64,20 @@
 | Phase 5-H-2 | Done | CFC kernel module extraction implemented and user-tested |
 | Phase 5-I-1 | Done | injury helper call path reviewed and documented; no runtime code change |
 | Phase 5-I-2 | Done | resultant helper extraction implemented and user-tested |
-| Phase 5-I-3 | Done | scalar helper extraction implemented; pending user test |
-| Phase 5-I-4 | Done | femur force helper extraction implemented; pending user test |
-| Phase 5-I-5 | Done | chest unit helper extraction implemented; pending user test |
-| Phase 5-I-6 | Done | Nij math helper extraction implemented; pending user test |
+| Phase 5-I-3 | Done | scalar helper extraction implemented and user-tested |
+| Phase 5-I-4 | Done | femur force helper extraction implemented and user-tested |
+| Phase 5-I-5 | Done | chest unit helper extraction implemented and user-tested |
+| Phase 5-I-6 | Done | Nij math helper extraction implemented and user-tested |
 | Phase 5-I-7 | Done | Phase 5-I closure boundary documented; no runtime code change |
 | Phase 5-J-1 | Done | HIC / 3ms high-risk boundary documented; no runtime code change |
-| Phase 5-J-2 | Done | HIC / 3ms math module extraction implemented; pending user test |
-| Phase 5-J-3 | Done | legacy injury metrics wrapper extraction implemented; pending user test |
-| Phase 5-J-4 | Done | neck payload helper extraction implemented; pending user test |
+| Phase 5-J-2 | Done | HIC / 3ms math module extraction implemented and user-tested |
+| Phase 5-J-3 | Done | legacy injury metrics wrapper extraction implemented and user-tested |
+| Phase 5-J-4 | Done | neck payload helper extraction implemented and user-tested |
 | Phase 5-J-5 | Done | remaining injury-body boundary documented; no runtime code change |
-| Phase 5-J-6 | Done | femur calculation body extraction implemented; pending user test |
-| Phase 5-J-7 | Done | neck calculation body extraction implemented; pending user test |
-| Phase 5-J-8 | Done | chest calculation body extraction implemented; pending user test |
-| Phase 5 | In Progress | Started with regression fixture tooling only |
+| Phase 5-J-6 | Done | femur calculation body extraction implemented and user-tested |
+| Phase 5-J-7 | Done | neck calculation body extraction implemented and user-tested |
+| Phase 5-J-8 | Done | chest calculation body extraction implemented and user-tested |
+| Phase 5 | Closed | preprocessing/injury calculation-side split complete and user-tested |
 
 ## Completed work on this branch
 - Added `app/report/exporters/runtime.py`.
@@ -89,11 +89,12 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-Phase 5-I-2 and the PELVIS CFC1000 policy correction are user-tested. Continue from the next
-approved Phase 5 step.
+Phase 5 code-optimization runtime work is closed.
 
-Current working step:
-- Phase 5-J-4 neck payload helper extraction is implemented and waiting for user runtime test.
+Next non-refactor follow-up candidates:
+1. DAT loader `215` handling policy fix
+2. viewer keyboard navigation numpy truth-value warning fix
+3. optional final regression snapshot comparison before branch merge
 
 Deferred after code optimization:
 - DAT loader `215` handling issue is confirmed and intentionally deferred until the current

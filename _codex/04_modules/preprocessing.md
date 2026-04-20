@@ -848,6 +848,35 @@ Required verification:
 - `py_compile` for `chest_metrics.py`, `service.py`, and `chest_injury.py`
 - user tests: CHEST calculate, V*C rows, SUMMARY REPORT, Excel export, and save/reopen
 
+## Phase 5 closure
+Phase 5 preprocessing/injury calculation-side split is closed after user runtime tests through
+Phase 5-J-8.
+
+Completed extraction boundary:
+- preprocessing channel role / time / offset / source helpers
+- CFC filter kernel module
+- small injury math helpers
+- HIC / 3ms math module
+- FEMUR / NECK / CHEST calculation body modules
+
+Kept compatibility:
+- existing public imports from `app/services/preprocessing/service.py`
+- saved payload keys
+- report payload keys
+- calculated-channel metadata keys
+- UI entry points
+
+Not changed:
+- filtering math
+- End Points CFC extension behavior
+- injury formulas
+- IARV / limit / pass-fail logic
+- raw-reference / double-filtering guard policy
+
+Deferred after Phase 5:
+- DAT loader `215` handling policy fix
+- viewer keyboard navigation numpy truth-value warning fix
+
 ## PELVIS acceleration input CFC policy
 PELVIS acceleration channels use CFC1000 for AUTO SET and INJURY input preparation.
 This follows the SAE J211-1 Table 1 ATD channel recommendation for pelvis
