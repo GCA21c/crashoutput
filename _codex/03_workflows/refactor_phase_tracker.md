@@ -67,6 +67,7 @@
 | Phase 5-I-3 | Done | scalar helper extraction implemented; pending user test |
 | Phase 5-I-4 | Done | femur force helper extraction implemented; pending user test |
 | Phase 5-I-5 | Done | chest unit helper extraction implemented; pending user test |
+| Phase 5-I-6 | Done | Nij math helper extraction implemented; pending user test |
 | Phase 5 | In Progress | Started with regression fixture tooling only |
 
 ## Completed work on this branch
@@ -83,7 +84,7 @@ Phase 5-I-2 and the PELVIS CFC1000 policy correction are user-tested. Continue f
 approved Phase 5 step.
 
 Current working step:
-- Phase 5-I-5 chest unit helper extraction is implemented and waiting for user runtime test.
+- Phase 5-I-6 Nij math helper extraction is implemented and waiting for user runtime test.
 
 Deferred after code optimization:
 - DAT loader `215` handling issue is confirmed and intentionally deferred until the current
@@ -266,6 +267,13 @@ Phase 5-I-5 scope:
 - `service.py` keeps those legacy names available through import compatibility aliases.
 - Did not change the chest unit conversion rules, compression sign preference rule, chest formulas,
   report keys, IARV, or pass/fail logic.
+
+Phase 5-I-6 scope:
+- Added `app/services/injury/nij_math.py`.
+- Moved `compute_nij()` and `compute_nij_series()` out of
+  `app/services/preprocessing/service.py`.
+- `service.py` imports the moved helpers and keeps the same public names.
+- Did not change Nij coefficients, sign logic, neck formulas, report keys, IARV, or pass/fail logic.
 
 PELVIS acceleration CFC policy adjustment:
 - SAE J211-1 Table 1 check confirmed ATD pelvis acceleration is CFC1000.

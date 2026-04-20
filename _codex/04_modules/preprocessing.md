@@ -520,6 +520,31 @@ Required verification:
 - `compare-dir` against the Phase 5 baseline
 - user tests: CHEST acceleration, deflection, and V*C results
 
+## Phase 5-I-6 Nij math helper extraction
+Implemented fifth small injury helper move:
+
+- new module: `app/services/injury/nij_math.py`
+- moved helpers:
+  - `compute_nij`
+  - `compute_nij_series`
+
+Compatibility:
+- `app/services/preprocessing/service.py` imports the moved helpers and keeps the same public names.
+
+Not changed:
+- Nij coefficients (`fzc`, `fzt`, `myf`, `mye`)
+- Nij sign logic
+- neck calculation body
+- report payload keys
+- IARV / limit / pass-fail logic
+
+Required verification:
+- `py_compile` for `nij_math.py`, `service.py`, and affected injury modules
+- direct import compatibility from `service.py`
+- `capture-dir` after the move
+- `compare-dir` against the Phase 5 baseline
+- user tests: NECK force/moment/Nij results
+
 ## PELVIS acceleration input CFC policy
 PELVIS acceleration channels use CFC1000 for AUTO SET and INJURY input preparation.
 This follows the SAE J211-1 Table 1 ATD channel recommendation for pelvis

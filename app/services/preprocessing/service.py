@@ -59,6 +59,7 @@ from app.services.injury.chest_units import (
     pick_compression_positive,
 )
 from app.services.injury.forces import normalize_force_to_n, peak_detail_abs
+from app.services.injury.nij_math import compute_nij, compute_nij_series
 from app.services.injury.scalars import convert_accel_to_g, series_to_float
 from app.services.injury.vector_math import compute_resultant_xyz
 
@@ -782,31 +783,6 @@ def compute_3ms_one_peak_details(time_s, signal, use_abs=True):
     if best is not None:
         return best
     return compute_3ms_clip_details(t, y_raw if not use_abs else y, use_abs=False)
-
-
-def compute_nij(fx_n, my_nm):
-    nij_series = compute_nij_series(fx_n, my_nm)
-    valid = nij_series[np.isfinite(nij_series)]
-    return float(np.nanmax(valid)) if valid.size else None
-
-
-def compute_nij_series(fx_n, my_nm):
-    fx = np.asarray(fx_n, dtype=float)
-    my = np.asarray(my_nm, dtype=float)
-    valid = np.isfinite(fx) & np.isfinite(my)
-    out = np.full_like(fx, np.nan, dtype=float)
-    if not np.any(valid):
-        return out
-    fzc = 6160.0
-    fzt = 6806.0
-    myf = 310.0
-    mye = 125.0
-    fxv = fx[valid]
-    myv = my[valid]
-    f_term = np.where(fxv >= 0, fxv / fzt, (-fxv) / fzc)
-    m_term = np.where(myv >= 0, myv / myf, (-myv) / mye)
-    out[valid] = f_term + m_term
-    return out
 
 
 def compute_injury_metrics(viewer, detected_channels):
