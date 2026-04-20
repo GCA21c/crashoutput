@@ -21,6 +21,8 @@
 - Extracted the resultant XYZ helper into a dedicated injury vector math module for Phase 5-I-2.
 - Corrected PELVIS acceleration AUTO SET and INJURY input CFC policy to CFC1000
   after checking SAE J211-1 Table 1 ATD pelvis acceleration guidance.
+- Renamed the PELVIS input resolver purpose from `head_injury` to `pelvis_injury`
+  for traceability while keeping the same CFC1000 input policy.
 
 ## Why
 - Phase 5 will touch higher-risk boundaries around preprocessing, injury preparation, and
@@ -66,3 +68,4 @@
 - Phase 5-H-2 keeps CFC kernel helper names available from `service.py` for compatibility.
 - PELVIS acceleration formula is unchanged; only the preferred/required input CFC was corrected
   to CFC1000.
+- User runtime test for the PELVIS CFC1000 path was reported normal.

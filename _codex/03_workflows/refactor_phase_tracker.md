@@ -63,7 +63,7 @@
 | Phase 5-H-1 | Done | CFC/filtering kernel call path reviewed and documented; no runtime code change |
 | Phase 5-H-2 | Done | CFC kernel module extraction implemented and user-tested |
 | Phase 5-I-1 | Done | injury helper call path reviewed and documented; no runtime code change |
-| Phase 5-I-2 | Partial | resultant helper extraction implemented; awaiting user runtime test |
+| Phase 5-I-2 | Done | resultant helper extraction implemented and user-tested |
 | Phase 5 | In Progress | Started with regression fixture tooling only |
 
 ## Completed work on this branch
@@ -76,7 +76,8 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-Wait for user runtime test after Phase 5-I-2 resultant helper extraction.
+Phase 5-I-2 and the PELVIS CFC1000 policy correction are user-tested. Continue from the next
+approved Phase 5 step.
 
 Phase 5-A scope:
 - Added `tools/capture_regression_snapshot.py`.
@@ -216,7 +217,10 @@ PELVIS acceleration CFC policy adjustment:
 - Updated DATA FILTERING AUTO SET preset for PELVIS acceleration from `CFC 180` to `CFC 1000`.
 - Updated INJURY PELVIS auto-pick filter preference to `A`/CFC1000.
 - Updated INJURY PELVIS calculation input resolver desired CFC to `1000` for X/Y/Z.
+- Renamed the PELVIS resolver purpose from `head_injury` to `pelvis_injury` so the input
+  preparation path is traceable without implying HEAD calculation use.
 - Did not change resultant, 3ms, report, IARV, or pass/fail formulas.
+- User tested the PELVIS CFC1000 path as normal.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.
