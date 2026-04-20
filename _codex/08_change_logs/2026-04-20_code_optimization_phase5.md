@@ -15,6 +15,7 @@
 - Added DAT channel-order metadata and display-only channel prefixes for DATA FILTERING.
 - Extracted filter source / raw-alignment helper functions into a dedicated module for Phase 5-G.
 - Changed REPORT SUMMARY Excel export to let users choose the output path before saving.
+- Documented CFC/filtering kernel call paths and high-risk boundary for Phase 5-H-1.
 
 ## Why
 - Phase 5 will touch higher-risk boundaries around preprocessing, injury preparation, and
@@ -34,6 +35,8 @@
 - `app/services/io/dat_loader.py`
 - `app/ui/pages/filtering_page.py`
 - `app/ui/pages/report_summary_page.py`
+- `app/ui/viewer_module.py` (reviewed only)
+- `app/ui/pages/injury_page.py` (reviewed only)
 - `_codex/03_workflows/regression_snapshot_workflow.md`
 - `_codex/04_modules/preprocessing.md`
 - `_codex/09_regression_snapshots/README.md`

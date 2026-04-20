@@ -59,7 +59,8 @@
 | Phase 5-D | Done | numeric/time helper extraction implemented and user-tested |
 | Phase 5-E | Done | offset/trimming helper extraction implemented and user-tested |
 | Phase 5-F | Done | viewer/channel search helper extraction implemented and user-tested |
-| Phase 5-G | Partial | filter source helper extraction implemented; awaiting user runtime test |
+| Phase 5-G | Done | filter source helper extraction implemented and user-tested |
+| Phase 5-H-1 | Done | CFC/filtering kernel call path reviewed and documented; no runtime code change |
 | Phase 5 | In Progress | Started with regression fixture tooling only |
 
 ## Completed work on this branch
@@ -72,8 +73,8 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-Wait for user runtime test after Phase 5-G filter source helper extraction and REPORT SUMMARY
-Excel export save-dialog adjustment.
+Decide whether to proceed to Phase 5-H-2 CFC kernel module extraction. Risk is HIGH, so keep it
+as a separate user-tested slice if approved.
 
 Phase 5-A scope:
 - Added `tools/capture_regression_snapshot.py`.
@@ -158,6 +159,7 @@ Phase 5-G scope:
   `app/services/preprocessing/service.py`.
 - `service.py` keeps `parse_cfc_filter_label` and legacy private helper names available through imports.
 - Verified import compatibility and Phase 5 snapshot compare loop: all 5 representative snapshots match.
+- User tested runtime behavior as normal after the move.
 - Did not move `apply_filtering_with_derivatives()`, `apply_filtering()`, CFC filter kernel,
   End Points extension, HIC/3ms/VC/Nij/femur calculation functions.
 
@@ -166,6 +168,14 @@ REPORT SUMMARY Excel export save-dialog adjustment:
 - The suggested filename still uses the existing template-name plus sanitized Test ID rule.
 - The initial folder still uses the runtime helper that avoids `C:\Windows\System32` current-working-folder issues.
 - The generated workbook is still opened after the completion dialog is acknowledged.
+- User tested the Excel export save-dialog flow as normal.
+
+Phase 5-H-1 scope:
+- Reviewed CFC/filtering kernel call paths without moving code.
+- Documented active callers in `app/ui/pages/filtering_page.py`, `app/ui/viewer_module.py`,
+  `app/ui/pages/injury_page.py`, and internal `service.py` injury helpers.
+- Documented current double-filtering guards and the next high-risk boundary.
+- No calculation logic, filtering math, source alignment, or runtime code changed in this slice.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.
