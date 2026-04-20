@@ -491,6 +491,35 @@ Required verification:
 - `compare-dir` against the Phase 5 baseline
 - user tests: FEMUR left/right force results and REPORT SUMMARY reload
 
+## Phase 5-I-5 chest unit helper extraction
+Implemented fourth small injury helper move:
+
+- new module: `app/services/injury/chest_units.py`
+- moved helpers:
+  - `convert_accel_to_g_series`
+  - `convert_disp_to_mm_series`
+  - `pick_compression_positive`
+
+Compatibility:
+- `app/services/preprocessing/service.py` imports the moved helpers and preserves legacy names:
+  - `_convert_accel_to_g_series`
+  - `_convert_disp_to_mm_series`
+  - `_pick_compression_positive`
+
+Not changed:
+- acceleration/displacement unit conversion rules
+- chest compression sign preference rule
+- chest 3ms / deflection / VC calculation body
+- report payload keys
+- IARV / limit / pass-fail logic
+
+Required verification:
+- `py_compile` for `chest_units.py`, `service.py`, and affected injury modules
+- direct import compatibility from `service.py`
+- `capture-dir` after the move
+- `compare-dir` against the Phase 5 baseline
+- user tests: CHEST acceleration, deflection, and V*C results
+
 ## PELVIS acceleration input CFC policy
 PELVIS acceleration channels use CFC1000 for AUTO SET and INJURY input preparation.
 This follows the SAE J211-1 Table 1 ATD channel recommendation for pelvis

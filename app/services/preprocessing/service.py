@@ -53,6 +53,11 @@ from app.services.preprocessing.cfc_filter import (
     end_points_extend as _end_points_extend,
 )
 from app.services.injury.common_engines import compute_3ms_bundle, compute_vc_engine_bundle
+from app.services.injury.chest_units import (
+    convert_accel_to_g_series,
+    convert_disp_to_mm_series,
+    pick_compression_positive,
+)
 from app.services.injury.forces import normalize_force_to_n, peak_detail_abs
 from app.services.injury.scalars import convert_accel_to_g, series_to_float
 from app.services.injury.vector_math import compute_resultant_xyz
@@ -1178,36 +1183,13 @@ def compute_neck_nij_metrics(time_s, fz_n, my_nm, apply_cfc600=True, criterion_k
 
 
 
-def _convert_accel_to_g_series(values, unit_text=''):
-    arr = np.asarray(values, dtype=float)
-    unit = str(unit_text or '').lower().replace(' ', '')
-    if 'm/s' in unit or 'ms-2' in unit or 'mps2' in unit:
-        return arr / 9.80665
-    return arr
+_convert_accel_to_g_series = convert_accel_to_g_series
 
 
-def _convert_disp_to_mm_series(values, unit_text=''):
-    arr = np.asarray(values, dtype=float)
-    unit = str(unit_text or '').lower().replace(' ', '')
-    if unit in ('m', 'meter', 'meters'):
-        return arr * 1000.0
-    if unit in ('cm', 'centimeter', 'centimeters'):
-        return arr * 10.0
-    if unit in ('mm', 'millimeter', 'millimeters', ''):
-        return arr
-    if unit in ('in', 'inch', 'inches'):
-        return arr * 25.4
-    return arr
+_convert_disp_to_mm_series = convert_disp_to_mm_series
 
 
-def _pick_compression_positive(values_mm):
-    arr = np.asarray(values_mm, dtype=float)
-    finite = arr[np.isfinite(arr)]
-    if finite.size == 0:
-        return 1.0
-    vmax = np.nanmax(finite)
-    vmin = np.nanmin(finite)
-    return 1.0 if abs(vmax) >= abs(vmin) else -1.0
+_pick_compression_positive = pick_compression_positive
 
 
 def compute_chest_metrics(
