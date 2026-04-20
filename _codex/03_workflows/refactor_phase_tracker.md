@@ -72,7 +72,8 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-Wait for user runtime test after Phase 5-G filter source helper extraction.
+Wait for user runtime test after Phase 5-G filter source helper extraction and REPORT SUMMARY
+Excel export save-dialog adjustment.
 
 Phase 5-A scope:
 - Added `tools/capture_regression_snapshot.py`.
@@ -159,6 +160,12 @@ Phase 5-G scope:
 - Verified import compatibility and Phase 5 snapshot compare loop: all 5 representative snapshots match.
 - Did not move `apply_filtering_with_derivatives()`, `apply_filtering()`, CFC filter kernel,
   End Points extension, HIC/3ms/VC/Nij/femur calculation functions.
+
+REPORT SUMMARY Excel export save-dialog adjustment:
+- Changed Excel export to open a save-file dialog before writing the workbook.
+- The suggested filename still uses the existing template-name plus sanitized Test ID rule.
+- The initial folder still uses the runtime helper that avoids `C:\Windows\System32` current-working-folder issues.
+- The generated workbook is still opened after the completion dialog is acknowledged.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.

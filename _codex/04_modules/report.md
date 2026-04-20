@@ -113,9 +113,10 @@ into `resources/templates/FMVSS208 Sumy_temp.xlsx`.
 
 The export flow is:
 1. `report_summary_page.py` ensures `Valuation` has populated `_snapshot`.
-2. `app/report/exporters/runtime.py` resolves the output filename, execution folder,
-   duplicate filename, and OS file-open behavior.
-3. The export file is saved to the application execution folder.
+2. `report_summary_page.py` opens a save-file dialog so the user can choose the output
+   folder and filename. The dialog suggests the runtime default filename from
+   `app/report/exporters/runtime.py`.
+3. The export file is saved to the user-selected path.
 4. `app/report/exporters/excel.py` uses `openpyxl` to inspect anchors, write values to
    existing template cells, and save the workbook. The exporter does not patch worksheet
    XML directly because that can leave stale workbook internals such as `calcChain.xml`.
@@ -162,11 +163,11 @@ Export filename rule:
 - extension: template extension
 - example: `FMVSS208 Sumy_ABC123.xlsx`
 - empty Test ID: `NO_TEST_ID`
-- duplicate filenames: append `_01`, `_02`, etc.
-- export folder: executable folder for packaged runs, repository root for source runs.
-  If that folder is not writable, the exporter falls back to the user's Documents folder.
-  It must not use the process current working directory because Windows shortcuts may set
-  it to `C:\Windows\System32`.
+- export folder: chosen by the user in the save-file dialog.
+- suggested initial folder: executable folder for packaged runs, repository root for source runs.
+  If that folder is not writable, the dialog starts from the user's Documents folder where possible.
+  The suggestion must not use the process current working directory because Windows shortcuts may
+  set it to `C:\Windows\System32`.
 
 After the completion dialog is acknowledged, the UI opens the saved workbook with the OS
 default file association. Windows uses `os.startfile`; macOS and Linux use `open` and

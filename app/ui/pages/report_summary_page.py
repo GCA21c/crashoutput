@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import filedialog, messagebox, ttk
 
 from app.report import (
     ExcelExportError,
@@ -10,7 +10,7 @@ from app.report import (
     get_regulation_definition,
     update_summary_report_cache,
 )
-from app.report.exporters.runtime import open_export_file, unique_export_path
+from app.report.exporters.runtime import default_export_filename, execution_folder, open_export_file
 from app.report.occupants import (
     report_fields_from_sources,
 )
@@ -427,8 +427,18 @@ class ReportSummaryPage(tk.Frame):
         self._loaded_dataset_identity = None
         self._show_report_info(INFO_REPORT_SAVED_KO.format(saved_path=saved_path))
 
-    def _unique_export_path(self):
-        return unique_export_path(self.test_id_var.get().strip(), source_file=__file__)
+    def _select_export_path(self):
+        filename = default_export_filename(self.test_id_var.get().strip())
+        path = filedialog.asksaveasfilename(
+            parent=self,
+            title="Save Excel Export",
+            initialdir=str(execution_folder(source_file=__file__)),
+            initialfile=filename,
+            defaultextension=".xlsx",
+            filetypes=(("Excel Workbook", "*.xlsx"), ("All Files", "*.*")),
+            confirmoverwrite=True,
+        )
+        return path or None
 
     def _open_export_file(self, path):
         try:
@@ -449,7 +459,9 @@ class ReportSummaryPage(tk.Frame):
         if not self._snapshot:
             self._show_report_warning(WARNING_VALUATION_REQUIRED_KO)
             return
-        output_path = self._unique_export_path()
+        output_path = self._select_export_path()
+        if not output_path:
+            return
         try:
             result = export_summary_report(
                 self._snapshot,

@@ -14,6 +14,7 @@
 - Extracted viewer/channel search helpers into a dedicated module for Phase 5-F.
 - Added DAT channel-order metadata and display-only channel prefixes for DATA FILTERING.
 - Extracted filter source / raw-alignment helper functions into a dedicated module for Phase 5-G.
+- Changed REPORT SUMMARY Excel export to let users choose the output path before saving.
 
 ## Why
 - Phase 5 will touch higher-risk boundaries around preprocessing, injury preparation, and
@@ -32,6 +33,7 @@
 - `app/services/preprocessing/service.py`
 - `app/services/io/dat_loader.py`
 - `app/ui/pages/filtering_page.py`
+- `app/ui/pages/report_summary_page.py`
 - `_codex/03_workflows/regression_snapshot_workflow.md`
 - `_codex/04_modules/preprocessing.md`
 - `_codex/09_regression_snapshots/README.md`
@@ -47,3 +49,4 @@
 - Phase 5-F keeps viewer/channel search helper names available from `service.py` for compatibility.
 - DATA FILTERING prefixes such as `002:B1:` are display-only and are not used as data keys.
 - Phase 5-G keeps filter source helper names available from `service.py` for compatibility.
+- REPORT SUMMARY Excel export still opens the generated workbook after the completion dialog.
