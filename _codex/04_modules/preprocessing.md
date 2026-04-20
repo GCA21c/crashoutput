@@ -679,6 +679,26 @@ Required verification:
 - `compare-dir` against the Phase 5 baseline
 - user tests listed in the Phase 5-J-1 boundary
 
+## Phase 5-J-3 legacy injury metrics wrapper extraction
+Implemented a low-risk cleanup after the HIC / 3ms move:
+
+- new module: `app/services/injury/legacy_metrics.py`
+- moved helper:
+  - `compute_injury_metrics`
+
+Compatibility:
+- `app/services/preprocessing/service.py` imports the moved helper and keeps the same public name.
+
+Not changed:
+- HIC / 3ms / Nij formulas
+- viewer-facing metric labels
+- report payload keys
+- IARV / limit / pass-fail logic
+
+Required verification:
+- `py_compile` for `legacy_metrics.py`, `service.py`, and affected viewer modules
+- user tests: DATA VIEWER legacy metric path if still exposed
+
 ## PELVIS acceleration input CFC policy
 PELVIS acceleration channels use CFC1000 for AUTO SET and INJURY input preparation.
 This follows the SAE J211-1 Table 1 ATD channel recommendation for pelvis
