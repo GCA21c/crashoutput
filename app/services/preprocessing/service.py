@@ -53,6 +53,7 @@ from app.services.preprocessing.cfc_filter import (
     end_points_extend as _end_points_extend,
 )
 from app.services.injury.common_engines import compute_3ms_bundle, compute_vc_engine_bundle
+from app.services.injury.scalars import convert_accel_to_g, series_to_float
 from app.services.injury.vector_math import compute_resultant_xyz
 
 FILTER_OPTIONS = ("Raw", "CFC 60", "CFC 180", "CFC 600", "CFC 1000")
@@ -242,17 +243,10 @@ def apply_filtering(df, time_column, channel_to_filter):
     return out
 
 
-def _series_to_float(arr):
-    values = np.asarray(arr, dtype=float)
-    return values[np.isfinite(values)]
+_series_to_float = series_to_float
 
 
-def _convert_accel_to_g(values, unit_text=""):
-    unit = str(unit_text or "").lower().replace(" ", "")
-    vals = np.asarray(values, dtype=float)
-    if "m/s" in unit or "ms-2" in unit or "mps2" in unit:
-        return vals / 9.80665
-    return vals
+_convert_accel_to_g = convert_accel_to_g
 
 
 def _cumtrapz(y, x):

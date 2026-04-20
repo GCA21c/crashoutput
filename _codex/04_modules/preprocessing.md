@@ -438,6 +438,32 @@ Required verification:
 - `compare-dir` against the Phase 5 baseline
 - user tests: HEAD, CHEST, PELVIS resultant-related entry paths
 
+## Phase 5-I-3 scalar helper extraction
+Implemented second small injury helper move:
+
+- new module: `app/services/injury/scalars.py`
+- moved helpers:
+  - `series_to_float`
+  - `convert_accel_to_g`
+
+Compatibility:
+- `app/services/preprocessing/service.py` imports the moved helpers and preserves legacy names:
+  - `_series_to_float`
+  - `_convert_accel_to_g`
+
+Not changed:
+- acceleration conversion rule (`m/s^2`-like units -> `/ 9.80665`)
+- HIC / 3ms / VC / Nij / femur calculation functions
+- report payload keys
+- IARV / limit / pass-fail logic
+
+Required verification:
+- `py_compile` for `scalars.py`, `service.py`, and affected injury modules
+- direct import compatibility from `service.py`
+- `capture-dir` after the move
+- `compare-dir` against the Phase 5 baseline
+- user tests: DATA VIEWER load, HEAD HIC/3ms, and any path still using `compute_injury_metrics()`
+
 ## PELVIS acceleration input CFC policy
 PELVIS acceleration channels use CFC1000 for AUTO SET and INJURY input preparation.
 This follows the SAE J211-1 Table 1 ATD channel recommendation for pelvis
