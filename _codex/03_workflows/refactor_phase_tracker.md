@@ -211,6 +211,12 @@ Phase 5-I-2 scope:
 - Did not change the resultant formula, HIC/3ms/VC/Nij/femur formulas, report keys, IARV,
   or pass/fail logic.
 
+PELVIS acceleration CFC policy adjustment:
+- DATA FILTERING AUTO SET already presets PELVIS acceleration channels to `CFC 180`.
+- Updated INJURY PELVIS auto-pick filter preference from `A`/CFC1000 to `C`/CFC180.
+- Updated INJURY PELVIS calculation input resolver desired CFC from `1000` to `180` for X/Y/Z.
+- Did not change resultant, 3ms, report, IARV, or pass/fail formulas.
+
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.
 - Keep `DummySetPage = TestSetupPage`.

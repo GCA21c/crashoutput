@@ -437,3 +437,21 @@ Required verification:
 - `capture-dir` after the move
 - `compare-dir` against the Phase 5 baseline
 - user tests: HEAD, CHEST, PELVIS resultant-related entry paths
+
+## PELVIS acceleration input CFC policy
+PELVIS acceleration channels use the same CFC180 input policy as the frontal filtering preset.
+
+- AUTO SET preset DB:
+  - `app/core/dummy/filter_presets.py`
+  - `body_region="pelvis"`, `measurement_family="acceleration"`, `target_cfc="CFC 180"`
+- INJURY page channel preference:
+  - `app/ui/pages/injury_page.py` `FILTER_PREFERENCE_MAP["pelvis"]`
+  - preferred filter code is `C`, which maps to `CFC 180`
+- INJURY PELVIS calculation input resolver:
+  - X/Y/Z acceleration calls `_resolve_standard_series_for_calc(..., desired_cfc=180)`
+
+This is an input-preparation policy. It does not change:
+- resultant formula
+- 3ms formula
+- report payload keys
+- IARV / limit / pass-fail logic
