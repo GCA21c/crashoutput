@@ -71,7 +71,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-Wait for user runtime test after DATA FILTERING display-only channel prefix improvement.
+Continue Phase 5 after user-tested DATA FILTERING display-only channel prefix improvement.
 
 Phase 5-A scope:
 - Added `tools/capture_regression_snapshot.py`.
@@ -146,6 +146,8 @@ DATA FILTERING display prefix scope:
 - DAT sample `1.zip` confirmed Time=`001` and the first data channel=`002` using DAT header block order.
 - Existing saved `.pkl` regression snapshots still match because this display metadata is absent from
   older saves and falls back to view-only dataframe order.
+- Fixed a DATA FILTERING display fallback crash caused by evaluating a pandas `Index` as a boolean.
+- User tested the display prefix and fallback fix as normal.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.
