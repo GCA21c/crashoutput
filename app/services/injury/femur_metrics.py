@@ -1,6 +1,6 @@
 import numpy as np
 
-from app.core.dummy.factor_db import get_femur_dummy_profile
+from app.core.dummy import get_femur_dummy_profile
 from app.services.injury.forces import normalize_force_to_n, peak_detail_abs
 
 
