@@ -2590,7 +2590,13 @@ class InjuryPage(tk.Frame):
 
     def _unit_text(self, channel):
         viewer = self.workbench.viewer
-        return viewer.get_y_axis_label(channel)
+        if not channel:
+            return ''
+        units = dict(getattr(viewer, 'units', {}) or {})
+        unit = str(units.get(channel, '') or '').strip()
+        if not unit or unit == '-':
+            return ''
+        return unit
 
     def _find_derived_channel(self, source_channel, purpose, role, cfc_value):
         metadata = dict((self.workbench.dataset_metadata or {}).get('derived_channels') or {})
