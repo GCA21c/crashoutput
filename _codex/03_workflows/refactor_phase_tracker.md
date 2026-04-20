@@ -4,7 +4,7 @@
 다음 작업을 시작하기 전 항상 이 문서를 확인한다.
 
 ## Current branch
-- `코드최적화p5`
+- `코드최적회p5-2`
 
 ## Global guard
 - 계산 로직 변경 금지
@@ -61,7 +61,23 @@
 | Phase 5-F | Done | viewer/channel search helper extraction implemented and user-tested |
 | Phase 5-G | Done | filter source helper extraction implemented and user-tested |
 | Phase 5-H-1 | Done | CFC/filtering kernel call path reviewed and documented; no runtime code change |
-| Phase 5 | In Progress | Started with regression fixture tooling only |
+| Phase 5-H-2 | Done | CFC kernel module extraction implemented and user-tested |
+| Phase 5-I-1 | Done | injury helper call path reviewed and documented; no runtime code change |
+| Phase 5-I-2 | Done | resultant helper extraction implemented and user-tested |
+| Phase 5-I-3 | Done | scalar helper extraction implemented and user-tested |
+| Phase 5-I-4 | Done | femur force helper extraction implemented and user-tested |
+| Phase 5-I-5 | Done | chest unit helper extraction implemented and user-tested |
+| Phase 5-I-6 | Done | Nij math helper extraction implemented and user-tested |
+| Phase 5-I-7 | Done | Phase 5-I closure boundary documented; no runtime code change |
+| Phase 5-J-1 | Done | HIC / 3ms high-risk boundary documented; no runtime code change |
+| Phase 5-J-2 | Done | HIC / 3ms math module extraction implemented and user-tested |
+| Phase 5-J-3 | Done | legacy injury metrics wrapper extraction implemented and user-tested |
+| Phase 5-J-4 | Done | neck payload helper extraction implemented and user-tested |
+| Phase 5-J-5 | Done | remaining injury-body boundary documented; no runtime code change |
+| Phase 5-J-6 | Done | femur calculation body extraction implemented and user-tested |
+| Phase 5-J-7 | Done | neck calculation body extraction implemented and user-tested |
+| Phase 5-J-8 | Done | chest calculation body extraction implemented and user-tested |
+| Phase 5 | Closed | preprocessing/injury calculation-side split complete and user-tested |
 
 ## Completed work on this branch
 - Added `app/report/exporters/runtime.py`.
@@ -73,8 +89,36 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-Decide whether to proceed to Phase 5-H-2 CFC kernel module extraction. Risk is HIGH, so keep it
-as a separate user-tested slice if approved.
+Phase 5 code-optimization runtime work is closed.
+
+Next non-refactor follow-up candidates:
+1. DAT loader `215` handling policy fix
+2. viewer keyboard navigation numpy truth-value warning fix
+3. optional final regression snapshot comparison before branch merge
+
+Deferred after code optimization:
+- DAT loader `215` handling issue is confirmed and intentionally deferred until the current
+  code-optimization sequence is closed.
+- On `raw_dat_check.zip`, the current loader treats DAT header `215=-1` as a no-value sentinel
+  and rewrites matching raw integer samples to `0` before scale/offset conversion.
+- This rewrite is now treated as a high-risk loader policy bug because raw imported samples must
+  not be arbitrarily forced to `0` without an explicitly proven format rule for that dataset.
+- Reference exports (`111.xlsx` second sheet and direct raw comparison tables) show that at least
+  `B1CHST0000H3ACYP` expects raw integer `-1` to remain a valid sample, producing
+  `offset + (-1) * scale = 0.209009...`, while the current loader produces
+  `offset + 0 * scale = 0.313513...`.
+- The same rule affects many channels, not just chest Y, so this must be handled as a loader
+  policy change with regression checks, not as an isolated channel fix.
+- Do not patch `app/services/io/dat_loader.py` during the remaining optimization phases unless the
+  user explicitly pauses the refactor track and approves a loader-behavior change.
+- After the optimization phases finish, reopen the loader task with:
+  1. `raw_dat_check.zip`
+  2. `111.xlsx` second-sheet comparison
+  3. representative before/after raw snapshots for HEAD / CHEST / PELVIS channels
+  4. a decision on whether DAT header `215` should be ignored, conditionally honored, or mapped to
+     `NaN` instead of `0`.
+  5. preserve the rule that unknown/suspect `215` hits must never be silently rewritten to `0`
+     during raw import.
 
 Phase 5-A scope:
 - Added `tools/capture_regression_snapshot.py`.
@@ -176,6 +220,143 @@ Phase 5-H-1 scope:
   `app/ui/pages/injury_page.py`, and internal `service.py` injury helpers.
 - Documented current double-filtering guards and the next high-risk boundary.
 - No calculation logic, filtering math, source alignment, or runtime code changed in this slice.
+
+Phase 5-H-2 scope:
+- Added `app/services/preprocessing/cfc_filter.py`.
+- Moved `FILTER_EXTENSION_MODE`, SAE J211 CFC coefficient helper, End Points extension helper,
+  segment-level CFC filter helper, and `apply_cfc_filter_to_series()` out of `service.py`.
+- `service.py` keeps the legacy private helper names and public `apply_cfc_filter_to_series`
+  available through imports.
+- Verified direct import compatibility and Phase 5 snapshot compare loop: all 5 representative
+  snapshots match.
+- User tested DATA VIEWER preview filtering, DATA FILTERING manual apply/commit, AUTO SET,
+  INJURY entry, saved `.pkl` reopen, and double-filtering guard behavior as normal.
+- Did not change CFC math, End Points behavior, `filtfilt` arguments, manual filtering
+  orchestration, derived-channel routing, or injury formulas.
+
+Phase 5-I-1 scope:
+- Reviewed HIC/3ms, generic resultant/Nij, neck, chest, and femur helper call paths without
+  moving code.
+- Documented active callers in `app/services/injury/*.py`, `app/ui/pages/injury_page.py`,
+  and `app/services/injury/common_engines.py`.
+- Documented duplicate/sensitive helper areas such as VC gradient handling and lazy imports in
+  `common_engines.py`.
+- No calculation logic, injury formula, threshold/IARV, report key, or runtime code changed in
+  this slice.
+
+Phase 5-I-2 scope:
+- Added `app/services/injury/vector_math.py`.
+- Moved `compute_resultant_xyz()` out of `app/services/preprocessing/service.py`.
+- `service.py` keeps `compute_resultant_xyz` available through import compatibility.
+- Verified direct import compatibility and Phase 5 snapshot compare loop: all 5 representative
+  snapshots match.
+- Did not change the resultant formula, HIC/3ms/VC/Nij/femur formulas, report keys, IARV,
+  or pass/fail logic.
+
+Phase 5-I-3 scope:
+- Added `app/services/injury/scalars.py`.
+- Moved `_series_to_float()` and `_convert_accel_to_g()` out of
+  `app/services/preprocessing/service.py`.
+- `service.py` keeps `_series_to_float` and `_convert_accel_to_g` available through import
+  compatibility aliases.
+- Did not change the acceleration conversion rule, HIC/3ms/VC/Nij/femur formulas, report keys,
+  IARV, or pass/fail logic.
+
+Phase 5-I-4 scope:
+- Added `app/services/injury/forces.py`.
+- Moved `_normalize_force_to_n()` and `_peak_detail_abs()` out of
+  `app/services/preprocessing/service.py`.
+- `service.py` keeps `_normalize_force_to_n` and `_peak_detail_abs` available through import
+  compatibility aliases.
+- Did not change the force conversion rule, femur formulas, report keys, IARV, or pass/fail logic.
+
+Phase 5-I-5 scope:
+- Added `app/services/injury/chest_units.py`.
+- Moved `_convert_accel_to_g_series()`, `_convert_disp_to_mm_series()`, and
+  `_pick_compression_positive()` out of `app/services/preprocessing/service.py`.
+- `service.py` keeps those legacy names available through import compatibility aliases.
+- Did not change the chest unit conversion rules, compression sign preference rule, chest formulas,
+  report keys, IARV, or pass/fail logic.
+
+Phase 5-I-6 scope:
+- Added `app/services/injury/nij_math.py`.
+- Moved `compute_nij()` and `compute_nij_series()` out of
+  `app/services/preprocessing/service.py`.
+- `service.py` imports the moved helpers and keeps the same public names.
+- Did not change Nij coefficients, sign logic, neck formulas, report keys, IARV, or pass/fail logic.
+
+Phase 5-I-7 scope:
+- Documented the Phase 5-I closure boundary in `_codex/04_modules/preprocessing.md`.
+- Confirmed that the remaining calculation-side functions are no longer low-risk helper moves.
+- Left runtime code unchanged.
+
+Phase 5-J-1 scope:
+- Documented the HIC / 3ms call boundary in `_codex/04_modules/preprocessing.md`.
+- Fixed the next runtime step as a dedicated high-risk HIC / 3ms slice.
+- Left runtime code unchanged.
+
+Phase 5-J-2 scope:
+- Added `app/services/injury/hic_3ms_math.py`.
+- Moved HIC / 3ms math helpers out of `app/services/preprocessing/service.py`.
+- `service.py` keeps all legacy helper names and public HIC / 3ms names available through imports.
+- Did not intentionally change HIC formula, 3ms helper meaning, `compute_3ms_bundle()` call shape,
+  `use_high_res_cumulative_3ms` behavior, report keys, IARV, or pass/fail logic.
+
+Phase 5-J-3 scope:
+- Added `app/services/injury/legacy_metrics.py`.
+- Moved `compute_injury_metrics()` out of `app/services/preprocessing/service.py`.
+- `service.py` imports the moved helper and keeps the same public name.
+- Did not change any HIC / 3ms / Nij formula, viewer label, report key, IARV, or pass/fail logic.
+
+Phase 5-J-4 scope:
+- Added `app/services/injury/neck_payloads.py`.
+- Moved `build_neck_injury_channels()` and `build_neck_injury_channel_metadata()` out of
+  `app/services/preprocessing/service.py`.
+- `service.py` imports the moved helpers and keeps the same public names.
+- Did not change neck formulas, saved channel names, metadata labels, report keys, IARV, or
+  pass/fail logic.
+
+Phase 5-J-5 scope:
+- Documented the remaining high-risk calculation bodies still in
+  `app/services/preprocessing/service.py`:
+  - `compute_femur_metrics()`
+  - `compute_neck_nij_metrics()`
+  - `compute_chest_metrics()`
+- Recorded caller modules, coupling points, and the preferred move order:
+  1. femur
+  2. neck
+  3. chest
+- Explicitly kept this slice documentation-only with no runtime code change.
+
+Phase 5-J-6 scope:
+- Added `app/services/injury/femur_metrics.py`.
+- Moved `compute_femur_metrics()` out of `app/services/preprocessing/service.py`.
+- `service.py` imports the moved helper and keeps the same public name.
+- Did not change femur formulas, result dict keys, report keys, IARV, or pass/fail logic.
+
+Phase 5-J-7 scope:
+- Added `app/services/injury/neck_metrics.py`.
+- Moved `compute_neck_nij_metrics()` out of `app/services/preprocessing/service.py`.
+- `service.py` imports the moved helper and keeps the same public name.
+- Did not change neck unit normalization, CFC600 preparation, MOCy correction, Nij sign logic,
+  result dict keys, report keys, IARV, or pass/fail logic.
+
+Phase 5-J-8 scope:
+- Added `app/services/injury/chest_metrics.py`.
+- Moved `compute_chest_metrics()` out of `app/services/preprocessing/service.py`.
+- `service.py` imports the moved helper and keeps the same public name.
+- Did not change chest acceleration/displacement target-CFC handling, double-filtering guards,
+  3ms semantics, V*C engine semantics, result dict keys, report keys, IARV, or pass/fail logic.
+
+PELVIS acceleration CFC policy adjustment:
+- SAE J211-1 Table 1 check confirmed ATD pelvis acceleration is CFC1000.
+- Updated DATA FILTERING AUTO SET preset for PELVIS acceleration from `CFC 180` to `CFC 1000`.
+- Updated INJURY PELVIS auto-pick filter preference to `A`/CFC1000.
+- Updated INJURY PELVIS calculation input resolver desired CFC to `1000` for X/Y/Z.
+- Renamed the PELVIS resolver purpose from `head_injury` to `pelvis_injury` so the input
+  preparation path is traceable without implying HEAD calculation use.
+- Did not change resultant, 3ms, report, IARV, or pass/fail formulas.
+- User tested the PELVIS CFC1000 path as normal.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.

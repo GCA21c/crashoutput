@@ -16,6 +16,13 @@
 - Extracted filter source / raw-alignment helper functions into a dedicated module for Phase 5-G.
 - Changed REPORT SUMMARY Excel export to let users choose the output path before saving.
 - Documented CFC/filtering kernel call paths and high-risk boundary for Phase 5-H-1.
+- Extracted the CFC filter kernel into a dedicated preprocessing module for Phase 5-H-2.
+- Documented injury helper call paths and high-risk boundary for Phase 5-I-1.
+- Extracted the resultant XYZ helper into a dedicated injury vector math module for Phase 5-I-2.
+- Corrected PELVIS acceleration AUTO SET and INJURY input CFC policy to CFC1000
+  after checking SAE J211-1 Table 1 ATD pelvis acceleration guidance.
+- Renamed the PELVIS input resolver purpose from `head_injury` to `pelvis_injury`
+  for traceability while keeping the same CFC1000 input policy.
 
 ## Why
 - Phase 5 will touch higher-risk boundaries around preprocessing, injury preparation, and
@@ -31,12 +38,17 @@
 - `app/services/preprocessing/series_ops.py`
 - `app/services/preprocessing/channel_search.py`
 - `app/services/preprocessing/filter_sources.py`
+- `app/services/preprocessing/cfc_filter.py`
 - `app/services/preprocessing/service.py`
+- `app/services/injury/vector_math.py`
+- `app/ui/pages/injury_page.py`
 - `app/services/io/dat_loader.py`
 - `app/ui/pages/filtering_page.py`
 - `app/ui/pages/report_summary_page.py`
 - `app/ui/viewer_module.py` (reviewed only)
 - `app/ui/pages/injury_page.py` (reviewed only)
+- `app/services/injury/*.py` (reviewed only)
+- `app/services/injury/common_engines.py` (reviewed only)
 - `_codex/03_workflows/regression_snapshot_workflow.md`
 - `_codex/04_modules/preprocessing.md`
 - `_codex/09_regression_snapshots/README.md`
@@ -53,3 +65,7 @@
 - DATA FILTERING prefixes such as `002:B1:` are display-only and are not used as data keys.
 - Phase 5-G keeps filter source helper names available from `service.py` for compatibility.
 - REPORT SUMMARY Excel export still opens the generated workbook after the completion dialog.
+- Phase 5-H-2 keeps CFC kernel helper names available from `service.py` for compatibility.
+- PELVIS acceleration formula is unchanged; only the preferred/required input CFC was corrected
+  to CFC1000.
+- User runtime test for the PELVIS CFC1000 path was reported normal.

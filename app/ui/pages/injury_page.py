@@ -4960,9 +4960,9 @@ class InjuryPage(tk.Frame):
                 if not (x_ch and y_ch and z_ch):
                     return False
                 time = self._get_time()
-                x_values, _ = self._resolve_standard_series_for_calc(x_ch, 'head_injury', 'x', 1000, 1.0)
-                y_values, _ = self._resolve_standard_series_for_calc(y_ch, 'head_injury', 'y', 1000, 1.0)
-                z_values, _ = self._resolve_standard_series_for_calc(z_ch, 'head_injury', 'z', 1000, 1.0)
+                x_values, _ = self._resolve_standard_series_for_calc(x_ch, 'pelvis_injury', 'x', 1000, 1.0)
+                y_values, _ = self._resolve_standard_series_for_calc(y_ch, 'pelvis_injury', 'y', 1000, 1.0)
+                z_values, _ = self._resolve_standard_series_for_calc(z_ch, 'pelvis_injury', 'z', 1000, 1.0)
                 plot_unit = self._head_plot_unit((x_ch, y_ch, z_ch))
                 result = calculate_pelvis_injury_bundle(
                     time=time,
@@ -5169,9 +5169,9 @@ class InjuryPage(tk.Frame):
             if not all((x_ch, y_ch, z_ch)):
                 raise ValueError('PELVIS \uacc4\uc0b0\uc5d0\ub294 X/Y/Z \uac00\uc18d\ub3c4 \ucc44\ub110\uc774 \ubaa8\ub450 \ud544\uc694\ud569\ub2c8\ub2e4.')
             time = self._get_time()
-            x_values, _ = self._resolve_standard_series_for_calc(x_ch, 'head_injury', 'x', 1000, 1.0)
-            y_values, _ = self._resolve_standard_series_for_calc(y_ch, 'head_injury', 'y', 1000, 1.0)
-            z_values, _ = self._resolve_standard_series_for_calc(z_ch, 'head_injury', 'z', 1000, 1.0)
+            x_values, _ = self._resolve_standard_series_for_calc(x_ch, 'pelvis_injury', 'x', 1000, 1.0)
+            y_values, _ = self._resolve_standard_series_for_calc(y_ch, 'pelvis_injury', 'y', 1000, 1.0)
+            z_values, _ = self._resolve_standard_series_for_calc(z_ch, 'pelvis_injury', 'z', 1000, 1.0)
             result = calculate_pelvis_injury_bundle(
                 time=time,
                 x_values=self._convert_channel_to_head_plot_unit(x_values, x_ch),
