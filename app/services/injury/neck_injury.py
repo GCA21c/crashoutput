@@ -34,11 +34,11 @@ def _format_value_at_line(label, value, time_s, unit=''):
     return f"{label:<4}: {value_text} at {time_text}" if time_text != '-' else f"{label:<4}: {value_text}"
 
 
-def _format_neck_axis_block(display_name, detail, unit=''):
+def _format_neck_axis_block(display_name, detail, unit='', max_label='Max', min_label='Min'):
     return '\n'.join([
         str(display_name or '-'),
-        _format_value_at_line('Max', detail.get('max_value'), detail.get('max_time'), unit=unit),
-        _format_value_at_line('Min', detail.get('min_value'), detail.get('min_time'), unit=unit),
+        _format_value_at_line(max_label, detail.get('max_value'), detail.get('max_time'), unit=unit),
+        _format_value_at_line(min_label, detail.get('min_value'), detail.get('min_time'), unit=unit),
     ])
 
 
@@ -138,11 +138,24 @@ def calculate_neck_injury_bundle(
         display_channel_names[axis] = f"{axis} - {rewritten_name}" if channel_name else f"{axis} - -"
         detail = _series_extrema_detail(time_arr, series if series is not None else [])
         bucket = 'force' if axis.startswith('F') else 'moment'
+        max_label = 'Max'
+        min_label = 'Min'
+        if axis == 'Fx':
+            max_label = 'MAX(Rear Shear)'
+            min_label = 'MIN(Forward Shear)'
+        elif axis == 'Fz':
+            max_label = 'MAX(Tension)'
+            min_label = 'MIN(Compression)'
+        elif axis == 'My':
+            max_label = 'MAX(Flexion)'
+            min_label = 'MIN(Extension)'
         extrema_blocks[bucket].append(
             _format_neck_axis_block(
                 display_channel_names[axis],
                 detail,
                 unit=display_units[axis] or '',
+                max_label=max_label,
+                min_label=min_label,
             )
         )
     metrics['display_series'] = display_series
