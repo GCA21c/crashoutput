@@ -824,6 +824,30 @@ Required verification:
 - `py_compile` for `neck_metrics.py`, `service.py`, and `neck_injury.py`
 - user tests: NECK calculate, SUMMARY REPORT, save/reopen, and calculated-channel persistence
 
+## Phase 5-J-8 chest calculation body extraction
+Implemented the last remaining injury-body runtime move:
+
+- new module: `app/services/injury/chest_metrics.py`
+- moved helper:
+  - `compute_chest_metrics`
+
+Compatibility:
+- `app/services/preprocessing/service.py` imports the moved helper and keeps the same public name.
+
+Not changed:
+- chest acceleration target CFC handling
+- displacement target-CFC source selection
+- double-filtering guard behavior
+- 3ms helper call semantics
+- V*C engine call semantics
+- result dict keys
+- report payload keys
+- IARV / limit / pass-fail logic
+
+Required verification:
+- `py_compile` for `chest_metrics.py`, `service.py`, and `chest_injury.py`
+- user tests: CHEST calculate, V*C rows, SUMMARY REPORT, Excel export, and save/reopen
+
 ## PELVIS acceleration input CFC policy
 PELVIS acceleration channels use CFC1000 for AUTO SET and INJURY input preparation.
 This follows the SAE J211-1 Table 1 ATD channel recommendation for pelvis
