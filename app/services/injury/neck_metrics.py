@@ -12,7 +12,7 @@ def compute_neck_nij_metrics(time_s, fz_n, my_nm, apply_cfc600=True, criterion_k
     condyle (MOCy). For upper load cells this is derived from the filtered raw
     My and Fx channels using the dummy/load-cell lever arm D:
 
-        MOCy = My + Fx * D
+        MOCy = My - Fx * D
 
     If Fx is not available, the function falls back to raw My and reports that
     MOC correction was not applied.
@@ -73,7 +73,7 @@ def compute_neck_nij_metrics(time_s, fz_n, my_nm, apply_cfc600=True, criterion_k
     else:
         moc_applied = fx is not None and np.isfinite(fx).any() and abs(moc_d) > 0.0
         if moc_applied:
-            my = my + fx * moc_d
+            my = my - fx * moc_d
 
     # Nij case calculation needs both Fz and MOCy to be valid at the same sample.
     # However peak Fz / peak My summaries are properties of the individual
