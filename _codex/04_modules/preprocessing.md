@@ -136,3 +136,32 @@ Required verification:
 - `compare-dir` against the Phase 5 baseline
 - user startup, DATA OFFSET apply/reload, DATA TRIMMING apply/reload, and representative
   DATA FILTERING / INJURY entry test
+
+## Phase 5-F viewer/channel search helper extraction
+Implemented fourth extraction:
+
+- new module: `app/services/preprocessing/channel_search.py`
+- moved helpers:
+  - `make_channel_search_text`
+  - `infer_channel_group_key`
+  - `find_resultant_or_axis`
+  - `auto_detect_injury_channels`
+
+Compatibility:
+- `app/services/preprocessing/service.py` imports `make_channel_search_text`,
+  `infer_channel_group_key`, and `auto_detect_injury_channels` from the new module.
+- legacy private helper `_find_resultant_or_axis` remains available from `service.py` as
+  an alias to `channel_search.find_resultant_or_axis`.
+
+Not changed:
+- channel matching semantics
+- DATA FILTERING apply/commit functions
+- CFC filter kernel and End Points extension
+- HIC / 3ms / VC / Nij / femur calculation functions
+
+Required verification:
+- import compatibility for DATA FILTERING page
+- `capture-dir` after the move
+- `compare-dir` against the Phase 5 baseline
+- user startup, DATA VIEWER channel list, DATA FILTERING channel search/grouping, and
+  representative INJURY entry test

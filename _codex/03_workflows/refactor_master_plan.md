@@ -554,6 +554,24 @@ Validation:
 - import compatibility for offset and trimming pages
 - Phase 5 `compare-dir` must match all representative snapshots before user runtime test.
 
+### Phase 5-F viewer/channel search helper extraction
+Fourth implemented extraction candidate:
+- `app/services/preprocessing/channel_search.py`
+
+Moved only viewer/search helpers:
+- `make_channel_search_text`
+- `infer_channel_group_key`
+- `find_resultant_or_axis`
+- `auto_detect_injury_channels`
+
+Compatibility:
+- `app/services/preprocessing/service.py` keeps public channel search helper names available.
+- `_find_resultant_or_axis` remains available from `service.py` for older imports.
+
+Validation:
+- import compatibility for DATA FILTERING page
+- Phase 5 `compare-dir` must match all representative snapshots before user runtime test.
+
 ## Do not touch first
 아래 영역은 검증 장치 없이 먼저 수정하지 않는다.
 

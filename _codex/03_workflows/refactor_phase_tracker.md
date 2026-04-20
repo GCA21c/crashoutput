@@ -58,6 +58,7 @@
 | Phase 5-C | Done | channel role detector helper extraction implemented and user-tested |
 | Phase 5-D | Done | numeric/time helper extraction implemented and user-tested |
 | Phase 5-E | Done | offset/trimming helper extraction implemented and user-tested |
+| Phase 5-F | Partial | viewer/channel search helper extraction implemented; awaiting user runtime test |
 | Phase 5 | In Progress | Started with regression fixture tooling only |
 
 ## Completed work on this branch
@@ -70,10 +71,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-Phase 5-F can start after user approval. Recommended scope: move viewer/channel search
-helper functions (`make_channel_search_text`, `infer_channel_group_key`, `_find_resultant_or_axis`,
-`auto_detect_injury_channels`) to a dedicated module while preserving `service.py`
-compatibility imports.
+Wait for user runtime test after Phase 5-F viewer/channel search helper extraction.
 
 Phase 5-A scope:
 - Added `tools/capture_regression_snapshot.py`.
@@ -126,6 +124,16 @@ Phase 5-E scope:
   `_replace_with_numeric_series` import compatibility.
 - Verified import compatibility and Phase 5 snapshot compare loop: all 5 representative snapshots match.
 - User tested runtime behavior as normal after the move.
+- Did not move filtering functions, CFC filter kernel, End Points extension,
+  HIC/3ms/VC/Nij/femur calculation functions.
+
+Phase 5-F scope:
+- Added `app/services/preprocessing/channel_search.py`.
+- Moved viewer-based channel search, channel grouping, resultant auto-pick, and simple injury
+  auto-detection helpers out of `app/services/preprocessing/service.py`.
+- `service.py` keeps `make_channel_search_text`, `infer_channel_group_key`,
+  `auto_detect_injury_channels`, and `_find_resultant_or_axis` import compatibility.
+- Verified import compatibility and Phase 5 snapshot compare loop: all 5 representative snapshots match.
 - Did not move filtering functions, CFC filter kernel, End Points extension,
   HIC/3ms/VC/Nij/femur calculation functions.
 

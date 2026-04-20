@@ -1,4 +1,3 @@
-import re
 from functools import lru_cache
 import numpy as np
 import pandas as pd
@@ -34,6 +33,12 @@ from app.services.preprocessing.timing import (
 )
 from app.services.preprocessing.offset import apply_offset, get_offset_sample_rows, trim_dataframe
 from app.services.preprocessing.series_ops import replace_with_numeric_series as _replace_with_numeric_series
+from app.services.preprocessing.channel_search import (
+    auto_detect_injury_channels,
+    find_resultant_or_axis as _find_resultant_or_axis,
+    infer_channel_group_key,
+    make_channel_search_text,
+)
 from app.services.injury.common_engines import compute_3ms_bundle, compute_vc_engine_bundle
 
 FILTER_OPTIONS = ("Raw", "CFC 60", "CFC 180", "CFC 600", "CFC 1000")
@@ -415,25 +420,6 @@ def apply_filtering(df, time_column, channel_to_filter):
     return out
 
 
-def make_channel_search_text(viewer, channel_name):
-    label = viewer.get_channel_display_name(channel_name)
-    return f"{channel_name} {label}".lower()
-
-
-def infer_channel_group_key(viewer, channel_name):
-    label = viewer.get_channel_display_name(channel_name).strip() or str(channel_name)
-    text = f"{channel_name} {label}"
-    text = re.sub(r"\[[^\]]*\]", " ", text)
-    tokens = re.findall(r"[A-Za-z]+", text.upper())
-    if not tokens:
-        return "ETC"
-    filtered = [tok for tok in tokens if tok not in {"X", "Y", "Z", "LEFT", "RIGHT", "RAW", "TIME", "SEC", "MS"}]
-    if filtered:
-        return filtered[0]
-    return tokens[0]
-
-
-
 def _series_to_float(arr):
     values = np.asarray(arr, dtype=float)
     return values[np.isfinite(values)]
@@ -445,41 +431,6 @@ def _convert_accel_to_g(values, unit_text=""):
     if "m/s" in unit or "ms-2" in unit or "mps2" in unit:
         return vals / 9.80665
     return vals
-
-
-def _find_resultant_or_axis(viewer, keywords):
-    candidates = []
-    for col in viewer.get_numeric_channel_names(exclude_time=True):
-        name = str(col).lower()
-        label = str(viewer.get_channel_display_name(col)).lower()
-        unit = str(viewer.get_y_axis_label(col)).lower()
-        text = f"{name} {label} {unit}"
-        score = 0
-        for kw in keywords:
-            if kw in text:
-                score += 3
-        if "res" in text or "resultant" in text or "mag" in text:
-            score += 2
-        if score > 0:
-            candidates.append((score, col))
-    candidates.sort(key=lambda x: (-x[0], str(x[1])))
-    return candidates[0][1] if candidates else None
-
-
-def auto_detect_injury_channels(viewer):
-    found = {}
-    head = _find_resultant_or_axis(viewer, ["head", "cg", "acc"])
-    if head:
-        found["Head Acceleration"] = head
-
-    # neck force / moment heuristics
-    for col in viewer.get_numeric_channel_names(exclude_time=True):
-        text = f"{col} {viewer.get_channel_display_name(col)} {viewer.get_y_axis_label(col)}".lower()
-        if "neck" in text and ("fx" in text or "force x" in text or "axial" in text):
-            found.setdefault("Neck Fx", col)
-        if "neck" in text and ("my" in text or "moment y" in text or "flex" in text or "ext" in text):
-            found.setdefault("Neck My", col)
-    return found
 
 
 def _cumtrapz(y, x):
