@@ -79,6 +79,30 @@
 Phase 5-I-2 and the PELVIS CFC1000 policy correction are user-tested. Continue from the next
 approved Phase 5 step.
 
+Deferred after code optimization:
+- DAT loader `215` handling issue is confirmed and intentionally deferred until the current
+  code-optimization sequence is closed.
+- On `raw_dat_check.zip`, the current loader treats DAT header `215=-1` as a no-value sentinel
+  and rewrites matching raw integer samples to `0` before scale/offset conversion.
+- This rewrite is now treated as a high-risk loader policy bug because raw imported samples must
+  not be arbitrarily forced to `0` without an explicitly proven format rule for that dataset.
+- Reference exports (`111.xlsx` second sheet and direct raw comparison tables) show that at least
+  `B1CHST0000H3ACYP` expects raw integer `-1` to remain a valid sample, producing
+  `offset + (-1) * scale = 0.209009...`, while the current loader produces
+  `offset + 0 * scale = 0.313513...`.
+- The same rule affects many channels, not just chest Y, so this must be handled as a loader
+  policy change with regression checks, not as an isolated channel fix.
+- Do not patch `app/services/io/dat_loader.py` during the remaining optimization phases unless the
+  user explicitly pauses the refactor track and approves a loader-behavior change.
+- After the optimization phases finish, reopen the loader task with:
+  1. `raw_dat_check.zip`
+  2. `111.xlsx` second-sheet comparison
+  3. representative before/after raw snapshots for HEAD / CHEST / PELVIS channels
+  4. a decision on whether DAT header `215` should be ignored, conditionally honored, or mapped to
+     `NaN` instead of `0`.
+  5. preserve the rule that unknown/suspect `215` hits must never be silently rewritten to `0`
+     during raw import.
+
 Phase 5-A scope:
 - Added `tools/capture_regression_snapshot.py`.
 - Added `_codex/03_workflows/regression_snapshot_workflow.md`.
