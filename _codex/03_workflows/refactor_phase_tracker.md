@@ -65,6 +65,7 @@
 | Phase 5-I-1 | Done | injury helper call path reviewed and documented; no runtime code change |
 | Phase 5-I-2 | Done | resultant helper extraction implemented and user-tested |
 | Phase 5-I-3 | Done | scalar helper extraction implemented; pending user test |
+| Phase 5-I-4 | Done | femur force helper extraction implemented; pending user test |
 | Phase 5 | In Progress | Started with regression fixture tooling only |
 
 ## Completed work on this branch
@@ -81,7 +82,7 @@ Phase 5-I-2 and the PELVIS CFC1000 policy correction are user-tested. Continue f
 approved Phase 5 step.
 
 Current working step:
-- Phase 5-I-3 scalar helper extraction is implemented and waiting for user runtime test.
+- Phase 5-I-4 femur force helper extraction is implemented and waiting for user runtime test.
 
 Deferred after code optimization:
 - DAT loader `215` handling issue is confirmed and intentionally deferred until the current
@@ -248,6 +249,14 @@ Phase 5-I-3 scope:
   compatibility aliases.
 - Did not change the acceleration conversion rule, HIC/3ms/VC/Nij/femur formulas, report keys,
   IARV, or pass/fail logic.
+
+Phase 5-I-4 scope:
+- Added `app/services/injury/forces.py`.
+- Moved `_normalize_force_to_n()` and `_peak_detail_abs()` out of
+  `app/services/preprocessing/service.py`.
+- `service.py` keeps `_normalize_force_to_n` and `_peak_detail_abs` available through import
+  compatibility aliases.
+- Did not change the force conversion rule, femur formulas, report keys, IARV, or pass/fail logic.
 
 PELVIS acceleration CFC policy adjustment:
 - SAE J211-1 Table 1 check confirmed ATD pelvis acceleration is CFC1000.

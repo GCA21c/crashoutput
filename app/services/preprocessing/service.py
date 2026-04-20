@@ -53,6 +53,7 @@ from app.services.preprocessing.cfc_filter import (
     end_points_extend as _end_points_extend,
 )
 from app.services.injury.common_engines import compute_3ms_bundle, compute_vc_engine_bundle
+from app.services.injury.forces import normalize_force_to_n, peak_detail_abs
 from app.services.injury.scalars import convert_accel_to_g, series_to_float
 from app.services.injury.vector_math import compute_resultant_xyz
 
@@ -1610,28 +1611,10 @@ def compute_chest_metrics(
     }
 
 
-def _normalize_force_to_n(values, unit_text):
-    arr = np.asarray(values, dtype=float)
-    unit = str(unit_text or '').strip().lower().replace(' ', '')
-    if unit in ('kn', 'kilonewton', 'kilonewtons'):
-        return arr * 1000.0, 'N'
-    if unit in ('mn',):
-        return arr * 1_000_000.0, 'N'
-    if unit in ('lbf', 'lb', 'lbs', 'poundforce', 'poundsforce'):
-        return arr * 4.4482216152605, 'N'
-    return arr, ('N' if not unit else str(unit_text or ''))
+_normalize_force_to_n = normalize_force_to_n
 
 
-def _peak_detail_abs(time_arr, values):
-    t = np.asarray(time_arr, dtype=float)
-    y = np.asarray(values, dtype=float)
-    valid = np.isfinite(t) & np.isfinite(y)
-    if not np.any(valid):
-        return {'value': None, 'time_s': None, 'index': None}
-    idx = np.flatnonzero(valid)
-    peak_local = int(np.nanargmax(np.abs(y[idx])))
-    peak_index = int(idx[peak_local])
-    return {'value': float(abs(y[peak_index])), 'time_s': float(t[peak_index]), 'index': peak_index}
+_peak_detail_abs = peak_detail_abs
 
 
 def compute_femur_metrics(time_s, left_force_n, right_force_n, criterion_key='H3_50%M', left_unit=None, right_unit=None):
