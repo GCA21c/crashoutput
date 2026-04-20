@@ -57,7 +57,7 @@
 | Phase 5-B | Done | preprocessing function groups and folder-level snapshot compare workflow verified |
 | Phase 5-C | Done | channel role detector helper extraction implemented and user-tested |
 | Phase 5-D | Done | numeric/time helper extraction implemented and user-tested |
-| Phase 5-E | Partial | offset/trimming helper extraction implemented; awaiting user runtime test |
+| Phase 5-E | Done | offset/trimming helper extraction implemented and user-tested |
 | Phase 5 | In Progress | Started with regression fixture tooling only |
 
 ## Completed work on this branch
@@ -70,7 +70,10 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-Wait for user runtime test after Phase 5-E offset/trimming helper extraction.
+Phase 5-F can start after user approval. Recommended scope: move viewer/channel search
+helper functions (`make_channel_search_text`, `infer_channel_group_key`, `_find_resultant_or_axis`,
+`auto_detect_injury_channels`) to a dedicated module while preserving `service.py`
+compatibility imports.
 
 Phase 5-A scope:
 - Added `tools/capture_regression_snapshot.py`.
@@ -122,6 +125,7 @@ Phase 5-E scope:
 - `service.py` keeps `trim_dataframe`, `get_offset_sample_rows`, `apply_offset`, and
   `_replace_with_numeric_series` import compatibility.
 - Verified import compatibility and Phase 5 snapshot compare loop: all 5 representative snapshots match.
+- User tested runtime behavior as normal after the move.
 - Did not move filtering functions, CFC filter kernel, End Points extension,
   HIC/3ms/VC/Nij/femur calculation functions.
 
