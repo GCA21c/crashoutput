@@ -308,3 +308,106 @@ Required verification:
 - `compare-dir` against the Phase 5 baseline
 - user tests: DATA VIEWER preview filter, DATA FILTERING manual apply/commit, AUTO SET,
   HEAD/CHEST/NECK injury entry, and saved `.pkl` reopen
+
+## Phase 5-I-1 injury helper boundary review
+Performed before moving any injury calculation helper code.
+
+Current injury calculation owners still in `app/services/preprocessing/service.py`:
+- HIC / 3ms helpers:
+  - `_cumtrapz`
+  - `_prepare_hic_series`
+  - `_integral_at_query`
+  - `_value_at_query`
+  - `_update_best_hic`
+  - `compute_hic_details`
+  - `_level_exceedance_intervals`
+  - `_clip_exceedance_detail`
+  - `compute_3ms_one_peak_exceedance_details`
+  - `_estimate_constant_dt`
+  - `compute_3ms_multiple_peak_exceedance_details`
+  - `compute_hic`
+  - `compute_3ms_clip_details`
+  - `compute_3ms_clip`
+  - `compute_3ms_one_peak_details`
+- Generic scalar helpers:
+  - `_series_to_float`
+  - `_convert_accel_to_g`
+  - `compute_resultant_xyz`
+  - `compute_nij`
+  - `compute_nij_series`
+  - `compute_injury_metrics`
+- Neck helpers:
+  - `build_neck_injury_channels`
+  - `build_neck_injury_channel_metadata`
+  - `compute_neck_nij_metrics`
+- Chest helpers:
+  - `_convert_accel_to_g_series`
+  - `_convert_disp_to_mm_series`
+  - `_pick_compression_positive`
+  - `compute_chest_metrics`
+  - nested VC/source-selection helpers inside `compute_chest_metrics`
+- Femur helpers:
+  - `_normalize_force_to_n`
+  - `_peak_detail_abs`
+  - `compute_femur_metrics`
+
+Current callers:
+- `app/services/injury/head_injury.py`
+  - imports `compute_hic_details` from `service.py`.
+  - imports `compute_3ms_bundle` from `app/services/injury/common_engines.py`.
+- `app/services/injury/pelvis_injury.py`
+  - imports `compute_resultant_xyz` from `service.py`.
+  - imports `compute_3ms_bundle` from `common_engines.py`.
+- `app/services/injury/chest_injury.py`
+  - imports `compute_chest_metrics` from `service.py`.
+- `app/services/injury/neck_injury.py`
+  - imports `compute_neck_nij_metrics` from `service.py`.
+- `app/services/injury/femur_injury.py`
+  - imports `compute_femur_metrics` from `service.py`.
+- `app/ui/pages/injury_page.py`
+  - imports `compute_resultant_xyz`, `apply_cfc_filter_to_series`, and
+    `parse_cfc_filter_label` from `service.py`.
+  - resolves required-CFC standard series before calling injury service bundles.
+
+Existing shared helper module:
+- `app/services/injury/common_engines.py`
+  - owns `compute_3ms_bundle()` and `compute_vc_engine_bundle()`.
+  - imports 3ms detail functions lazily from `service.py` inside `compute_3ms_bundle()`.
+  - has its own `_gradient_contiguous()` implementation for VC velocity.
+- `compute_chest_metrics()` in `service.py` also has a nested `_gradient_contiguous()`
+  style helper and calls `compute_vc_engine_bundle()`.
+  This duplicate gradient area is calculation-sensitive and should not be collapsed in
+  the same slice as a module move.
+
+Do not move yet without dedicated snapshots and user tests:
+- HIC / 3ms internals because they directly affect HEAD, CHEST, and PELVIS values.
+- `compute_chest_metrics()` because it combines acceleration CFC selection, displacement
+  target-CFC selection, V*C engine calls, VC display/regulatory output, and report payload
+  keys.
+- `compute_neck_nij_metrics()` because it combines unit normalization, optional internal
+  CFC600 preparation, MOCy correction, Nij case calculation, and report metadata.
+- `compute_femur_metrics()` because it combines unit normalization, absolute/signed peak
+  semantics, and dummy limit pass/fail metadata.
+- `compute_3ms_bundle()` / `compute_vc_engine_bundle()` consolidation because import order
+  and duplicate helper behavior are part of the current compatibility surface.
+
+Potential next safe slice:
+- Phase 5-I-2 may move only small, pure, non-threshold helpers into a dedicated module while
+  preserving `service.py` legacy import names. Candidate order:
+  1. `compute_resultant_xyz`
+  2. `_series_to_float`
+  3. unit conversion helpers, but only after checking exact callers and snapshot output
+- Keep HIC / 3ms / VC / Nij / femur formula bodies in place until each has a focused test
+  slice and user confirmation.
+
+Required verification for any Phase 5-I code move:
+- `py_compile` for `service.py`, all `app/services/injury/*.py`, and `injury_page.py`
+- direct import compatibility from `service.py`
+- `capture-dir` and `compare-dir` against the Phase 5 baseline
+- user tests:
+  - HEAD HIC/3ms
+  - CHEST 3ms/deflection/V*C
+  - NECK force/moment/Nij
+  - PELVIS resultant/3ms
+  - FEMUR left/right force
+  - REPORT SUMMARY and Excel export after injury results are saved

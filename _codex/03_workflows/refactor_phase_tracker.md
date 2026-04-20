@@ -62,6 +62,7 @@
 | Phase 5-G | Done | filter source helper extraction implemented and user-tested |
 | Phase 5-H-1 | Done | CFC/filtering kernel call path reviewed and documented; no runtime code change |
 | Phase 5-H-2 | Done | CFC kernel module extraction implemented and user-tested |
+| Phase 5-I-1 | Done | injury helper call path reviewed and documented; no runtime code change |
 | Phase 5 | In Progress | Started with regression fixture tooling only |
 
 ## Completed work on this branch
@@ -74,7 +75,8 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-Continue Phase 5 after user-tested Phase 5-H-2 CFC kernel module extraction.
+Decide whether to proceed to Phase 5-I-2 small injury helper extraction. Keep it as a separate
+user-tested slice if approved.
 
 Phase 5-A scope:
 - Added `tools/capture_regression_snapshot.py`.
@@ -189,6 +191,16 @@ Phase 5-H-2 scope:
   INJURY entry, saved `.pkl` reopen, and double-filtering guard behavior as normal.
 - Did not change CFC math, End Points behavior, `filtfilt` arguments, manual filtering
   orchestration, derived-channel routing, or injury formulas.
+
+Phase 5-I-1 scope:
+- Reviewed HIC/3ms, generic resultant/Nij, neck, chest, and femur helper call paths without
+  moving code.
+- Documented active callers in `app/services/injury/*.py`, `app/ui/pages/injury_page.py`,
+  and `app/services/injury/common_engines.py`.
+- Documented duplicate/sensitive helper areas such as VC gradient handling and lazy imports in
+  `common_engines.py`.
+- No calculation logic, injury formula, threshold/IARV, report key, or runtime code changed in
+  this slice.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.

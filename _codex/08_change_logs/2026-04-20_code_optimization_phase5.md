@@ -17,6 +17,7 @@
 - Changed REPORT SUMMARY Excel export to let users choose the output path before saving.
 - Documented CFC/filtering kernel call paths and high-risk boundary for Phase 5-H-1.
 - Extracted the CFC filter kernel into a dedicated preprocessing module for Phase 5-H-2.
+- Documented injury helper call paths and high-risk boundary for Phase 5-I-1.
 
 ## Why
 - Phase 5 will touch higher-risk boundaries around preprocessing, injury preparation, and
@@ -39,6 +40,8 @@
 - `app/ui/pages/report_summary_page.py`
 - `app/ui/viewer_module.py` (reviewed only)
 - `app/ui/pages/injury_page.py` (reviewed only)
+- `app/services/injury/*.py` (reviewed only)
+- `app/services/injury/common_engines.py` (reviewed only)
 - `_codex/03_workflows/regression_snapshot_workflow.md`
 - `_codex/04_modules/preprocessing.md`
 - `_codex/09_regression_snapshots/README.md`
