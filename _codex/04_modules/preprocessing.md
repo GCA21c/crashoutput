@@ -439,16 +439,18 @@ Required verification:
 - user tests: HEAD, CHEST, PELVIS resultant-related entry paths
 
 ## PELVIS acceleration input CFC policy
-PELVIS acceleration channels use the same CFC180 input policy as the frontal filtering preset.
+PELVIS acceleration channels use CFC1000 for AUTO SET and INJURY input preparation.
+This follows the SAE J211-1 Table 1 ATD channel recommendation for pelvis
+accelerations. It is not a formula change.
 
 - AUTO SET preset DB:
   - `app/core/dummy/filter_presets.py`
-  - `body_region="pelvis"`, `measurement_family="acceleration"`, `target_cfc="CFC 180"`
+  - `body_region="pelvis"`, `measurement_family="acceleration"`, `target_cfc="CFC 1000"`
 - INJURY page channel preference:
   - `app/ui/pages/injury_page.py` `FILTER_PREFERENCE_MAP["pelvis"]`
-  - preferred filter code is `C`, which maps to `CFC 180`
+  - preferred filter code is `A`, which maps to `CFC 1000`
 - INJURY PELVIS calculation input resolver:
-  - X/Y/Z acceleration calls `_resolve_standard_series_for_calc(..., desired_cfc=180)`
+  - X/Y/Z acceleration calls `_resolve_standard_series_for_calc(..., desired_cfc=1000)`
 
 This is an input-preparation policy. It does not change:
 - resultant formula

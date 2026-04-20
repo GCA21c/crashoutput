@@ -212,9 +212,10 @@ Phase 5-I-2 scope:
   or pass/fail logic.
 
 PELVIS acceleration CFC policy adjustment:
-- DATA FILTERING AUTO SET already presets PELVIS acceleration channels to `CFC 180`.
-- Updated INJURY PELVIS auto-pick filter preference from `A`/CFC1000 to `C`/CFC180.
-- Updated INJURY PELVIS calculation input resolver desired CFC from `1000` to `180` for X/Y/Z.
+- SAE J211-1 Table 1 check confirmed ATD pelvis acceleration is CFC1000.
+- Updated DATA FILTERING AUTO SET preset for PELVIS acceleration from `CFC 180` to `CFC 1000`.
+- Updated INJURY PELVIS auto-pick filter preference to `A`/CFC1000.
+- Updated INJURY PELVIS calculation input resolver desired CFC to `1000` for X/Y/Z.
 - Did not change resultant, 3ms, report, IARV, or pass/fail formulas.
 
 Phase 1-C decisions:

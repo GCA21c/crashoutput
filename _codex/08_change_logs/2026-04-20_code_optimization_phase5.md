@@ -19,7 +19,8 @@
 - Extracted the CFC filter kernel into a dedicated preprocessing module for Phase 5-H-2.
 - Documented injury helper call paths and high-risk boundary for Phase 5-I-1.
 - Extracted the resultant XYZ helper into a dedicated injury vector math module for Phase 5-I-2.
-- Aligned PELVIS acceleration injury input CFC policy with AUTO SET preset CFC180.
+- Corrected PELVIS acceleration AUTO SET and INJURY input CFC policy to CFC1000
+  after checking SAE J211-1 Table 1 ATD pelvis acceleration guidance.
 
 ## Why
 - Phase 5 will touch higher-risk boundaries around preprocessing, injury preparation, and
@@ -63,5 +64,5 @@
 - Phase 5-G keeps filter source helper names available from `service.py` for compatibility.
 - REPORT SUMMARY Excel export still opens the generated workbook after the completion dialog.
 - Phase 5-H-2 keeps CFC kernel helper names available from `service.py` for compatibility.
-- PELVIS acceleration formula is unchanged; only the preferred/required input CFC was aligned
-  from CFC1000 to CFC180.
+- PELVIS acceleration formula is unchanged; only the preferred/required input CFC was corrected
+  to CFC1000.
