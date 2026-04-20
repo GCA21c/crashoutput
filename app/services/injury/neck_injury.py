@@ -173,7 +173,7 @@ def calculate_neck_injury_bundle(
         + fmt_metric_at('Peak Tension Force (FZ+)', metrics['peak_tension_fz'], unit='N', time_s=metrics.get('peak_tension_time')) + '\n'
         + fmt_metric_at('Peak Comp. Force (FZ-)', metrics['peak_compression_fz'], unit='N', time_s=metrics.get('peak_compression_time')) + '\n'
         + fmt_metric_at(f'Peak Flexion {moment_input_label}', metrics['peak_flexion_my'], unit='Nm', time_s=metrics.get('peak_flexion_time')) + '\n'
-        + fmt_metric_at(f'Peak Extension {moment_input_label}', abs(metrics['peak_extension_my']), unit='Nm', time_s=metrics.get('peak_extension_time')) + '\n\n'
+        + fmt_metric_at(f'Peak Extension {moment_input_label}', metrics['peak_extension_my'], unit='Nm', time_s=metrics.get('peak_extension_time')) + '\n\n'
         + fmt_metric_at('NTE', metrics['peak_nte'], time_s=metrics.get('peak_nte_time')) + '\n'
         + fmt_metric_at('NTF', metrics['peak_ntf'], time_s=metrics.get('peak_ntf_time')) + '\n'
         + fmt_metric_at('NCE', metrics['peak_nce'], time_s=metrics.get('peak_nce_time')) + '\n'

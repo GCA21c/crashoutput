@@ -109,7 +109,6 @@ FMVSS_208_ITEMS = (
         "peak_extension_my",
         unit="Nm",
         limit_key="MyE",
-        value_transform="abs",
     ),
     _item(
         "neck.peak_flexion_mocy",
