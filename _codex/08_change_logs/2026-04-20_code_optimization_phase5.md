@@ -10,6 +10,7 @@
 - Documented preprocessing service function groups and extraction risk.
 - Extracted preprocessing channel role detector helpers into a dedicated module for Phase 5-C.
 - Extracted preprocessing numeric/time helpers into a dedicated module for Phase 5-D.
+- Extracted preprocessing offset/trimming helpers into dedicated modules for Phase 5-E.
 
 ## Why
 - Phase 5 will touch higher-risk boundaries around preprocessing, injury preparation, and
@@ -21,6 +22,8 @@
 - `tools/capture_regression_snapshot.py`
 - `app/services/preprocessing/channel_roles.py`
 - `app/services/preprocessing/timing.py`
+- `app/services/preprocessing/offset.py`
+- `app/services/preprocessing/series_ops.py`
 - `app/services/preprocessing/service.py`
 - `_codex/03_workflows/regression_snapshot_workflow.md`
 - `_codex/04_modules/preprocessing.md`
@@ -33,3 +36,4 @@
 - Actual `.pkl` input files and generated snapshot JSON files are ignored by git by default.
 - Phase 5-C keeps `service.py` as the compatibility import surface for moved detector helpers.
 - Phase 5-D keeps `_get_sample_rate` available from `service.py` for compatibility.
+- Phase 5-E keeps offset/trimming helper names available from `service.py` for compatibility.

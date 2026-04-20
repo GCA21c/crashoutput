@@ -535,6 +535,25 @@ Validation:
 - import compatibility for filtering page, offset page, viewer module
 - Phase 5 `compare-dir` must match all representative snapshots before user runtime test.
 
+### Phase 5-E offset/trimming helper extraction
+Third implemented extraction candidate:
+- `app/services/preprocessing/offset.py`
+- `app/services/preprocessing/series_ops.py`
+
+Moved only preprocessing range/offset helpers:
+- `trim_dataframe`
+- `get_offset_sample_rows`
+- `apply_offset`
+- `replace_with_numeric_series`
+
+Compatibility:
+- `app/services/preprocessing/service.py` keeps public offset/trimming helper names available.
+- `_replace_with_numeric_series` remains available from `service.py` for internal compatibility.
+
+Validation:
+- import compatibility for offset and trimming pages
+- Phase 5 `compare-dir` must match all representative snapshots before user runtime test.
+
 ## Do not touch first
 아래 영역은 검증 장치 없이 먼저 수정하지 않는다.
 

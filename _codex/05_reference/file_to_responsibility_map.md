@@ -24,6 +24,8 @@
 | `app/services/preprocessing/offset_preview.py` | DATA OFFSET before-graph preview persistence helpers |
 | `app/services/preprocessing/channel_roles.py` | preprocessing channel role detection and derived-channel naming helpers |
 | `app/services/preprocessing/timing.py` | preprocessing numeric channel, time column, Time0, and sample-rate helpers |
+| `app/services/preprocessing/offset.py` | preprocessing trim and offset operations |
+| `app/services/preprocessing/series_ops.py` | preprocessing dataframe series write helpers |
 | `app/services/preprocessing/service.py` | filtering / preprocessing engine |
 | `app/services/injury/common_engines.py` | shared injury helpers |
 | `app/services/injury/input_resolver.py` | injury input channel lookup helper |

@@ -104,3 +104,35 @@ Required verification:
 - `capture-dir` after the move
 - `compare-dir` against the Phase 5 baseline
 - user startup, DATA OFFSET, DATA FILTERING, and representative INJURY entry test
+
+## Phase 5-E offset/trimming helper extraction
+Implemented third extraction:
+
+- new module: `app/services/preprocessing/offset.py`
+- new support module: `app/services/preprocessing/series_ops.py`
+- moved helpers:
+  - `trim_dataframe`
+  - `get_offset_sample_rows`
+  - `apply_offset`
+  - shared value writer `replace_with_numeric_series`
+
+Compatibility:
+- `app/services/preprocessing/service.py` imports `trim_dataframe`, `get_offset_sample_rows`,
+  and `apply_offset` from the new module.
+- legacy private helper `_replace_with_numeric_series` remains available from `service.py` as
+  an alias to `series_ops.replace_with_numeric_series`.
+
+Not changed:
+- offset sample-row rule
+- offset mean calculation
+- trimming time mask
+- CFC filter kernel and End Points extension
+- `apply_filtering()` and `apply_filtering_with_derivatives()`
+- HIC / 3ms / VC / Nij / femur calculation functions
+
+Required verification:
+- import compatibility for OFFSET and TRIMMING pages
+- `capture-dir` after the move
+- `compare-dir` against the Phase 5 baseline
+- user startup, DATA OFFSET apply/reload, DATA TRIMMING apply/reload, and representative
+  DATA FILTERING / INJURY entry test

@@ -32,6 +32,8 @@ from app.services.preprocessing.timing import (
     get_sample_rate as _get_sample_rate,
     get_time_numeric,
 )
+from app.services.preprocessing.offset import apply_offset, get_offset_sample_rows, trim_dataframe
+from app.services.preprocessing.series_ops import replace_with_numeric_series as _replace_with_numeric_series
 from app.services.injury.common_engines import compute_3ms_bundle, compute_vc_engine_bundle
 
 FILTER_OPTIONS = ("Raw", "CFC 60", "CFC 180", "CFC 600", "CFC 1000")
@@ -42,29 +44,6 @@ FILTER_EXTENSION_MODE = "End Points"
 CHEST_CRITERIA_PRESETS = CHEST_DUMMY_PROFILES
 NECK_CRITERIA_PRESETS = NECK_DUMMY_PROFILES
 FEMUR_CRITERIA_PRESETS = FEMUR_DUMMY_PROFILES
-
-def trim_dataframe(df, time_column, start_time, end_time):
-    """Trim rows by time while keeping the existing time values untouched.
-
-    Behavior:
-    - Remove only rows outside the requested numeric time range.
-    - Preserve the original Time values exactly as stored in the dataframe.
-    - Do not re-zero, rescale, or regenerate the Time column.
-    - Keep non-numeric metadata/header rows.
-
-    This stays intentionally simple so trimming does not introduce any hidden
-    time-unit side effects.
-    """
-    start_time = float(start_time)
-    end_time = float(end_time)
-    if end_time < start_time:
-        start_time, end_time = end_time, start_time
-    time_arr = get_time_numeric(df, time_column)
-    numeric_mask = np.isfinite(time_arr)
-    within_range = numeric_mask & (time_arr >= start_time) & (time_arr <= end_time)
-    keep_mask = (~numeric_mask) | within_range
-    return df.loc[keep_mask].reset_index(drop=True).copy()
-
 
 _CFC_SF = {
     60: 2.0775,
@@ -130,26 +109,6 @@ def _apply_cfc_filter_segment(y_segment, fs, cfc_value):
         return filtered[:len(y_segment)]
     except Exception:
         return y_segment.copy()
-
-
-def _replace_with_numeric_series(out, channel_name, values):
-    """Preserve original CSV structure and metadata rows.
-
-    Some crash CSV files keep channel description / unit information as ordinary
-    rows near the top of the dataframe. Replacing the full column with a pure
-    float dtype destroys those rows and later causes channel names such as
-    ``Unnamed: 1`` to appear instead of the original descriptions.
-
-    To avoid that, keep the original column as an object series and only
-    overwrite rows where the new numeric values are finite.
-    """
-    original = out[channel_name].copy()
-    result = original.astype(object)
-    numeric_values = np.asarray(values, dtype=float)
-    finite_mask = np.isfinite(numeric_values)
-    if finite_mask.any():
-        result.iloc[np.flatnonzero(finite_mask)] = numeric_values[finite_mask].tolist()
-    out[channel_name] = result
 
 
 @lru_cache(maxsize=64)
@@ -454,74 +413,6 @@ def apply_filtering(df, time_column, channel_to_filter):
         _replace_with_numeric_series(out, channel_name, filtered)
 
     return out
-
-
-def get_offset_sample_rows(df, time_column, sample_count, time0_row=None, include_time0=True):
-    """Return offset rows from data start toward Time0.
-
-    New baseline rule:
-    - build the candidate region from the first valid numeric time sample
-      through Time0
-    - then take up to ``sample_count`` rows from the *start* of that region
-
-    This replaces the old "last n samples before Time0" behavior.
-    """
-    time_arr = get_time_numeric(df, time_column)
-    numeric_rows = np.flatnonzero(np.isfinite(time_arr))
-    if numeric_rows.size == 0:
-        return np.asarray([], dtype=int)
-
-    if time0_row is None:
-        time0_row = find_time0_row(df, time_column)
-    if time0_row is None:
-        return np.asarray([], dtype=int)
-
-    side = "right" if include_time0 else "left"
-    end_pos = int(np.searchsorted(numeric_rows, time0_row, side=side))
-    if end_pos <= 0:
-        return np.asarray([], dtype=int)
-
-    sample_count = max(0, int(sample_count))
-    if sample_count <= 0:
-        return np.asarray([], dtype=int)
-
-    return numeric_rows[:min(end_pos, sample_count)]
-
-
-
-def apply_offset(df, time_column, channel_names, sample_count, time0_row=None):
-    """Apply baseline offset to every requested numeric channel.
-
-    The preview/reference channel in the UI is only for visualization. This
-    function subtracts each channel's own mean offset from that channel across
-    the whole valid numeric region, excluding only the Time column.
-
-    Offset mean basis:
-    - start at the first valid numeric sample in the dataset
-    - include rows up to Time0
-    - use up to the first ``sample_count`` rows in that start-to-Time0 region
-    """
-    out = df.copy(deep=True)
-    sample_rows = get_offset_sample_rows(out, time_column, sample_count, time0_row=time0_row, include_time0=True)
-    if sample_rows.size == 0:
-        return out, {}
-
-    offsets = {}
-    for channel_name in channel_names:
-        y = pd.to_numeric(out[channel_name], errors="coerce").to_numpy(dtype=float)
-        valid_sample_rows = sample_rows[np.isfinite(y[sample_rows])]
-        if valid_sample_rows.size == 0:
-            continue
-        mean_value = float(np.mean(y[valid_sample_rows]))
-        if not np.isfinite(mean_value):
-            continue
-        offsets[channel_name] = mean_value
-        corrected = y.copy()
-        finite_rows = np.flatnonzero(np.isfinite(corrected))
-        corrected[finite_rows] = corrected[finite_rows] - mean_value
-        _replace_with_numeric_series(out, channel_name, corrected)
-
-    return out, offsets
 
 
 def make_channel_search_text(viewer, channel_name):

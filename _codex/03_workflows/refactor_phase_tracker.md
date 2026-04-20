@@ -57,6 +57,7 @@
 | Phase 5-B | Done | preprocessing function groups and folder-level snapshot compare workflow verified |
 | Phase 5-C | Done | channel role detector helper extraction implemented and user-tested |
 | Phase 5-D | Done | numeric/time helper extraction implemented and user-tested |
+| Phase 5-E | Partial | offset/trimming helper extraction implemented; awaiting user runtime test |
 | Phase 5 | In Progress | Started with regression fixture tooling only |
 
 ## Completed work on this branch
@@ -69,10 +70,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-Phase 5-E can start after user approval. Recommended scope: move trimming/offset helper
-functions (`trim_dataframe`, `get_offset_sample_rows`, `apply_offset`) to a dedicated
-module while preserving `service.py` compatibility imports and validating `_O` / `_O_F`
-snapshots.
+Wait for user runtime test after Phase 5-E offset/trimming helper extraction.
 
 Phase 5-A scope:
 - Added `tools/capture_regression_snapshot.py`.
@@ -115,6 +113,17 @@ Phase 5-D scope:
 - User tested runtime behavior as normal after the move.
 - Did not move trimming/offset commit functions, filtering functions, CFC filter kernel,
   End Points extension, HIC/3ms/VC/Nij/femur calculation functions.
+
+Phase 5-E scope:
+- Added `app/services/preprocessing/offset.py`.
+- Added `app/services/preprocessing/series_ops.py`.
+- Moved trim, offset sample-row, offset apply, and shared numeric series write helpers out of
+  `app/services/preprocessing/service.py`.
+- `service.py` keeps `trim_dataframe`, `get_offset_sample_rows`, `apply_offset`, and
+  `_replace_with_numeric_series` import compatibility.
+- Verified import compatibility and Phase 5 snapshot compare loop: all 5 representative snapshots match.
+- Did not move filtering functions, CFC filter kernel, End Points extension,
+  HIC/3ms/VC/Nij/femur calculation functions.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.
