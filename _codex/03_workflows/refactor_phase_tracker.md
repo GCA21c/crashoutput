@@ -63,6 +63,7 @@
 | Phase 5-H-1 | Done | CFC/filtering kernel call path reviewed and documented; no runtime code change |
 | Phase 5-H-2 | Done | CFC kernel module extraction implemented and user-tested |
 | Phase 5-I-1 | Done | injury helper call path reviewed and documented; no runtime code change |
+| Phase 5-I-2 | Partial | resultant helper extraction implemented; awaiting user runtime test |
 | Phase 5 | In Progress | Started with regression fixture tooling only |
 
 ## Completed work on this branch
@@ -75,8 +76,7 @@
 - Documented `dummyset` and `DummySetPage` compatibility requirements.
 
 ## Current next action
-Decide whether to proceed to Phase 5-I-2 small injury helper extraction. Keep it as a separate
-user-tested slice if approved.
+Wait for user runtime test after Phase 5-I-2 resultant helper extraction.
 
 Phase 5-A scope:
 - Added `tools/capture_regression_snapshot.py`.
@@ -201,6 +201,15 @@ Phase 5-I-1 scope:
   `common_engines.py`.
 - No calculation logic, injury formula, threshold/IARV, report key, or runtime code changed in
   this slice.
+
+Phase 5-I-2 scope:
+- Added `app/services/injury/vector_math.py`.
+- Moved `compute_resultant_xyz()` out of `app/services/preprocessing/service.py`.
+- `service.py` keeps `compute_resultant_xyz` available through import compatibility.
+- Verified direct import compatibility and Phase 5 snapshot compare loop: all 5 representative
+  snapshots match.
+- Did not change the resultant formula, HIC/3ms/VC/Nij/femur formulas, report keys, IARV,
+  or pass/fail logic.
 
 Phase 1-C decisions:
 - Keep `self.pages["dummyset"] = self.pages["test_setup"]`.

@@ -53,6 +53,7 @@ from app.services.preprocessing.cfc_filter import (
     end_points_extend as _end_points_extend,
 )
 from app.services.injury.common_engines import compute_3ms_bundle, compute_vc_engine_bundle
+from app.services.injury.vector_math import compute_resultant_xyz
 
 FILTER_OPTIONS = ("Raw", "CFC 60", "CFC 180", "CFC 600", "CFC 1000")
 OFFSET_SAMPLE_OPTIONS = (100, 300, 1000, 2000)
@@ -787,13 +788,6 @@ def compute_nij(fx_n, my_nm):
     nij_series = compute_nij_series(fx_n, my_nm)
     valid = nij_series[np.isfinite(nij_series)]
     return float(np.nanmax(valid)) if valid.size else None
-
-
-def compute_resultant_xyz(x, y, z):
-    x = np.asarray(x, dtype=float)
-    y = np.asarray(y, dtype=float)
-    z = np.asarray(z, dtype=float)
-    return np.sqrt(np.square(x) + np.square(y) + np.square(z))
 
 
 def compute_nij_series(fx_n, my_nm):

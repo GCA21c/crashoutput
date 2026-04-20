@@ -18,6 +18,7 @@
 - Documented CFC/filtering kernel call paths and high-risk boundary for Phase 5-H-1.
 - Extracted the CFC filter kernel into a dedicated preprocessing module for Phase 5-H-2.
 - Documented injury helper call paths and high-risk boundary for Phase 5-I-1.
+- Extracted the resultant XYZ helper into a dedicated injury vector math module for Phase 5-I-2.
 
 ## Why
 - Phase 5 will touch higher-risk boundaries around preprocessing, injury preparation, and
@@ -35,6 +36,7 @@
 - `app/services/preprocessing/filter_sources.py`
 - `app/services/preprocessing/cfc_filter.py`
 - `app/services/preprocessing/service.py`
+- `app/services/injury/vector_math.py`
 - `app/services/io/dat_loader.py`
 - `app/ui/pages/filtering_page.py`
 - `app/ui/pages/report_summary_page.py`

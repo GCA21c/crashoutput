@@ -411,3 +411,29 @@ Required verification for any Phase 5-I code move:
   - PELVIS resultant/3ms
   - FEMUR left/right force
   - REPORT SUMMARY and Excel export after injury results are saved
+
+## Phase 5-I-2 resultant helper extraction
+Implemented first small injury helper move:
+
+- new module: `app/services/injury/vector_math.py`
+- moved helper:
+  - `compute_resultant_xyz`
+
+Compatibility:
+- `app/services/preprocessing/service.py` imports `compute_resultant_xyz` from the new module.
+- Existing imports from `service.py` remain valid for `app/services/injury/pelvis_injury.py`
+  and `app/ui/pages/injury_page.py`.
+
+Not changed:
+- resultant formula: `sqrt(x^2 + y^2 + z^2)`
+- unit conversion responsibility
+- HIC / 3ms / VC / Nij / femur calculation functions
+- report payload keys
+- IARV / limit / pass-fail logic
+
+Required verification:
+- `py_compile` for `vector_math.py`, `service.py`, injury service modules, and `injury_page.py`
+- direct import compatibility from `service.py`
+- `capture-dir` after the move
+- `compare-dir` against the Phase 5 baseline
+- user tests: HEAD, CHEST, PELVIS resultant-related entry paths
