@@ -780,6 +780,27 @@ Required verification for any remaining Phase 5-J runtime move:
   - SUMMARY REPORT
   - Excel export when that body feeds report rows
 
+## Phase 5-J-6 femur calculation body extraction
+Implemented the first remaining injury-body runtime move:
+
+- new module: `app/services/injury/femur_metrics.py`
+- moved helper:
+  - `compute_femur_metrics`
+
+Compatibility:
+- `app/services/preprocessing/service.py` imports the moved helper and keeps the same public name.
+
+Not changed:
+- femur unit normalization rule
+- left/right peak selection rule
+- governing side rule
+- report payload keys
+- IARV / limit / pass-fail logic
+
+Required verification:
+- `py_compile` for `femur_metrics.py`, `service.py`, and `femur_injury.py`
+- user tests: FEMUR calculate, SUMMARY REPORT, and save/reopen
+
 ## PELVIS acceleration input CFC policy
 PELVIS acceleration channels use CFC1000 for AUTO SET and INJURY input preparation.
 This follows the SAE J211-1 Table 1 ATD channel recommendation for pelvis
