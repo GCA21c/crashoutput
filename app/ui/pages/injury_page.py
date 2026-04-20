@@ -2788,11 +2788,7 @@ class InjuryPage(tk.Frame):
         return np.asarray(values, dtype=float)
 
     def _head_plot_unit(self, channels):
-        unit_text = ' / '.join((self._unit_text(ch) or '') for ch in channels).lower()
-        if 'm/s' in unit_text or 'ms-2' in unit_text or 'mps2' in unit_text:
-            return 'g'
-        first = self._unit_text(channels[0]) if channels else ''
-        return first if first else 'Value'
+        return 'g'
 
     def _head_resultant_channel_name(self, slot):
         return f"{slot}_HEAD_RESULTANT_CFC1000"
