@@ -52,15 +52,32 @@ def _apply_transform(value, transform_name):
 
 def _read_path(container, path):
     current = container
-    flat_key = str(path or "").strip()
-    if isinstance(current, dict) and flat_key in current:
-        return current.get(flat_key)
-    for part in str(path or "").split("."):
+    parts = [part for part in str(path or "").split(".") if part]
+    if isinstance(current, dict):
+        flat_key = ".".join(parts)
+        if flat_key in current:
+            return current.get(flat_key)
+    index = 0
+    while index < len(parts):
         if not isinstance(current, dict):
             return None
-        current = current.get(part)
+        remaining = ".".join(parts[index:])
+        if remaining in current:
+            return current.get(remaining)
+        matched = False
+        for end in range(len(parts), index, -1):
+            candidate = ".".join(parts[index:end])
+            if candidate in current:
+                current = current.get(candidate)
+                index = end
+                matched = True
+                break
+        if matched:
+            continue
+        current = current.get(parts[index])
         if current is None:
             return None
+        index += 1
     return current
 
 
