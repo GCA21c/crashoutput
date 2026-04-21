@@ -68,6 +68,7 @@ class CrashAnalysisWorkbench(tk.Frame):
         self.current_page_key = None
         self.is_resizing = False
         self._resize_after_id = None
+        self._page_switch_busy_after_id = None
         self._last_root_size = None
         self._resize_commit_delay_ms = 600
         self.original_df = None
@@ -324,6 +325,15 @@ class CrashAnalysisWorkbench(tk.Frame):
             if not allowed:
                 return
             key = allowed[0]
+        viewer = getattr(self, "viewer", None)
+        if viewer is not None and hasattr(viewer, "start_busy_file_bar"):
+            viewer.start_busy_file_bar("page_switch")
+            if self._page_switch_busy_after_id is not None:
+                try:
+                    self.after_cancel(self._page_switch_busy_after_id)
+                except Exception:
+                    pass
+                self._page_switch_busy_after_id = None
         if self.is_resizing:
             self._finish_resize(commit_render=False)
         if self.current_page_key and self.current_page_key in self.pages and self.current_page_key != key:
@@ -334,6 +344,8 @@ class CrashAnalysisWorkbench(tk.Frame):
         self._refresh_nav_styles()
         if hasattr(self.pages[key], "on_show"):
             self.pages[key].on_show()
+        if viewer is not None and hasattr(viewer, "stop_busy_file_bar"):
+            self._page_switch_busy_after_id = self.after(260, lambda: viewer.stop_busy_file_bar("page_switch"))
 
     def _place_page(self, key):
         page = self.pages.get(key)

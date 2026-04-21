@@ -1145,6 +1145,9 @@ class FastCSVViewerWithGraph:
         self._graph_drag_motion_counter = 0
 
         self.zoom_span_artist = None
+        self._file_bar_busy_reasons = set()
+        self._file_bar_shimmer_job = None
+        self._file_bar_shimmer_offset = -120
 
         self._build_ui()
         self._bind_graph_events()
@@ -1156,11 +1159,32 @@ class FastCSVViewerWithGraph:
         open_button = tk.Button(top_frame, text="DATA LOAD(DAT/CSV)", command=self.load_dat)
         open_button.pack(side=tk.LEFT)
 
-        self.file_label = tk.Label(top_frame, text="선택된 파일 없음", anchor="w")
-        self.file_label.pack(side=tk.LEFT, padx=10)
-
         self.channel_label = tk.Label(top_frame, text="선택 채널: 없음", anchor="w")
         self.channel_label.pack(side=tk.RIGHT, padx=10)
+
+        self.file_bar_frame = tk.Frame(top_frame, bg="#eef2f7", bd=1, relief=tk.SOLID)
+        self.file_bar_frame.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10)
+
+        self.file_label = tk.Label(
+            self.file_bar_frame,
+            text="선택된 파일 없음",
+            anchor="w",
+            bg="#eef2f7",
+            fg="#111827",
+            padx=10,
+            pady=4,
+        )
+        self.file_label.pack(side=tk.TOP, fill=tk.X)
+
+        self.file_bar_shimmer = tk.Canvas(
+            self.file_bar_frame,
+            height=4,
+            bg="#dbe4ef",
+            highlightthickness=0,
+            bd=0,
+        )
+        self.file_bar_shimmer.pack(side=tk.TOP, fill=tk.X)
+        self.file_bar_shimmer.bind("<Configure>", lambda _event: self._render_file_bar_shimmer())
 
         self.main_pane = tk.PanedWindow(self.parent, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)
         self.main_pane.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 0))
@@ -1269,6 +1293,52 @@ class FastCSVViewerWithGraph:
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
 
         self.root.bind("<Escape>", self.on_escape_key)
+
+    def _render_file_bar_shimmer(self):
+        canvas = getattr(self, "file_bar_shimmer", None)
+        if canvas is None:
+            return
+        canvas.delete("shimmer")
+        width = max(1, int(canvas.winfo_width()))
+        height = max(1, int(canvas.winfo_height()))
+        if not self._file_bar_busy_reasons:
+            return
+        offset = float(self._file_bar_shimmer_offset)
+        canvas.create_rectangle(0, 0, width, height, fill="#dbe4ef", outline="", tags="shimmer")
+        canvas.create_rectangle(offset - 44, 0, offset + 44, height, fill="#f8fbff", outline="", tags="shimmer")
+        canvas.create_rectangle(offset - 18, 0, offset + 18, height, fill="#ffffff", outline="", tags="shimmer")
+
+    def _animate_file_bar_shimmer(self):
+        self._file_bar_shimmer_job = None
+        canvas = getattr(self, "file_bar_shimmer", None)
+        if canvas is None or not self._file_bar_busy_reasons:
+            return
+        width = max(1, int(canvas.winfo_width()))
+        self._file_bar_shimmer_offset += max(10, width // 24)
+        if self._file_bar_shimmer_offset > (width + 120):
+            self._file_bar_shimmer_offset = -120
+        self._render_file_bar_shimmer()
+        self._file_bar_shimmer_job = self.parent.after(28, self._animate_file_bar_shimmer)
+
+    def start_busy_file_bar(self, reason="busy"):
+        self._file_bar_busy_reasons.add(str(reason or "busy"))
+        if self._file_bar_shimmer_job is not None:
+            return
+        self._file_bar_shimmer_offset = -120
+        self._render_file_bar_shimmer()
+        self._file_bar_shimmer_job = self.parent.after(1, self._animate_file_bar_shimmer)
+
+    def stop_busy_file_bar(self, reason="busy"):
+        self._file_bar_busy_reasons.discard(str(reason or "busy"))
+        if self._file_bar_busy_reasons:
+            return
+        if self._file_bar_shimmer_job is not None:
+            try:
+                self.parent.after_cancel(self._file_bar_shimmer_job)
+            except Exception:
+                pass
+            self._file_bar_shimmer_job = None
+        self._render_file_bar_shimmer()
 
 
     def _format_cursor_number(self, value, decimals=4):
