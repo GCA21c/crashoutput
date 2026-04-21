@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 
 from app.report.plotting_config import (
@@ -265,6 +266,7 @@ def render_plot_image(workbench, item, output_path):
     return str(output_path)
 
 
+@contextmanager
 def rendered_plot_images(workbench, items):
     rendered = []
     with tempfile.TemporaryDirectory(prefix="crashoutput_plotting_") as tmpdir:
