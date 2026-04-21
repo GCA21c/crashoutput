@@ -75,7 +75,7 @@ EXCEL_VALUE_EXPORT_RULES = {
 EXCEL_RESULT_SOURCE_OVERRIDES = {
     "FMVSS 208": {
         ("HEAD", "Resultant Acc. 3ms Clip"): ("Multiple Peak 3ms",),
-        ("CHEST", "Chest Acc. 3ms Clip"): ("Resultant Acc. Peak",),
+        ("CHEST", "Chest Acc. 3ms Clip"): ("Multiple Peak 3ms",),
     },
 }
 
