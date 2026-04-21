@@ -2568,14 +2568,12 @@ class InjuryPage(tk.Frame):
         return True
 
     def _start_file_bar_busy(self, reason='injury_calc'):
-        viewer = getattr(self.workbench, 'viewer', None)
-        if viewer is not None and hasattr(viewer, 'start_busy_file_bar'):
-            viewer.start_busy_file_bar(reason)
+        if hasattr(self.workbench, 'start_busy_top_status'):
+            self.workbench.start_busy_top_status(reason)
 
     def _stop_file_bar_busy(self, reason='injury_calc'):
-        viewer = getattr(self.workbench, 'viewer', None)
-        if viewer is not None and hasattr(viewer, 'stop_busy_file_bar'):
-            viewer.stop_busy_file_bar(reason)
+        if hasattr(self.workbench, 'stop_busy_top_status'):
+            self.workbench.stop_busy_top_status(reason)
 
     def _calculate_all_slots(self, single_calc):
         viewer = self.workbench.viewer

@@ -69,6 +69,9 @@ class CrashAnalysisWorkbench(tk.Frame):
         self.is_resizing = False
         self._resize_after_id = None
         self._page_switch_busy_after_id = None
+        self._top_status_busy_reasons = set()
+        self._top_status_shimmer_job = None
+        self._top_status_shimmer_offset = -160
         self._last_root_size = None
         self._resize_commit_delay_ms = 600
         self.original_df = None
@@ -156,8 +159,14 @@ class CrashAnalysisWorkbench(tk.Frame):
 
         top_status = tk.Frame(right_area, bg=STATUS_BG, bd=1, relief=tk.SOLID)
         top_status.pack(side=tk.TOP, fill=tk.X, padx=8, pady=(8, 0))
-        tk.Label(top_status, textvariable=self.dataset_info_var, bg=STATUS_BG, anchor="w", fg=TITLE_FG).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10, pady=6)
-        tk.Label(top_status, textvariable=self.history_info_var, bg=STATUS_BG, anchor="e", fg=TEXT_FG).pack(side=tk.RIGHT, padx=10)
+        self.top_status = top_status
+        self.top_status_text = tk.Frame(top_status, bg=STATUS_BG)
+        self.top_status_text.pack(side=tk.TOP, fill=tk.X)
+        tk.Label(self.top_status_text, textvariable=self.dataset_info_var, bg=STATUS_BG, anchor="w", fg=TITLE_FG).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10, pady=6)
+        tk.Label(self.top_status_text, textvariable=self.history_info_var, bg=STATUS_BG, anchor="e", fg=TEXT_FG).pack(side=tk.RIGHT, padx=10)
+        self.top_status_shimmer = tk.Canvas(top_status, height=6, bg="#cfd6df", highlightthickness=0, bd=0)
+        self.top_status_shimmer.pack(side=tk.TOP, fill=tk.X)
+        self.top_status_shimmer.bind("<Configure>", lambda _event: self._render_top_status_shimmer())
 
         self.content = tk.Frame(right_area, bg=PAGE_BG)
         self.content.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
@@ -223,6 +232,53 @@ class CrashAnalysisWorkbench(tk.Frame):
         # Internal key/class spelling is kept for compatibility; user-facing text says PLOTTING.
         self.pages["report_ploting"] = ReportPlotingPage(self.page_host, self)
         self._apply_injury_mode_nav()
+
+    def _render_top_status_shimmer(self):
+        canvas = getattr(self, "top_status_shimmer", None)
+        if canvas is None:
+            return
+        canvas.delete("shimmer")
+        width = max(1, int(canvas.winfo_width()))
+        height = max(1, int(canvas.winfo_height()))
+        if not self._top_status_busy_reasons:
+            canvas.create_rectangle(0, 0, width, height, fill="#cfd6df", outline="", tags="shimmer")
+            return
+        offset = float(self._top_status_shimmer_offset)
+        canvas.create_rectangle(0, 0, width, height, fill="#d6dde6", outline="", tags="shimmer")
+        canvas.create_rectangle(offset - 72, 0, offset + 72, height, fill="#f3f7fb", outline="", tags="shimmer")
+        canvas.create_rectangle(offset - 24, 0, offset + 24, height, fill="#ffffff", outline="", tags="shimmer")
+
+    def _animate_top_status_shimmer(self):
+        self._top_status_shimmer_job = None
+        canvas = getattr(self, "top_status_shimmer", None)
+        if canvas is None or not self._top_status_busy_reasons:
+            return
+        width = max(1, int(canvas.winfo_width()))
+        self._top_status_shimmer_offset += max(12, width // 20)
+        if self._top_status_shimmer_offset > (width + 160):
+            self._top_status_shimmer_offset = -160
+        self._render_top_status_shimmer()
+        self._top_status_shimmer_job = self.after(28, self._animate_top_status_shimmer)
+
+    def start_busy_top_status(self, reason="busy"):
+        self._top_status_busy_reasons.add(str(reason or "busy"))
+        if self._top_status_shimmer_job is not None:
+            return
+        self._top_status_shimmer_offset = -160
+        self._render_top_status_shimmer()
+        self._top_status_shimmer_job = self.after(1, self._animate_top_status_shimmer)
+
+    def stop_busy_top_status(self, reason="busy"):
+        self._top_status_busy_reasons.discard(str(reason or "busy"))
+        if self._top_status_busy_reasons:
+            return
+        if self._top_status_shimmer_job is not None:
+            try:
+                self.after_cancel(self._top_status_shimmer_job)
+            except Exception:
+                pass
+            self._top_status_shimmer_job = None
+        self._render_top_status_shimmer()
 
     def _add_nav_section(self, text):
         tk.Label(self.sidebar, text=text, font=NAV_FONT_BOLD, bg=SIDEBAR_BG, fg=SECTION_FG, anchor="w", padx=14, pady=8).pack(fill=tk.X, pady=(10, 2))
@@ -325,15 +381,13 @@ class CrashAnalysisWorkbench(tk.Frame):
             if not allowed:
                 return
             key = allowed[0]
-        viewer = getattr(self, "viewer", None)
-        if viewer is not None and hasattr(viewer, "start_busy_file_bar"):
-            viewer.start_busy_file_bar("page_switch")
-            if self._page_switch_busy_after_id is not None:
-                try:
-                    self.after_cancel(self._page_switch_busy_after_id)
-                except Exception:
-                    pass
-                self._page_switch_busy_after_id = None
+        self.start_busy_top_status("page_switch")
+        if self._page_switch_busy_after_id is not None:
+            try:
+                self.after_cancel(self._page_switch_busy_after_id)
+            except Exception:
+                pass
+            self._page_switch_busy_after_id = None
         if self.is_resizing:
             self._finish_resize(commit_render=False)
         if self.current_page_key and self.current_page_key in self.pages and self.current_page_key != key:
@@ -344,8 +398,7 @@ class CrashAnalysisWorkbench(tk.Frame):
         self._refresh_nav_styles()
         if hasattr(self.pages[key], "on_show"):
             self.pages[key].on_show()
-        if viewer is not None and hasattr(viewer, "stop_busy_file_bar"):
-            self._page_switch_busy_after_id = self.after(260, lambda: viewer.stop_busy_file_bar("page_switch"))
+        self._page_switch_busy_after_id = self.after(260, lambda: self.stop_busy_top_status("page_switch"))
 
     def _place_page(self, key):
         page = self.pages.get(key)
