@@ -80,6 +80,13 @@ EXCEL_RESULT_SOURCE_OVERRIDES = {
 }
 
 
+EXCEL_RESULT_FIELD_OVERRIDES = {
+    "FMVSS 208": {
+        ("HEAD", "80g / 3ms Limit"): "status",
+    },
+}
+
+
 SUMMARY_CRITERIA_ALIASES = {
     "CHEST": {
         "One Peak 3ms": ("One Peak 3ms",),
@@ -99,6 +106,7 @@ SUMMARY_CRITERIA_ALIASES = {
         "One Peak 3ms": ("One Peak 3ms",),
         "Multiple Peak 3ms": ("Multiple Peak 3ms",),
         "Resultant Acc. 3ms Clip": ("Resultant Acc. Peak", "Resultant Acc. 3ms Clip"),
+        "80g / 3ms Limit": ("Head Acceleration 80g / 3ms Limit", "80g / 3ms Limit"),
     },
     "KNEE": {
         "Left Knee Disp.": ("Left KNEE Displacement Peak",),
@@ -129,5 +137,6 @@ FMVSS208_SUMMARY_TEMPLATE = {
     "iarv_export_rules": EXCEL_IARV_EXPORT_RULES,
     "value_export_rules": EXCEL_VALUE_EXPORT_RULES,
     "result_source_overrides": EXCEL_RESULT_SOURCE_OVERRIDES,
+    "result_field_overrides": EXCEL_RESULT_FIELD_OVERRIDES,
     "criteria_aliases": SUMMARY_CRITERIA_ALIASES,
 }
