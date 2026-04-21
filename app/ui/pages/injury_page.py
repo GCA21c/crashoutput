@@ -2820,6 +2820,14 @@ class InjuryPage(tk.Frame):
             labels[axis_key] = f"ACC {axis_key.upper()} - {rewritten}"
         return labels
 
+    def _chest_dummy_profile_label(self, slot):
+        state = dict(self.slot_states.get(slot) or {})
+        return (
+            self.multi_dummy_panel.profile_var(slot).get().strip()
+            or str(state.get('dummy_profile') or '').strip()
+            or self.chest_dummy_var.get().strip()
+        )
+
     def _head_resultant_channel_metadata(self, slot, channels):
         x_ch, y_ch, z_ch = channels
         return {
@@ -3389,7 +3397,7 @@ class InjuryPage(tk.Frame):
                 accel_units={'x': self._unit_text(x_ch), 'y': self._unit_text(y_ch), 'z': self._unit_text(z_ch)},
                 disp_unit=self._unit_text(disp_ch),
                 criterion_key=self.chest_dummy_var.get(),
-                dummy_profile_label=self.multi_dummy_panel.profile_var(slot).get().strip(),
+                dummy_profile_label=self._chest_dummy_profile_label(slot),
                 raw_displacement=raw_disp_series,
                 raw_accel=raw_accel_series,
                 accel_filter_labels={
@@ -4960,7 +4968,7 @@ class InjuryPage(tk.Frame):
                     accel_units={'x': self._unit_text(x_ch), 'y': self._unit_text(y_ch), 'z': self._unit_text(z_ch)},
                     disp_unit=self._unit_text(disp_ch),
                     criterion_key=state.get('dummy_profile') or self.chest_dummy_var.get(),
-                    dummy_profile_label=state.get('dummy_profile') or self.chest_dummy_var.get(),
+                    dummy_profile_label=self._chest_dummy_profile_label(slot),
                     raw_displacement=raw_disp_series,
                     raw_accel=raw_accel_series,
                     accel_filter_labels={

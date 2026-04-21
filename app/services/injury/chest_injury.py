@@ -141,6 +141,9 @@ def calculate_chest_injury_bundle(
     ):
         lines.append(_format_chest_axis_block(accel_display_names.get(axis_key) or fallback_label, 'g', metrics['time'], arr))
         lines.append('')
+    lines.append(f"Dummy Family: {dummy_profile_label or criterion_key or '-'}")
+    lines.append("For V*C, SAE J1727 uses CFC600 displacement and ECE-R94 uses CFC180 displacement.")
+    lines.append("Whenever the selected displacement channel does not already match the required CFC class, the code rebuilds the missing path from raw-aligned displacement to avoid double filtering.")
     lines.append('')
     lines.append('- Injuries -')
     lines.append(_clip_line('One Peak 3ms_Clip', 'g', metrics.get('one_peak_3ms_detail')))
@@ -161,12 +164,6 @@ def calculate_chest_injury_bundle(
     lines.append('V*C ECE94_CFC180')
     lines.append(_peak_line('Max', 'm/s', ece_max, decimals=4))
     lines.append(_peak_line('Min', 'm/s', ece_min, decimals=4))
-    crit = metrics.get('criteria', {})
-    lines.append('')
-    lines.append(f"Dummy Family: {dummy_profile_label or criterion_key or '-'}")
-    lines.append("For V*C, SAE J1727 uses CFC600 displacement and ECE-R94 uses CFC180 displacement.")
-    lines.append("Whenever the selected displacement channel does not already match the required CFC class, the code rebuilds the missing path from raw-aligned displacement to avoid double filtering.")
-
     return {
         'metrics': metrics,
         'summary_text': '\n'.join(lines),
