@@ -2567,6 +2567,14 @@ class InjuryPage(tk.Frame):
             return messagebox.askyesno('확인', f'{slot} 위치에 데이터는 있으나 더미 유형 설정이 없습니다. 계속 진행하시겠습니까?')
         return True
 
+    def _start_file_bar_busy(self, reason='injury_calc'):
+        if hasattr(self.workbench, 'start_busy_top_status'):
+            self.workbench.start_busy_top_status(reason)
+
+    def _stop_file_bar_busy(self, reason='injury_calc'):
+        if hasattr(self.workbench, 'stop_busy_top_status'):
+            self.workbench.stop_busy_top_status(reason)
+
     def _calculate_all_slots(self, single_calc):
         viewer = self.workbench.viewer
         if viewer.df is None or viewer.time_column is None:
@@ -2574,20 +2582,24 @@ class InjuryPage(tk.Frame):
             return
         previous = self._active_slot()
         any_success = False
-        for slot in self._active_positions():
-            if not self._confirm_missing_dummy_profile(slot):
-                continue
-            self.active_dummy_var.set(slot)
-            try:
-                single_calc()
-                any_success = True
-            except Exception as exc:
-                messagebox.showwarning('경고', f'{slot} 계산 중 오류가 발생했습니다.\n{exc}')
-        self.active_dummy_var.set(previous if previous in self._active_positions() else self._first_active_position())
-        self._update_combined_summary()
-        if any_success:
-            if hasattr(self.workbench, 'add_history_entry'):
-                self._log_history(f'Calculation completed successfully for {len(self._active_positions())} active dummy position(s)', event_type='batch_calculation', slot=self._active_slot(), persist=True)
+        self._start_file_bar_busy('injury_batch')
+        try:
+            for slot in self._active_positions():
+                if not self._confirm_missing_dummy_profile(slot):
+                    continue
+                self.active_dummy_var.set(slot)
+                try:
+                    single_calc()
+                    any_success = True
+                except Exception as exc:
+                    messagebox.showwarning('경고', f'{slot} 계산 중 오류가 발생했습니다.\n{exc}')
+            self.active_dummy_var.set(previous if previous in self._active_positions() else self._first_active_position())
+            self._update_combined_summary()
+            if any_success:
+                if hasattr(self.workbench, 'add_history_entry'):
+                    self._log_history(f'Calculation completed successfully for {len(self._active_positions())} active dummy position(s)', event_type='batch_calculation', slot=self._active_slot(), persist=True)
+        finally:
+            self._stop_file_bar_busy('injury_batch')
 
     def calculate_hic_bundle_all(self):
         self._calculate_all_slots(self.calculate_hic_bundle)
@@ -2922,6 +2934,7 @@ class InjuryPage(tk.Frame):
             return
         slot = self._active_slot()
         self._save_active_slot_state()
+        self._start_file_bar_busy('injury_calc')
         try:
             time, resultant, channels, resolved_axes, used_channels = self._get_xyz_resultant()
             resultant_channel = self._head_resultant_channel_name(slot)
@@ -2979,6 +2992,8 @@ class InjuryPage(tk.Frame):
             self.show_hic_bundle_graph(preferred_graph_key, slot=slot)
         except Exception as exc:
             messagebox.showwarning('경고', str(exc))
+        finally:
+            self._stop_file_bar_busy('injury_calc')
 
     def show_hic_bundle_graph(self, metric_key, slot=None, silent=False):
         slot = slot or self._active_slot()
@@ -3100,6 +3115,7 @@ class InjuryPage(tk.Frame):
             'My': -1.0 if self.nij_my_neg_var.get() else 1.0,
             'Mz': -1.0 if self.nij_mz_neg_var.get() else 1.0,
         }
+        self._start_file_bar_busy('injury_calc')
         try:
             result = calculate_neck_injury_bundle(
                 time=self._get_time(),
@@ -3229,6 +3245,8 @@ class InjuryPage(tk.Frame):
             self.show_neck_graph(preferred_graph_key, slot=slot)
         except Exception as exc:
             messagebox.showwarning('경고', str(exc))
+        finally:
+            self._stop_file_bar_busy('injury_calc')
 
     def show_neck_graph(self, mode, slot=None, silent=False):
         slot = slot or self._active_slot()
@@ -3372,6 +3390,7 @@ class InjuryPage(tk.Frame):
             return
         slot = self._active_slot()
         self._save_active_slot_state()
+        self._start_file_bar_busy('injury_calc')
         try:
             time = self._get_time()
             x_ch = self._selected_channel(self.chest_x_var)
@@ -3480,6 +3499,8 @@ class InjuryPage(tk.Frame):
             self.show_chest_graph(preferred_graph_key, slot=slot)
         except Exception as exc:
             messagebox.showwarning('경고', str(exc))
+        finally:
+            self._stop_file_bar_busy('injury_calc')
 
     def show_chest_graph(self, mode, slot=None, silent=False):
         slot = slot or self._active_slot()
@@ -3582,6 +3603,7 @@ class InjuryPage(tk.Frame):
             return
         left_sign = 1.0
         right_sign = 1.0
+        self._start_file_bar_busy('injury_calc')
         try:
             left_force, used_left = self._resolve_standard_series_for_calc(left_ch, 'femur_injury', 'left', 600, left_sign)
             right_force, used_right = self._resolve_standard_series_for_calc(right_ch, 'femur_injury', 'right', 600, right_sign)
@@ -3655,6 +3677,8 @@ class InjuryPage(tk.Frame):
             self.show_femur_graph(preferred_graph_key, slot=slot)
         except Exception as exc:
             messagebox.showwarning('寃쎄퀬', str(exc))
+        finally:
+            self._stop_file_bar_busy('injury_calc')
 
     def _legacy_calculate_femur(self):
         self.calculate_femur()
@@ -5204,6 +5228,7 @@ class InjuryPage(tk.Frame):
             return
         slot = self._active_slot()
         self._save_active_slot_state()
+        self._start_file_bar_busy('injury_calc')
         try:
             x_ch = self._selected_channel(self.pelvis_x_var)
             y_ch = self._selected_channel(self.pelvis_y_var)
@@ -5265,6 +5290,8 @@ class InjuryPage(tk.Frame):
             self.show_pelvis_graph(preferred_graph_key, slot=slot)
         except Exception as exc:
             messagebox.showwarning('\uacbd\uace0', str(exc))
+        finally:
+            self._stop_file_bar_busy('injury_calc')
 
     def show_pelvis_graph(self, mode, slot=None, silent=False):
         slot = slot or self._active_slot()
@@ -5335,6 +5362,7 @@ class InjuryPage(tk.Frame):
         if not (left_ch and right_ch):
             messagebox.showwarning('경고', 'KNEE 계산에는 Left/Right knee slider 채널이 모두 필요합니다.')
             return
+        self._start_file_bar_busy('injury_calc')
         try:
             result = calculate_knee_injury_bundle(
                 time=self._get_time(),
@@ -5382,6 +5410,8 @@ class InjuryPage(tk.Frame):
             self.show_knee_graph(preferred_graph_key, slot=slot)
         except Exception as exc:
             messagebox.showwarning('경고', str(exc))
+        finally:
+            self._stop_file_bar_busy('injury_calc')
 
     def calculate_iliac(self):
         viewer = self.workbench.viewer
@@ -5399,6 +5429,7 @@ class InjuryPage(tk.Frame):
         if not all((left_fx_ch, left_my_ch, right_fx_ch, right_my_ch)):
             messagebox.showwarning('경고', 'ILIAC 계산에는 Left/Right Fx/My 채널이 모두 필요합니다.')
             return
+        self._start_file_bar_busy('injury_calc')
         try:
             st = self.slot_states[slot]
             criterion_key = (self.multi_dummy_panel.profile_var(slot).get().strip() or self.iliac_dummy_var.get().strip() or 'THOR_50M_ASIS')
@@ -5453,6 +5484,8 @@ class InjuryPage(tk.Frame):
             self.show_iliac_graph(preferred_graph_key, slot=slot)
         except Exception as exc:
             messagebox.showwarning('경고', str(exc))
+        finally:
+            self._stop_file_bar_busy('injury_calc')
 
     def calculate_tibia(self):
         viewer = self.workbench.viewer
@@ -5494,6 +5527,7 @@ class InjuryPage(tk.Frame):
         if not all(channel_map[key] for key in required_keys):
             messagebox.showwarning('경고', 'TIBIA 계산에는 좌/우 upper/lower Fz, Mx, My 채널이 모두 필요합니다.')
             return
+        self._start_file_bar_busy('injury_calc')
         try:
             criterion_key = (self.multi_dummy_panel.profile_var(slot).get().strip() or self.tibia_dummy_var.get().strip() or 'H3_50M_EURO_NCAP')
             units = {key: self._unit_text(channel_map[key]) for key in channel_map}
@@ -5554,6 +5588,8 @@ class InjuryPage(tk.Frame):
             self.show_tibia_graph(preferred_graph_key, slot=slot)
         except Exception as exc:
             messagebox.showwarning('경고', str(exc))
+        finally:
+            self._stop_file_bar_busy('injury_calc')
 
     def show_knee_graph(self, mode, slot=None, silent=False):
         slot = slot or self._active_slot()
