@@ -167,7 +167,6 @@ class CrashAnalysisWorkbench(tk.Frame):
         self.top_status_dataset_label.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10, pady=6)
         self.top_status_history_label = tk.Label(top_status, textvariable=self.history_info_var, bg=STATUS_BG, anchor="e", fg=TEXT_FG)
         self.top_status_history_label.pack(side=tk.RIGHT, padx=10)
-        self.top_status_shimmer.lower()
 
         self.content = tk.Frame(right_area, bg=PAGE_BG)
         self.content.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
