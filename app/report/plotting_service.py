@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import os
+import re
 import tempfile
 from pathlib import Path
 
@@ -23,6 +23,9 @@ PLOTTING_MODULE_ORDER = (
     ("iliac", "iliac"),
     ("tibia", "tibia"),
 )
+
+_SLOT_ORDER = {slot: index for index, slot in enumerate(("B1", "B2", "B3", "B4", "B5", "B6"))}
+_MODULE_ORDER = {section_key: index for index, (_page_key, section_key) in enumerate(PLOTTING_MODULE_ORDER)}
 
 
 def plotting_payload_from_metadata(metadata):
@@ -110,7 +113,14 @@ def collect_plot_items(workbench):
     items = []
     for page_key, section_key in PLOTTING_MODULE_ORDER:
         items.extend(_collect_page_plot_items(workbench, page_key, section_key))
-    return items
+    return sorted(
+        items,
+        key=lambda item: (
+            _SLOT_ORDER.get(str(item.get("slot") or "").strip().upper(), len(_SLOT_ORDER)),
+            _MODULE_ORDER.get(str(item.get("section_key") or "").strip().lower(), len(_MODULE_ORDER)),
+            str(item.get("graph_label") or item.get("graph_key") or ""),
+        ),
+    )
 
 
 def merge_plot_items(existing_payload, collected_items):
@@ -150,7 +160,14 @@ def available_plot_options(all_items, current_items):
         item_key = str(item.get("item_key") or "")
         if item_key and item_key not in current_keys:
             options.append(dict(item))
-    return options
+    return sorted(
+        options,
+        key=lambda item: (
+            _SLOT_ORDER.get(str(item.get("slot") or "").strip().upper(), len(_SLOT_ORDER)),
+            _MODULE_ORDER.get(str(item.get("section_key") or "").strip().lower(), len(_MODULE_ORDER)),
+            str(item.get("graph_label") or item.get("graph_key") or ""),
+        ),
+    )
 
 
 def build_plotting_payload(items, report_fields, template_path=None):
@@ -172,7 +189,17 @@ def plotting_default_template_path():
 
 def plotting_output_default_name(source_path):
     source_name = Path(str(source_path or "plotting")).stem
-    return f"{source_name}{PLOTTING_OUTPUT_SUFFIX}.pptx"
+    safe_name = re.sub(r'[\\/:*?"<>|]+', "_", str(source_name)).strip() or "plotting"
+    return f"{safe_name}{PLOTTING_OUTPUT_SUFFIX}.pptx"
+
+
+def plotting_output_name_from_fields(report_fields, source_path=None):
+    report_fields = dict(report_fields or {})
+    test_id = str(report_fields.get("test_id") or "").strip()
+    if test_id:
+        safe_name = re.sub(r'[\\/:*?"<>|]+', "_", test_id).strip() or "plotting"
+        return f"{safe_name}{PLOTTING_OUTPUT_SUFFIX}.pptx"
+    return plotting_output_default_name(source_path)
 
 
 def plotting_item_display_name(item):
@@ -250,4 +277,3 @@ def rendered_plot_images(workbench, items):
             render_plot_image(workbench, item, image_path)
             rendered.append((dict(item), image_path))
         yield rendered
-

@@ -10,7 +10,7 @@ from app.report.plotting_service import (
     merge_plot_items,
     plotting_default_template_path,
     plotting_item_display_name,
-    plotting_output_default_name,
+    plotting_output_name_from_fields,
     plotting_payload_from_metadata,
     plotting_report_fields,
     plotting_save_suffix,
@@ -381,7 +381,7 @@ class ReportPlotingPage(tk.Frame):
 
     def _select_export_path(self):
         current_source = getattr(self.workbench, "current_file_path", None) or getattr(self.workbench, "source_file_label", None)
-        filename = plotting_output_default_name(current_source)
+        filename = plotting_output_name_from_fields(plotting_report_fields(self.workbench), current_source)
         return filedialog.asksaveasfilename(
             parent=self,
             title="Save PPT Export",

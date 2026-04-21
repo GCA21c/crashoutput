@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from pathlib import Path
 
-from app.report.plotting_config import GRAPH_LAYOUT
-from app.report.plotting_service import format_common_report_text, plotting_item_display_name, plotting_item_text, rendered_plot_images
+from app.report.plotting_config import PLOTTING_TEMPLATE_TEXT_MARKERS
+from app.report.plotting_service import plotting_item_display_name, plotting_item_text, rendered_plot_images
 
 
 class PptExportError(RuntimeError):
@@ -13,67 +14,167 @@ class PptExportError(RuntimeError):
 def _load_presentation_api():
     try:
         from pptx import Presentation
-        from pptx.util import Inches, Pt
+        from pptx.enum.shapes import MSO_SHAPE_TYPE
     except ImportError as exc:
         raise PptExportError("python-pptx is required for PPT export. Install python-pptx and retry.") from exc
-    return Presentation, Inches, Pt
+    return Presentation, MSO_SHAPE_TYPE
 
 
-def _clear_text_frame(shape):
+def _shape_text(shape):
+    if not getattr(shape, "has_text_frame", False):
+        return ""
+    parts = []
+    for paragraph in list(shape.text_frame.paragraphs):
+        text = "".join(run.text for run in list(paragraph.runs))
+        if text:
+            parts.append(text)
+    return "\n".join(parts).strip()
+
+
+def _shape_has_marker(shape, marker):
+    return marker.lower() in _shape_text(shape).lower()
+
+
+def _find_marker_shape(slide, marker):
+    for shape in list(slide.shapes):
+        if _shape_has_marker(shape, marker):
+            return shape
+    return None
+
+
+def _set_shape_lines(shape, lines):
     if not getattr(shape, "has_text_frame", False):
         return
-    shape.text_frame.clear()
-
-
-def _set_textbox_text(slide, box, text, *, font_size_pt, bold=False):
-    left, top, width, height = box
-    shape = slide.shapes.add_textbox(left, top, width, height)
+    lines = [str(line) for line in list(lines or [])]
+    if not lines:
+        lines = [""]
     text_frame = shape.text_frame
-    text_frame.word_wrap = True
-    text_frame.clear()
-    paragraph = text_frame.paragraphs[0]
-    run = paragraph.add_run()
-    run.text = str(text or "").strip()
-    run.font.size = font_size_pt
-    run.font.bold = bool(bold)
-    return shape
+    while len(text_frame.paragraphs) < len(lines):
+        text_frame.add_paragraph()
+    paragraphs = list(text_frame.paragraphs)
+    for index, paragraph in enumerate(paragraphs):
+        target = lines[index] if index < len(lines) else ""
+        runs = list(paragraph.runs)
+        if runs:
+            runs[0].text = target
+            for run in runs[1:]:
+                run.text = ""
+        else:
+            paragraph.text = target
+
+
+def _duplicate_template_slide(presentation, source_slide):
+    slide = presentation.slides.add_slide(source_slide.slide_layout)
+    sp_tree = slide.shapes._spTree
+    for shape in list(slide.shapes):
+        sp_tree.remove(shape.element)
+    for shape in list(source_slide.shapes):
+        sp_tree.insert_element_before(deepcopy(shape.element), "p:extLst")
+    for rel in list(source_slide.part.rels.values()):
+        if "notesSlide" in rel.reltype:
+            continue
+        slide.part.rels.add_relationship(rel.reltype, rel._target, rel.rId)
+    return slide
+
+
+def _report_info_lines(report_fields, item, workbench):
+    report_fields = dict(report_fields or {})
+    config = getattr(workbench, "get_shared_dummy_config", lambda: {})() or {}
+    test_mode = str(config.get("injury_test_mode") or "-").strip().upper() or "-"
+    dummy_value = str(item.get("dummy_profile") or item.get("dummy_name") or "-").strip() or "-"
+    manufacturer = str(report_fields.get("manufacturer") or "").strip() or "-"
+    vehicle = str(report_fields.get("vehicle") or "").strip() or "-"
+    speed = str(report_fields.get("speed") or "").strip() or "-"
+    test_date = str(report_fields.get("test_date") or "").strip() or "-"
+    test_id = str(report_fields.get("test_id") or "").strip() or "-"
+    return [
+        f"Test ID : {test_id}",
+        f"Test Date : {test_date}",
+        f"Dummy : {dummy_value}",
+        f"Manufacturer : {manufacturer}",
+        f"Vehicle : {vehicle}",
+        f"Test mode : {test_mode}",
+        f"Speed : {speed}",
+    ]
+
+
+def _apply_text_mapping(slide, item, report_fields, workbench):
+    test_id = str(dict(report_fields or {}).get("test_id") or "").strip() or "-"
+    graph_header = plotting_item_display_name(item)
+
+    title_shape = _find_marker_shape(slide, PLOTTING_TEMPLATE_TEXT_MARKERS["test_id_title"])
+    if title_shape is None:
+        raise PptExportError("Template marker not found: TEST ID")
+    _set_shape_lines(title_shape, [test_id])
+
+    header_shape = _find_marker_shape(slide, PLOTTING_TEMPLATE_TEXT_MARKERS["graph_header"])
+    if header_shape is None:
+        raise PptExportError("Template marker not found: Graph header name")
+    _set_shape_lines(header_shape, [graph_header])
+
+    fields_shape = _find_marker_shape(slide, PLOTTING_TEMPLATE_TEXT_MARKERS["report_fields"])
+    if fields_shape is None:
+        raise PptExportError("Template marker not found: Test ID :")
+    _set_shape_lines(fields_shape, _report_info_lines(report_fields, item, workbench))
+
+    injury_shape = _find_marker_shape(slide, PLOTTING_TEMPLATE_TEXT_MARKERS["injury_text"])
+    if injury_shape is None:
+        raise PptExportError("Template marker not found: Input txt")
+    _set_shape_lines(injury_shape, plotting_item_text(item).splitlines())
+
+
+def _apply_plot_image(slide, image_path, mso_shape_type):
+    plot_shape = _find_marker_shape(slide, PLOTTING_TEMPLATE_TEXT_MARKERS["plot_box"])
+    if plot_shape is None:
+        raise PptExportError("Template marker not found: Plot here")
+    if getattr(plot_shape, "shape_type", None) == mso_shape_type.AUTO_SHAPE:
+        try:
+            plot_shape.fill.user_picture(str(image_path))
+            if getattr(plot_shape, "has_text_frame", False):
+                _set_shape_lines(plot_shape, [""])
+            return
+        except Exception:
+            pass
+    left = plot_shape.left
+    top = plot_shape.top
+    width = plot_shape.width
+    height = plot_shape.height
+    slide.shapes.add_picture(str(image_path), left, top, width=width, height=height)
+    if getattr(plot_shape, "has_text_frame", False):
+        _set_shape_lines(plot_shape, [""])
 
 
 def export_plotting_report_to_ppt(workbench, items, report_fields, output_path, template_path):
-    Presentation, Inches, Pt = _load_presentation_api()
+    Presentation, MSO_SHAPE_TYPE = _load_presentation_api()
     template = Path(str(template_path or "")).expanduser().resolve()
     if not template.exists():
         raise PptExportError(f"PPT template not found: {template}")
 
+    included_items = [dict(item) for item in list(items or []) if bool(item.get("included", True))]
+    if not included_items:
+        raise PptExportError("No included plots to export.")
+
     presentation = Presentation(str(template))
-    blank_layout = None
-    for layout in presentation.slide_layouts:
-        if not getattr(layout, "placeholders", None):
-            blank_layout = layout
-            break
-    if blank_layout is None:
-        blank_layout = presentation.slide_layouts[len(presentation.slide_layouts) - 1]
+    if not presentation.slides:
+        raise PptExportError("Template has no slides.")
+    template_slide = presentation.slides[0]
 
     output = Path(str(output_path)).expanduser().resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
-    common_text = format_common_report_text(report_fields)
     written = 0
 
-    with rendered_plot_images(workbench, items) as rendered_items:
-        for item, image_path in rendered_items:
-            slide = presentation.slides.add_slide(blank_layout)
-            title = plotting_item_display_name(item)
-            _set_textbox_text(slide, tuple(Inches(v) for v in GRAPH_LAYOUT["title_box"]), title, font_size_pt=Pt(18), bold=True)
-            _set_textbox_text(slide, tuple(Inches(v) for v in GRAPH_LAYOUT["common_box"]), common_text, font_size_pt=Pt(10), bold=False)
-            left, top, width, height = [Inches(v) for v in GRAPH_LAYOUT["graph_box"]]
-            slide.shapes.add_picture(str(image_path), left, top, width=width, height=height)
-            _set_textbox_text(
-                slide,
-                tuple(Inches(v) for v in GRAPH_LAYOUT["injury_box"]),
-                plotting_item_text(item),
-                font_size_pt=Pt(10),
-                bold=False,
-            )
+    with rendered_plot_images(workbench, included_items) as rendered_items:
+        if not rendered_items:
+            raise PptExportError("No rendered plots available for export.")
+        base_item, base_image = rendered_items[0]
+        _apply_text_mapping(template_slide, base_item, report_fields, workbench)
+        _apply_plot_image(template_slide, base_image, MSO_SHAPE_TYPE)
+        written += 1
+
+        for item, image_path in rendered_items[1:]:
+            slide = _duplicate_template_slide(presentation, template_slide)
+            _apply_text_mapping(slide, item, report_fields, workbench)
+            _apply_plot_image(slide, image_path, MSO_SHAPE_TYPE)
             written += 1
 
     presentation.save(str(output))

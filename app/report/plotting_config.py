@@ -1,7 +1,7 @@
 from pathlib import Path
 
 
-PLOTTING_TEMPLATE_FILENAME = "ReportPlotting_temp.pptx"
+PLOTTING_TEMPLATE_FILENAME = "testid_Plot.pptx"
 
 
 def resolve_plotting_template_path():
@@ -14,7 +14,7 @@ def resolve_plotting_template_path():
 PLOTTING_TEMPLATE_PATH = resolve_plotting_template_path()
 
 
-PLOTTING_OUTPUT_SUFFIX = "_PLOTTING"
+PLOTTING_OUTPUT_SUFFIX = "_Plot"
 PLOTTING_SAVE_SUFFIX = "_P"
 PLOTTING_CACHE_KEY = "plotting_report"
 
@@ -27,11 +27,10 @@ COMMON_REPORT_FIELD_ORDER = (
     ("test_id", "Test ID"),
 )
 
-
-GRAPH_LAYOUT = {
-    "title_box": (0.6, 0.3, 11.8, 0.45),
-    "common_box": (0.6, 0.8, 11.8, 0.7),
-    "graph_box": (0.6, 1.65, 8.1, 5.0),
-    "injury_box": (8.95, 1.65, 3.3, 5.0),
+PLOTTING_TEMPLATE_TEXT_MARKERS = {
+    "test_id_title": "TEST ID",
+    "graph_header": "Graph header name",
+    "report_fields": "Test ID :",
+    "injury_text": "Input txt",
+    "plot_box": "Plot here",
 }
-
