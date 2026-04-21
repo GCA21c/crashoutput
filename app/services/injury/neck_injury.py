@@ -166,11 +166,11 @@ def calculate_neck_injury_bundle(
         + "\n\n"
     )
     summary = (
-        f"Criterion: {crit.get('criterion_label', criterion_key)}\n"
         f"Dummy Family: {dummy_profile_label or criterion_key or '-'}\n"
         f"Moment Input: {moment_input_label}\n"
         f"Lever arm D: {crit.get('moc_d', 0.0):.6f} m | MOC 적용: {'Yes' if crit.get('moc_applied') else 'No'}\n\n"
         + summary_detail
+        + "- Injuries -\n"
         + fmt_metric_at('Peak Tension Force (FZ+)', metrics['peak_tension_fz'], unit='N', time_s=metrics.get('peak_tension_time')) + '\n'
         + fmt_metric_at('Peak Comp. Force (FZ-)', metrics['peak_compression_fz'], unit='N', time_s=metrics.get('peak_compression_time')) + '\n'
         + fmt_metric_at(f'Peak Flexion {moment_input_label}', metrics['peak_flexion_my'], unit='Nm', time_s=metrics.get('peak_flexion_time')) + '\n'
