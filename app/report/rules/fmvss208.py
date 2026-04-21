@@ -84,6 +84,16 @@ FMVSS_208_ITEMS = (
         limit_key="head_3ms_limit_g",
     ),
     _item(
+        "head.acceleration_80g_3ms_limit",
+        "Head Acceleration 80g / 3ms Limit",
+        "head",
+        "head",
+        "head_accel_80g_3ms_duration_ms",
+        unit="ms",
+        payload_aliases=("fmvss_head_acc_80g_3ms_duration_ms",),
+        limit_value=3.0,
+    ),
+    _item(
         "neck.peak_tension",
         "Peak Tension Force(FZ+)",
         "neck",

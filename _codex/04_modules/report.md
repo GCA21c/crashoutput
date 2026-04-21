@@ -69,6 +69,8 @@ Acceleration-based 3ms rows should keep this order when all values are available
 2. `Multiple Peak 3ms`
 3. existing resultant/acceleration 3ms criteria, such as `Resultant Acc. 3ms Clip`
    or `Chest Acc. 3ms Clip`
+4. extra duration-based criteria that reuse the same resultant signal, such as
+   `Head Acceleration 80g / 3ms Limit`
 
 ## Payload key mapping
 SUMMARY REPORT reads values through `app/report/engine.py` `_extract_metric_value()`.
@@ -89,6 +91,9 @@ Examples:
 - PELVIS `Multiple Peak 3ms_Clip`
   - `value_key`: `pelvis_multiple_3ms_clip`
   - fallback: `multiple_peak_3ms.value`
+- HEAD `Head Acceleration 80g / 3ms Limit`
+  - `value_key`: `head_accel_80g_3ms_duration_ms`
+  - fallback: `fmvss_head_acc_80g_3ms_duration_ms`
 
 Existing payload keys are compatibility contract. Do not rename saved keys in place.
 For cleanup, add a new canonical key only after the old key is still read through

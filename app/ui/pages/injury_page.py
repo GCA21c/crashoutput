@@ -388,6 +388,7 @@ class InjuryPage(tk.Frame):
                 'head_multiple_3ms_clip': self._safe_metric_float(metrics.get('multiple_peak_3ms_value')),
                 'head_3ms_clip': self._safe_metric_float(metrics.get('one_peak_3ms_value') or metrics.get('clip3_value')),
                 'resultant_peak_g': self._safe_metric_float(metrics.get('resultant_peak_value')),
+                'head_accel_80g_3ms_duration_ms': self._safe_metric_float(metrics.get('fmvss_head_acc_80g_3ms_duration_ms')),
                 'head_x_max': self._safe_metric_float(metrics.get('head_x_max_value')),
                 'head_x_min': self._safe_metric_float(metrics.get('head_x_min_value')),
                 'head_y_max': self._safe_metric_float(metrics.get('head_y_max_value')),
@@ -1599,12 +1600,13 @@ class InjuryPage(tk.Frame):
                     x_plot=self._convert_channel_to_head_plot_unit(x, x_ch),
                     y_plot=self._convert_channel_to_head_plot_unit(y, y_ch),
                     z_plot=self._convert_channel_to_head_plot_unit(z, z_ch),
-                    plot_unit=self._head_plot_unit((x_ch, y_ch, z_ch)),
-                    channels=(x_ch, y_ch, z_ch),
-                    resultant_channel=resultant_channel,
-                    resultant_filter_label='CFC 1000',
-                    use_high_res_cumulative_3ms=self._slot_use_high_res_cumulative_3ms(slot),
-                )
+                plot_unit=self._head_plot_unit((x_ch, y_ch, z_ch)),
+                channels=(x_ch, y_ch, z_ch),
+                slot_label=slot,
+                resultant_channel=resultant_channel,
+                resultant_filter_label='CFC 1000',
+                use_high_res_cumulative_3ms=self._slot_use_high_res_cumulative_3ms(slot),
+            )
                 state['head_bundle'] = result['bundle']
                 meta = dict(result.get('metadata') or {})
                 meta['dummy_name'] = state.get('dummy_name') or ''
@@ -2932,6 +2934,7 @@ class InjuryPage(tk.Frame):
                 plot_unit=self._head_plot_unit(channels),
                 channels=channels,
                 axis_display_names=self._head_axis_display_names(channels),
+                slot_label=slot,
                 resultant_channel=resultant_channel,
                 resultant_filter_label='CFC 1000',
                 use_high_res_cumulative_3ms=self._current_use_high_res_cumulative_3ms(),
@@ -4882,6 +4885,7 @@ class InjuryPage(tk.Frame):
                     z_plot=self._convert_channel_to_head_plot_unit(z, z_ch),
                     plot_unit=self._head_plot_unit((x_ch, y_ch, z_ch)),
                     channels=(x_ch, y_ch, z_ch),
+                    slot_label=slot,
                     resultant_channel=resultant_channel,
                     resultant_filter_label='CFC 1000',
                     use_high_res_cumulative_3ms=self._slot_use_high_res_cumulative_3ms(slot),
