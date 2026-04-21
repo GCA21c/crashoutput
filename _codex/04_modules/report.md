@@ -173,20 +173,11 @@ After the completion dialog is acknowledged, the UI opens the saved workbook wit
 default file association. Windows uses `os.startfile`; macOS and Linux use `open` and
 `xdg-open` fallbacks.
 
-## Snapshot regression check
+## Report refactor check
 Before and after report refactors, compare the output of `app/report/engine.py`
-`build_report_snapshot(metadata, regulation_name)`.
+`build_report_snapshot(metadata, regulation_name)` through direct runtime inspection.
 
-Phase 5 and later refactors should use:
-
-- `tools/capture_regression_snapshot.py`
-- `_codex/03_workflows/regression_snapshot_workflow.md`
-
-The tool reads saved `.pkl` files through `app/core/io/dataset_store.py`, captures dataframe
-shape/column digests, metadata structure, report snapshot rows, and saved summary report
-structure, then writes a JSON baseline under `_codex/09_regression_snapshots/` by default.
-
-The minimum fields that must remain identical for a no-behavior-change refactor are:
+The minimum fields that should remain identical for a no-behavior-change refactor are:
 - `regulation_name`
 - slot order and each slot's `slot`, `dummy_name`, `dummy_profile`
 - row count and row order
@@ -201,11 +192,11 @@ For Excel export refactors, also compare:
 - IARV exclusion decisions
 - RESULT source override decisions
 
-Formatting-only differences should not change snapshot numeric values. Excel-only
+Formatting-only differences should not change report numeric values. Excel-only
 rounding is checked at export time and must not be pushed back into the report snapshot.
 
 ## Phase 3 helper refactor gate
-Phase 3 helper commonization must start with snapshot comparison, not code movement.
+Phase 3 helper commonization must start with report/output comparison, not code movement.
 
 Required baseline artifacts:
 - metadata with `injury_saved_results`
