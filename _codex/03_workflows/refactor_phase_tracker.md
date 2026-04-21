@@ -53,7 +53,7 @@
 | Phase 4-H | Done | user tested DATA FILTERING commit payload helper and OFFSET preview fixes |
 | Phase 4-I | Done | Phase 4 closure boundary documented; high-risk moves deferred |
 | Phase 4 | Closed | orchestration split complete and user-tested |
-| Phase 5-A | Partial | regression snapshot tool/docs added; actual baseline JSON requires representative saved `.pkl` |
+| Phase 5-A | Done | regression snapshot tool/docs added; representative baseline JSON captured from the local 5-file set |
 | Phase 5-B | Done | preprocessing function groups and folder-level snapshot compare workflow verified |
 | Phase 5-C | Done | channel role detector helper extraction implemented and user-tested |
 | Phase 5-D | Done | numeric/time helper extraction implemented and user-tested |
@@ -137,9 +137,12 @@ Phase 5-A scope:
   - `_O_F_T_I_R`
 - No calculation logic, filtering math, injury formula, report extraction key, or pickle format change.
 - Snapshot JSON files are local/ignored by git by default.
+- Phase 5-A tracker status is now treated as complete because the representative local baseline
+  set is present under `_codex/09_regression_snapshots/` and `before/`.
 
 Phase 5-B scope:
 - Added folder-level `capture-dir` and `compare-dir` commands to `tools/capture_regression_snapshot.py`.
+- Added `verify-dir` to refresh `after/` and compare against the existing baseline in one step.
 - Added `_codex/04_modules/preprocessing.md` to classify `app/services/preprocessing/service.py`
   function groups and extraction risk.
 - Added `_codex/09_regression_snapshots/before/` and `after/` placeholder folders.

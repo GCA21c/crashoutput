@@ -328,6 +328,25 @@ def compare_directories(before_dir: Path, after_dir: Path, limit: int) -> int:
     return exit_code
 
 
+def refresh_and_compare_directory(
+    input_dir: Path,
+    before_dir: Path,
+    after_dir: Path,
+    regulation: str,
+    include_column_digests: bool,
+    limit: int,
+) -> int:
+    capture_result = capture_directory(
+        input_dir,
+        after_dir,
+        regulation=regulation,
+        include_column_digests=include_column_digests,
+    )
+    if capture_result:
+        return capture_result
+    return compare_directories(before_dir, after_dir, limit=limit)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Capture or compare regression snapshots.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -361,6 +380,21 @@ def _build_parser() -> argparse.ArgumentParser:
     compare_dir.add_argument("before_dir", type=Path, help="baseline snapshot directory")
     compare_dir.add_argument("after_dir", type=Path, help="new snapshot directory")
     compare_dir.add_argument("--limit", type=int, default=50, help="maximum differences per file to print")
+
+    verify_dir = subparsers.add_parser(
+        "verify-dir",
+        help="capture fresh snapshots into an output directory and compare them against a baseline directory",
+    )
+    verify_dir.add_argument("input_dir", type=Path, help="directory containing saved CRASH pickle files")
+    verify_dir.add_argument("before_dir", type=Path, help="baseline snapshot directory")
+    verify_dir.add_argument("after_dir", type=Path, help="directory to refresh with new snapshot JSON files")
+    verify_dir.add_argument("--regulation", default=DEFAULT_REGULATION, help="report regulation label")
+    verify_dir.add_argument(
+        "--no-column-digests",
+        action="store_true",
+        help="skip per-column value digests for faster structure-only snapshots",
+    )
+    verify_dir.add_argument("--limit", type=int, default=50, help="maximum differences per file to print")
     return parser
 
 
@@ -391,6 +425,15 @@ def main(argv: list[str] | None = None) -> int:
         )
     if args.command == "compare-dir":
         return compare_directories(args.before_dir, args.after_dir, limit=args.limit)
+    if args.command == "verify-dir":
+        return refresh_and_compare_directory(
+            args.input_dir,
+            args.before_dir,
+            args.after_dir,
+            regulation=args.regulation,
+            include_column_digests=not args.no_column_digests,
+            limit=args.limit,
+        )
     return 2
 
 

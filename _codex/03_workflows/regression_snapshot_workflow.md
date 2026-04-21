@@ -60,6 +60,17 @@ python3 tools/capture_regression_snapshot.py compare-dir \
   _codex/09_regression_snapshots/after
 ```
 
+반복 검증 단축:
+
+```bash
+python3 tools/capture_regression_snapshot.py verify-dir \
+  _codex/09_regression_snapshots/input_files \
+  _codex/09_regression_snapshots/before \
+  _codex/09_regression_snapshots/after
+```
+
+`verify-dir`는 `after` snapshot을 다시 만들고 바로 `before`와 비교한다.
+
 `before` / `after` snapshot JSON은 git에 올리지 않는다.
 
 ## Required baseline set
@@ -117,3 +128,5 @@ Phase 5-B 이후 실제 helper 이동을 할 때는 아래 순서를 반복한�
 4. `compare-dir` 실행
 5. 차이가 없으면 사용자 프로그램 구동 테스트
 6. 차이가 있으면 원인 분석 후 refactor rollback 또는 사용자 승인
+
+반복 단계에서는 3~4를 `verify-dir` 한 번으로 대체할 수 있다.

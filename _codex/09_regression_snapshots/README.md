@@ -33,3 +33,11 @@ python3 tools/capture_regression_snapshot.py capture-dir _codex/09_regression_sn
 python3 tools/capture_regression_snapshot.py capture-dir _codex/09_regression_snapshots/input_files _codex/09_regression_snapshots/after
 python3 tools/capture_regression_snapshot.py compare-dir _codex/09_regression_snapshots/before _codex/09_regression_snapshots/after
 ```
+
+반복 검증 단축:
+
+```bash
+python3 tools/capture_regression_snapshot.py verify-dir _codex/09_regression_snapshots/input_files _codex/09_regression_snapshots/before _codex/09_regression_snapshots/after
+```
+
+`before` baseline이 이미 있을 때는 이 명령으로 `after`를 갱신하고 즉시 비교한다.
