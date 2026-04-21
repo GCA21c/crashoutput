@@ -52,6 +52,9 @@ def _apply_transform(value, transform_name):
 
 def _read_path(container, path):
     current = container
+    flat_key = str(path or "").strip()
+    if isinstance(current, dict) and flat_key in current:
+        return current.get(flat_key)
     for part in str(path or "").split("."):
         if not isinstance(current, dict):
             return None

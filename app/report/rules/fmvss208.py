@@ -175,7 +175,6 @@ def _femur_axis_items():
 
 
 FMVSS_208_ITEMS = (
-    *_head_axis_items(),
     _item(
         "head.hic15",
         "HIC15ms",
@@ -243,8 +242,8 @@ FMVSS_208_ITEMS = (
         payload_aliases=("fmvss_head_acc_80g_3ms_duration_ms",),
         limit_value=3.0,
     ),
+    *_head_axis_items(),
 
-    *_neck_axis_items(),
     _item(
         "neck.peak_tension",
         "Peak Tension Force(FZ+)",
@@ -290,8 +289,8 @@ FMVSS_208_ITEMS = (
     _item("neck.nce", "NCE", "neck", "neck", "peak_nce", time_aliases=("peak_nce_time",), limit_value=1.0),
     _item("neck.ncf", "NCF", "neck", "neck", "peak_ncf", time_aliases=("peak_ncf_time",), limit_value=1.0),
     _item("neck.nij", "Overall Nij", "neck", "neck", "overall_nij", time_aliases=("overall_nij_time",), limit_value=1.0),
+    *_neck_axis_items(),
 
-    *_chest_axis_items(),
     _item(
         "chest.one_peak_3ms",
         "One Peak 3ms",
@@ -362,8 +361,8 @@ FMVSS_208_ITEMS = (
         limit_key="vc_limit_mps",
     ),
     _detail_at_item("chest.vc_ece_min", "V*C ECE94_CFC180 Min", "chest", "chest", "vc_ece_min", unit="m/s"),
+    *_chest_axis_items(),
 
-    *_pelvis_axis_items(),
     _detail_range_item("pelvis.one_peak_3ms_clip", "One Peak 3ms_Clip", "pelvis", "pelvis", "one_peak_3ms", unit="g"),
     _detail_range_item("pelvis.multiple_peak_3ms_clip", "Multiple Peak 3ms_Clip", "pelvis", "pelvis", "multiple_peak_3ms", unit="g"),
     _item(
@@ -376,8 +375,8 @@ FMVSS_208_ITEMS = (
         payload_aliases=("resultant_peak.value",),
         time_aliases=("resultant_peak.time_s",),
     ),
+    *_pelvis_axis_items(),
 
-    *_femur_axis_items(),
     _item(
         "femur.left_peak",
         "Left Peak Axial Force",
@@ -400,6 +399,7 @@ FMVSS_208_ITEMS = (
         time_aliases=("right_peak_abs.time_s",),
         limit_key="femur_force_limit_n",
     ),
+    *_femur_axis_items(),
 
     _item(
         "knee.left_displacement_peak",
