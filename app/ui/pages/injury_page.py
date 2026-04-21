@@ -832,7 +832,6 @@ class InjuryPage(tk.Frame):
         self.nij_mx_combo = self._combo_row(inputs, "Moment Mx", self.nij_mx_var, self.nij_mx_neg_var)
         self.nij_my_combo = self._combo_row(inputs, "Moment My *", self.nij_my_var, self.nij_my_neg_var)
         self.nij_mz_combo = self._combo_row(inputs, "Moment Mz", self.nij_mz_var, self.nij_mz_neg_var)
-        tk.Label(box, textvariable=self.nij_guidance_var, bg="#ffffff", fg="#555555", justify="left", anchor="w", wraplength=420).pack(fill=tk.X, padx=10, pady=(0, 6))
         opt = tk.Frame(box, bg="#ffffff")
         opt.pack(fill=tk.X, padx=10, pady=(2, 4))
         tk.Button(opt, text="전체 계산", command=self.calculate_nij_all).pack(side=tk.RIGHT)
@@ -2814,6 +2813,13 @@ class InjuryPage(tk.Frame):
             labels[axis_key] = f"ACC {axis_key.upper()} - {rewritten}"
         return labels
 
+    def _chest_accel_display_names(self, channels):
+        labels = {}
+        for axis_key, channel_name in zip(('x', 'y', 'z'), channels):
+            rewritten = str(rewrite_filter_code_in_text(channel_name, 'CFC 180') or channel_name or '-').strip()
+            labels[axis_key] = f"ACC {axis_key.upper()} - {rewritten}"
+        return labels
+
     def _head_resultant_channel_metadata(self, slot, channels):
         x_ch, y_ch, z_ch = channels
         return {
@@ -3383,6 +3389,7 @@ class InjuryPage(tk.Frame):
                 accel_units={'x': self._unit_text(x_ch), 'y': self._unit_text(y_ch), 'z': self._unit_text(z_ch)},
                 disp_unit=self._unit_text(disp_ch),
                 criterion_key=self.chest_dummy_var.get(),
+                dummy_profile_label=self.multi_dummy_panel.profile_var(slot).get().strip(),
                 raw_displacement=raw_disp_series,
                 raw_accel=raw_accel_series,
                 accel_filter_labels={
@@ -3391,6 +3398,7 @@ class InjuryPage(tk.Frame):
                     'z': self._channel_filter_label_for_calc(z_ch, used_z),
                 },
                 disp_filter_label=self._channel_filter_label_for_calc(disp_ch),
+                accel_display_names=self._chest_accel_display_names((x_ch, y_ch, z_ch)),
                 disp_prefiltered=disp_prefiltered,
                 vc_sign_pref=1.0,
                 use_high_res_cumulative_3ms=self._current_use_high_res_cumulative_3ms(),
@@ -4952,6 +4960,7 @@ class InjuryPage(tk.Frame):
                     accel_units={'x': self._unit_text(x_ch), 'y': self._unit_text(y_ch), 'z': self._unit_text(z_ch)},
                     disp_unit=self._unit_text(disp_ch),
                     criterion_key=state.get('dummy_profile') or self.chest_dummy_var.get(),
+                    dummy_profile_label=state.get('dummy_profile') or self.chest_dummy_var.get(),
                     raw_displacement=raw_disp_series,
                     raw_accel=raw_accel_series,
                     accel_filter_labels={
@@ -4960,6 +4969,7 @@ class InjuryPage(tk.Frame):
                         'z': self._channel_filter_label_for_calc(z_ch, used_z),
                     },
                     disp_filter_label=self._channel_filter_label_for_calc(disp_ch),
+                    accel_display_names=self._chest_accel_display_names((x_ch, y_ch, z_ch)),
                     disp_prefiltered=disp_prefiltered,
                     vc_sign_pref=1.0,
                     use_high_res_cumulative_3ms=self._slot_use_high_res_cumulative_3ms(slot),

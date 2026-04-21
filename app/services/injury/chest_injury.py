@@ -5,6 +5,7 @@ from app.core.utils.formatting import (
     fmt_metric_at,
     fmt_metric_range,
     fmt_peak_line,
+    fmt_time_ms,
     fmt_value,
 )
 from app.services.preprocessing.service import compute_chest_metrics
@@ -54,6 +55,29 @@ def _format_axis_peak_lines(axis_label, unit, time, values):
     ]
 
 
+def _format_chest_axis_block(display_name, unit, time, values):
+    mask, arr_t, arr_v = _time_value_valid_mask(time, values)
+    if mask.size == 0 or not np.any(mask):
+        return '\n'.join([str(display_name or '-'), 'Max : -', 'Min : -'])
+
+    valid_t = arr_t[mask]
+    valid_v = arr_v[mask]
+    max_idx = _global_peak_index(valid_v, 'max')
+    min_idx = _global_peak_index(valid_v, 'min')
+    if max_idx is None or min_idx is None:
+        return '\n'.join([str(display_name or '-'), 'Max : -', 'Min : -'])
+
+    max_time = float(valid_t[max_idx])
+    min_time = float(valid_t[min_idx])
+    max_value = float(valid_v[max_idx])
+    min_value = float(valid_v[min_idx])
+    return '\n'.join([
+        str(display_name or '-'),
+        f"Max : {fmt_value(max_value, unit, unit_style='suffix')} at {fmt_time_ms(max_time)}",
+        f"Min : {fmt_value(min_value, unit, unit_style='suffix')} at {fmt_time_ms(min_time)}",
+    ])
+
+
 
 def _peak_line(label, unit, detail, decimals=4):
     if not detail or detail.get('value') is None:
@@ -80,10 +104,12 @@ def calculate_chest_injury_bundle(
     accel_units,
     disp_unit,
     criterion_key,
+    dummy_profile_label,
     raw_displacement,
     raw_accel,
     accel_filter_labels,
     disp_filter_label,
+    accel_display_names=None,
     disp_prefiltered=None,
     vc_sign_pref=1.0,
     use_high_res_cumulative_3ms=True,
@@ -106,9 +132,15 @@ def calculate_chest_injury_bundle(
         use_high_res_cumulative_3ms=use_high_res_cumulative_3ms,
     )
 
+    accel_display_names = dict(accel_display_names or {})
     lines = []
-    for label, arr in (('CHEST X', metrics['x_g']), ('CHEST Y', metrics['y_g']), ('CHEST Z', metrics['z_g'])):
-        lines.extend(_format_axis_peak_lines(label, 'g', metrics['time'], arr))
+    for axis_key, fallback_label, arr in (
+        ('x', 'ACC X', metrics['x_g']),
+        ('y', 'ACC Y', metrics['y_g']),
+        ('z', 'ACC Z', metrics['z_g']),
+    ):
+        lines.append(_format_chest_axis_block(accel_display_names.get(axis_key) or fallback_label, 'g', metrics['time'], arr))
+        lines.append('')
     lines.append('')
     lines.append('- Injuries -')
     lines.append(_clip_line('One Peak 3ms_Clip', 'g', metrics.get('one_peak_3ms_detail')))
@@ -131,12 +163,9 @@ def calculate_chest_injury_bundle(
     lines.append(_peak_line('Min', 'm/s', ece_min, decimals=4))
     crit = metrics.get('criteria', {})
     lines.append('')
-    lines.append(f"Dummy: {crit.get('label', criterion_key)}")
-    lines.append(f"FMVSS Chest Acc Limit: {crit.get('accel_3ms_limit_g', '-') if crit.get('accel_3ms_limit_g') is not None else '-'} g")
-    lines.append(f"FMVSS Chest Deflection Limit: {crit.get('deflection_limit_mm', '-') if crit.get('deflection_limit_mm') is not None else '-'} mm")
-    lines.append(f"VC Limit (reference): {crit.get('vc_limit_mps', '-') if crit.get('vc_limit_mps') is not None else '-'} m/s")
-    if metrics.get('disp_filter_note'):
-        lines.append(metrics['disp_filter_note'])
+    lines.append(f"Dummy Family: {dummy_profile_label or criterion_key or '-'}")
+    lines.append("For V*C, SAE J1727 uses CFC600 displacement and ECE-R94 uses CFC180 displacement.")
+    lines.append("Whenever the selected displacement channel does not already match the required CFC class, the code rebuilds the missing path from raw-aligned displacement to avoid double filtering.")
 
     return {
         'metrics': metrics,
