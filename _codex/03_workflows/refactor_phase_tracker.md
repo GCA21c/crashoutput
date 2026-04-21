@@ -92,8 +92,11 @@
 Phase 5 code-optimization runtime work is closed.
 
 Next non-refactor follow-up candidates:
-1. viewer keyboard navigation numpy truth-value warning fix
-2. optional final user verification before branch merge
+1. optional final user verification before branch merge
+
+Deferred by user:
+- viewer keyboard navigation numpy truth-value warning fix
+- current symptom is not reproducing, so it is out of the active schedule unless the issue appears again
 
 Resolved after code optimization:
 - DAT loader `215` handling issue was fixed after the Phase 5 code-optimization sequence closed.
