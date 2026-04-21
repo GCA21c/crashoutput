@@ -160,13 +160,14 @@ class CrashAnalysisWorkbench(tk.Frame):
         top_status = tk.Frame(right_area, bg=STATUS_BG, bd=1, relief=tk.SOLID)
         top_status.pack(side=tk.TOP, fill=tk.X, padx=8, pady=(8, 0))
         self.top_status = top_status
-        self.top_status_text = tk.Frame(top_status, bg=STATUS_BG)
-        self.top_status_text.pack(side=tk.TOP, fill=tk.X)
-        tk.Label(self.top_status_text, textvariable=self.dataset_info_var, bg=STATUS_BG, anchor="w", fg=TITLE_FG).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10, pady=6)
-        tk.Label(self.top_status_text, textvariable=self.history_info_var, bg=STATUS_BG, anchor="e", fg=TEXT_FG).pack(side=tk.RIGHT, padx=10)
-        self.top_status_shimmer = tk.Canvas(top_status, height=6, bg="#cfd6df", highlightthickness=0, bd=0)
-        self.top_status_shimmer.pack(side=tk.TOP, fill=tk.X)
+        self.top_status_shimmer = tk.Canvas(top_status, bg=STATUS_BG, highlightthickness=0, bd=0)
+        self.top_status_shimmer.place(relx=0, rely=0, relwidth=1, relheight=1)
         self.top_status_shimmer.bind("<Configure>", lambda _event: self._render_top_status_shimmer())
+        self.top_status_dataset_label = tk.Label(top_status, textvariable=self.dataset_info_var, bg=STATUS_BG, anchor="w", fg=TITLE_FG)
+        self.top_status_dataset_label.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10, pady=6)
+        self.top_status_history_label = tk.Label(top_status, textvariable=self.history_info_var, bg=STATUS_BG, anchor="e", fg=TEXT_FG)
+        self.top_status_history_label.pack(side=tk.RIGHT, padx=10)
+        self.top_status_shimmer.lower()
 
         self.content = tk.Frame(right_area, bg=PAGE_BG)
         self.content.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
@@ -241,12 +242,39 @@ class CrashAnalysisWorkbench(tk.Frame):
         width = max(1, int(canvas.winfo_width()))
         height = max(1, int(canvas.winfo_height()))
         if not self._top_status_busy_reasons:
-            canvas.create_rectangle(0, 0, width, height, fill="#cfd6df", outline="", tags="shimmer")
+            canvas.create_rectangle(0, 0, width, height, fill=STATUS_BG, outline="", tags="shimmer")
             return
         offset = float(self._top_status_shimmer_offset)
-        canvas.create_rectangle(0, 0, width, height, fill="#d6dde6", outline="", tags="shimmer")
-        canvas.create_rectangle(offset - 72, 0, offset + 72, height, fill="#f3f7fb", outline="", tags="shimmer")
-        canvas.create_rectangle(offset - 24, 0, offset + 24, height, fill="#ffffff", outline="", tags="shimmer")
+        canvas.create_rectangle(0, 0, width, height, fill=STATUS_BG, outline="", tags="shimmer")
+        canvas.create_polygon(
+            offset - 180, 0,
+            offset - 40, 0,
+            offset + 90, height,
+            offset - 50, height,
+            fill="#f4f8ff",
+            outline="",
+            stipple="gray25",
+            tags="shimmer",
+        )
+        canvas.create_polygon(
+            offset - 120, 0,
+            offset + 10, 0,
+            offset + 140, height,
+            offset + 10, height,
+            fill="#ffffff",
+            outline="",
+            stipple="gray50",
+            tags="shimmer",
+        )
+        canvas.create_polygon(
+            offset - 45, 0,
+            offset + 35, 0,
+            offset + 115, height,
+            offset + 35, height,
+            fill="#ffffff",
+            outline="",
+            tags="shimmer",
+        )
 
     def _animate_top_status_shimmer(self):
         self._top_status_shimmer_job = None
@@ -254,7 +282,7 @@ class CrashAnalysisWorkbench(tk.Frame):
         if canvas is None or not self._top_status_busy_reasons:
             return
         width = max(1, int(canvas.winfo_width()))
-        self._top_status_shimmer_offset += max(12, width // 20)
+        self._top_status_shimmer_offset += max(18, width // 16)
         if self._top_status_shimmer_offset > (width + 160):
             self._top_status_shimmer_offset = -160
         self._render_top_status_shimmer()
