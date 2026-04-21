@@ -4,6 +4,19 @@ from app.core.dummy import get_filter_preset_profile
 from app.services.preprocessing.service import get_numeric_channels
 
 
+def is_rd_aux_channel(channel_meta):
+    parsed = dict((channel_meta or {}).get("isocode_parsed") or {})
+    fine_1 = str(parsed.get("fine_location_1") or "").strip().upper()
+    fine_2 = str(parsed.get("fine_location_2") or "").strip().upper()
+    if fine_1 == "RD" or fine_2 == "RD":
+        return True
+    for key in ("raw_isocode", "managed_isocode"):
+        code = str((channel_meta or {}).get(key) or "").strip().upper()
+        if len(code) == 16 and (code[6:8] == "RD" or code[8:10] == "RD"):
+            return True
+    return False
+
+
 def preset_measurement_family(channel, channel_meta):
     parsed = dict((channel_meta or {}).get("isocode_parsed") or {})
     data_type = str(parsed.get("data_type_code") or "").strip().upper()
@@ -89,6 +102,8 @@ def build_auto_filter_map(config, active_df, time_column, channel_meta):
             for channel in numeric_channels:
                 meta = dict(channel_meta.get(channel) or {})
                 if str(meta.get("lineage_type") or "").strip().lower() == "derived":
+                    continue
+                if is_rd_aux_channel(meta):
                     continue
                 if channel_matches_preset_rule(channel, meta, slot, rule):
                     matched.append(channel)
