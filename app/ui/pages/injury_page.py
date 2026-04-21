@@ -1152,6 +1152,7 @@ class InjuryPage(tk.Frame):
         self.requested_row_positions = self.multi_dummy_panel.get_row_positions()
         self.active_positions = self.multi_dummy_panel.get_selected_positions() or self.active_positions
         self._load_active_slot_state()
+        self._persist_active_slot_selection()
         self.refresh_channel_lists(keep_existing=True)
 
     def _legacy_save_slot_state(self, slot):
@@ -1429,6 +1430,19 @@ class InjuryPage(tk.Frame):
 
         metadata['injury_saved_results'] = injury_saved
         metadata['injury_graph_registry'] = graph_registry
+        self.workbench.dataset_metadata = metadata
+        self._persist_graph_metadata_to_current_pickle()
+
+    def _persist_active_slot_selection(self, slot=None):
+        slot = slot or self._active_slot()
+        metadata = dict(getattr(self.workbench, 'dataset_metadata', {}) or {})
+        injury_saved = dict(metadata.get('injury_saved_results') or {})
+        section_payload = dict(injury_saved.get(self._section_key()) or {})
+        if not section_payload:
+            return
+        section_payload['active_slot'] = slot
+        injury_saved[self._section_key()] = section_payload
+        metadata['injury_saved_results'] = injury_saved
         self.workbench.dataset_metadata = metadata
         self._persist_graph_metadata_to_current_pickle()
 
