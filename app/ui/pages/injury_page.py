@@ -720,7 +720,7 @@ class InjuryPage(tk.Frame):
 
     def _on_slot_profile_changed(self, slot, value):
         self.slot_states[slot]['dummy_profile'] = (value or '').strip()
-        if slot == self._active_slot():
+        if slot == self._active_slot() and self.initial_mode != 'nij':
             self._dummy_profile_var().set((value or '').strip())
 
     def _update_combined_summary(self):
