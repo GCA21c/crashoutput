@@ -45,22 +45,28 @@ def _find_marker_shape(slide, marker):
 def _set_shape_lines(shape, lines):
     if not getattr(shape, "has_text_frame", False):
         return
-    lines = [str(line) for line in list(lines or [])]
-    if not lines:
-        lines = [""]
+    text = "\n".join(str(line) for line in list(lines or []))
     text_frame = shape.text_frame
-    while len(text_frame.paragraphs) < len(lines):
-        text_frame.add_paragraph()
     paragraphs = list(text_frame.paragraphs)
-    for index, paragraph in enumerate(paragraphs):
-        target = lines[index] if index < len(lines) else ""
-        runs = list(paragraph.runs)
-        if runs:
-            runs[0].text = target
-            for run in runs[1:]:
+    if not paragraphs:
+        paragraph = text_frame.add_paragraph()
+        paragraph.text = text
+        return
+    paragraph = paragraphs[0]
+    runs = list(paragraph.runs)
+    if runs:
+        runs[0].text = text
+        for run in runs[1:]:
+            run.text = ""
+    else:
+        paragraph.text = text
+    for extra in paragraphs[1:]:
+        extra_runs = list(extra.runs)
+        if extra_runs:
+            for run in extra_runs:
                 run.text = ""
         else:
-            paragraph.text = target
+            extra.text = ""
 
 
 def _duplicate_template_slide(presentation, source_slide):

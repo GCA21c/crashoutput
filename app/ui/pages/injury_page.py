@@ -3133,7 +3133,7 @@ class InjuryPage(tk.Frame):
             st['dummy_name'] = self.multi_dummy_panel.name_var(slot).get().strip()
             st['dummy_profile'] = self.multi_dummy_panel.profile_var(slot).get().strip()
             st['channels'] = dict(selected)
-            st['neg_flags'] = {}
+            st['neg_flags'] = {key: bool(value < 0) for key, value in sign_flags.items()}
             st['summary_text'] = result['summary_text']
             st['result_uid'] = st.get('result_uid') or self._injury_result_uid(slot)
             st['neck_metrics'] = metrics
