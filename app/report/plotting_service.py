@@ -144,8 +144,10 @@ def _resultant_extrema_lines(resultant_label, resultant_key, unit, context):
     metric_extrema = dict(context.get("metric_extrema") or {})
     detail = dict(metric_extrema.get(resultant_key) or {})
     return [
-        f"{resultant_label} MAX: {fmt_value(detail.get('max_value'), unit, unit_style='suffix')} at {fmt_time_ms(detail.get('max_time_s'))}",
-        f"{resultant_label} MIN: {fmt_value(detail.get('min_value'), unit, unit_style='suffix')} at {fmt_time_ms(detail.get('min_time_s'))}",
+        f"{resultant_label} MAX: ",
+        f"{fmt_value(detail.get('max_value'), unit, unit_style='suffix')} at {fmt_time_ms(detail.get('max_time_s'))}",
+        f"{resultant_label} MIN: ",
+        f"{fmt_value(detail.get('min_value'), unit, unit_style='suffix')} at {fmt_time_ms(detail.get('min_time_s'))}",
     ]
 
 
@@ -207,9 +209,12 @@ def build_plotting_auto_text(item):
     lines = []
     if template in {"acc_axes", "acc_axes_then_injuries"}:
         axis_keys = tuple(rule.get("axis_keys") or ())
-        for axis_key in axis_keys:
+        for index, axis_key in enumerate(axis_keys):
+            if index > 0:
+                lines.append("")
             lines.extend(_axis_extrema_lines(axis_key, rule.get("unit") or "g", context))
         if template == "acc_axes_then_injuries":
+            lines.append("")
             lines.extend(_resultant_extrema_lines(rule.get("resultant_label") or "Resultant", rule.get("resultant_key") or "resultant", rule.get("unit") or "g", context))
             lines.append("- Injuries -")
             for line_rule in tuple(rule.get("injury_lines") or ()):
