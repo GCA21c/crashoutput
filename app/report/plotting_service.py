@@ -83,10 +83,12 @@ def _compact_metric_detail(detail):
 
 def _build_auto_text_context(section_key, slot_payload):
     slot_payload = dict(slot_payload or {})
+    structured = dict(slot_payload.get("structured_metrics") or {})
     context = {
         "channels": dict(slot_payload.get("channels") or {}),
         "report_values": dict(slot_payload.get("report_values") or {}),
         "metric_extrema": dict(slot_payload.get("metric_extrema") or {}),
+        "structured_metrics": structured,
         "slot": str(slot_payload.get("slot") or ""),
     }
     if section_key == "head":
@@ -102,7 +104,6 @@ def _build_auto_text_context(section_key, slot_payload):
             )
         }
     else:
-        structured = dict(slot_payload.get("structured_metrics") or {})
         details = {}
         for key in (
             "one_peak_3ms_detail", "multiple_peak_3ms_detail", "resultant_peak",
@@ -148,6 +149,131 @@ def _resultant_extrema_lines(resultant_label, resultant_key, unit, context):
         f"{fmt_value(detail.get('max_value'), unit, unit_style='suffix')} at {fmt_time_ms(detail.get('max_time_s'))}",
         f"{resultant_label} MIN: ",
         f"{fmt_value(detail.get('min_value'), unit, unit_style='suffix')} at {fmt_time_ms(detail.get('min_time_s'))}",
+    ]
+
+
+def _neck_axis_display_name(axis_key, context):
+    structured = dict(context.get("structured_metrics") or {})
+    display_names = dict(structured.get("display_channel_names") or {})
+    return str(display_names.get(axis_key) or f"{axis_key} - -")
+
+
+def _neck_axis_unit(axis_key, context):
+    structured = dict(context.get("structured_metrics") or {})
+    display_units = dict(structured.get("display_units") or {})
+    return str(display_units.get(axis_key) or ("N" if str(axis_key).startswith("F") else "Nm"))
+
+
+def _neck_force_extrema_lines(axis_key, context):
+    metric_extrema = dict(context.get("metric_extrema") or {})
+    detail = dict(metric_extrema.get(f"display_series.{axis_key}") or {})
+    label = _neck_axis_display_name(axis_key, context)
+    unit = _neck_axis_unit(axis_key, context)
+    max_label = "Max"
+    min_label = "Min"
+    if axis_key == "Fx":
+        max_label = "MAX(Rear Shear)"
+        min_label = "MIN(Forward Shear)"
+    elif axis_key == "Fz":
+        max_label = "MAX(Tension)"
+        min_label = "MIN(Compression)"
+    return [
+        label,
+        f"{max_label}: {fmt_value((detail or {}).get('max_value'), unit, unit_style='suffix')} at {fmt_time_ms((detail or {}).get('max_time_s'))}",
+        f"{min_label}: {fmt_value((detail or {}).get('min_value'), unit, unit_style='suffix')} at {fmt_time_ms((detail or {}).get('min_time_s'))}",
+    ]
+
+
+def _neck_moment_extrema_lines(axis_key, context):
+    metric_extrema = dict(context.get("metric_extrema") or {})
+    detail = dict(metric_extrema.get(f"display_series.{axis_key}") or {})
+    label = _neck_axis_display_name(axis_key, context)
+    unit = _neck_axis_unit(axis_key, context)
+    max_label = "Max"
+    min_label = "Min"
+    if axis_key == "My":
+        max_label = "MAX(Flexion)"
+        min_label = "MIN(Extension)"
+    return [
+        label,
+        f"{max_label}: {fmt_value((detail or {}).get('max_value'), unit, unit_style='suffix')} at {fmt_time_ms((detail or {}).get('max_time_s'))}",
+        f"{min_label}: {fmt_value((detail or {}).get('min_value'), unit, unit_style='suffix')} at {fmt_time_ms((detail or {}).get('min_time_s'))}",
+    ]
+
+
+def _neck_mocy_summary_lines(context):
+    structured = dict(context.get("structured_metrics") or {})
+    criteria = dict(structured.get("criteria") or {})
+    dummy_family = str(criteria.get("dummy_family") or criteria.get("criterion_key") or "-")
+    input_moment = str(criteria.get("input_moment") or "My")
+    moc_d = criteria.get("moc_d", 0.0)
+    moc_applied = "Yes" if criteria.get("moc_applied") else "No"
+    peak_flexion = structured.get("peak_flexion_my")
+    peak_flexion_time = structured.get("peak_flexion_time")
+    peak_extension = structured.get("peak_extension_my")
+    peak_extension_time = structured.get("peak_extension_time")
+    return [
+        f"Dummy Family: {dummy_family}",
+        f"Moment Input: {input_moment}",
+        f"Lever arm D: {float(moc_d):.6f} m | MOC 적용: {moc_applied}",
+        "",
+        "- Injuries -",
+        fmt_metric_at("Peak Flexion MOCy", peak_flexion, unit="Nm", time_s=peak_flexion_time),
+        fmt_metric_at("Peak Extension MOCy", peak_extension, unit="Nm", time_s=peak_extension_time),
+    ]
+
+
+def _neck_nij_components_summary_lines(context):
+    structured = dict(context.get("structured_metrics") or {})
+    return [
+        "- Injuries -",
+        "",
+        fmt_metric_at("NTE", structured.get("peak_nte"), time_s=structured.get("peak_nte_time")),
+        fmt_metric_at("NTF", structured.get("peak_ntf"), time_s=structured.get("peak_ntf_time")),
+        fmt_metric_at("NCE", structured.get("peak_nce"), time_s=structured.get("peak_nce_time")),
+        fmt_metric_at("NCF", structured.get("peak_ncf"), time_s=structured.get("peak_ncf_time")),
+        "",
+        fmt_metric_at("Overall Nij", structured.get("overall_nij"), time_s=structured.get("overall_nij_time")),
+        f"Dominant Mode: {structured.get('dominant_mode') or '-'}",
+    ]
+
+
+def _neck_nij_overall_summary_lines(context):
+    structured = dict(context.get("structured_metrics") or {})
+    return [
+        "- Injuries -",
+        "",
+        fmt_metric_at("Overall Nij", structured.get("overall_nij"), time_s=structured.get("overall_nij_time")),
+        f"Dominant Mode: {structured.get('dominant_mode') or '-'}",
+    ]
+
+
+def _chest_displacement_summary_lines(context):
+    metric_extrema = dict(context.get("metric_extrema") or {})
+    detail = dict(metric_extrema.get("displacement_mm") or {})
+    peak_detail = dict((context.get("details") or {}).get("displacement_peak") or {})
+    return [
+        "- Injuries -",
+        f"Displacement MAX: {fmt_value(detail.get('max_value'), 'mm', unit_style='suffix')} at {fmt_time_ms(detail.get('max_time_s'))}",
+        f"Displacement MIN: {fmt_value(detail.get('min_value'), 'mm', unit_style='suffix')} at {fmt_time_ms(detail.get('min_time_s'))}",
+        "",
+        fmt_metric_at("Displacement Peak", peak_detail.get("value"), unit="mm", time_s=peak_detail.get("time_s")),
+    ]
+
+
+def _chest_vc_summary_lines(context):
+    metric_extrema = dict(context.get("metric_extrema") or {})
+    sae = dict(metric_extrema.get("vc_sae") or {})
+    ece = dict(metric_extrema.get("vc_ece") or {})
+    return [
+        "- Injuries -",
+        "V*C SAE J1727_CFC600",
+        f"Max: {fmt_value(sae.get('max_value'), 'm/s', unit_style='suffix')} at {fmt_time_ms(sae.get('max_time_s'))}",
+        f"Min: {fmt_value(sae.get('min_value'), 'm/s', unit_style='suffix')} at {fmt_time_ms(sae.get('min_time_s'))}",
+        "",
+        "V*C ECE94_CFC180",
+        f"Max: {fmt_value(ece.get('max_value'), 'm/s', unit_style='suffix')} at {fmt_time_ms(ece.get('max_time_s'))}",
+        f"Min: {fmt_value(ece.get('min_value'), 'm/s', unit_style='suffix')} at {fmt_time_ms(ece.get('min_time_s'))}",
     ]
 
 
@@ -197,6 +323,46 @@ def _injury_line_from_rule(line_rule, context):
     return "-"
 
 
+def _multiline_injury_block_from_rule(line_rule, context):
+    report_values = dict(context.get("report_values") or {})
+    details = dict(context.get("details") or {})
+    kind = str((line_rule or {}).get("type") or "").strip().lower()
+    label = str((line_rule or {}).get("label") or "").strip()
+    unit = str((line_rule or {}).get("unit") or "")
+
+    def _value_from_rule(key_name):
+        return report_values.get(key_name) if report_values.get(key_name) is not None else details.get(key_name)
+
+    if kind == "range":
+        value_text = fmt_metric_range(
+            "",
+            _value_from_rule(line_rule.get("value_key")),
+            unit=unit,
+            start_s=details.get(line_rule.get("start_key")),
+            end_s=details.get(line_rule.get("end_key")),
+        ).lstrip(": ").strip()
+        return f"{label}: \n{value_text}"
+    if kind == "at":
+        value_text = fmt_metric_at(
+            "",
+            _value_from_rule(line_rule.get("value_key")),
+            unit=unit,
+            time_s=details.get(line_rule.get("time_key")),
+        ).lstrip(": ").strip()
+        return f"{label}: \n{value_text}"
+    if kind in {"detail_range", "range_detail"}:
+        detail = dict(details.get(line_rule.get("detail_key")) or {})
+        value_text = fmt_metric_range("", detail.get("value"), unit=unit, start_s=detail.get("start_time_s"), end_s=detail.get("end_time_s")).lstrip(": ").strip()
+        return f"{label}: \n{value_text}"
+    if kind == "detail_at":
+        detail = dict(details.get(line_rule.get("detail_key")) or {})
+        value_text = fmt_metric_at("", detail.get("value"), unit=unit, time_s=detail.get("time_s")).lstrip(": ").strip()
+        return f"{label}: \n{value_text}"
+    if kind == "fmvss_head_80g":
+        return _injury_line_from_rule(line_rule, context)
+    return "-"
+
+
 def build_plotting_auto_text(item):
     item = dict(item or {})
     section_key = str(item.get("section_key") or "")
@@ -207,15 +373,16 @@ def build_plotting_auto_text(item):
     context = dict(item.get("auto_text_context") or {})
     template = str(rule.get("template") or "").strip().lower()
     lines = []
-    if template in {"acc_axes", "acc_axes_then_injuries"}:
+    if template in {"acc_axes", "acc_axes_then_resultant", "acc_axes_then_injuries"}:
         axis_keys = tuple(rule.get("axis_keys") or ())
         for index, axis_key in enumerate(axis_keys):
             if index > 0:
                 lines.append("")
             lines.extend(_axis_extrema_lines(axis_key, rule.get("unit") or "g", context))
-        if template == "acc_axes_then_injuries":
+        if template in {"acc_axes_then_resultant", "acc_axes_then_injuries"}:
             lines.append("")
             lines.extend(_resultant_extrema_lines(rule.get("resultant_label") or "Resultant", rule.get("resultant_key") or "resultant", rule.get("unit") or "g", context))
+        if template == "acc_axes_then_injuries":
             lines.append("- Injuries -")
             for line_rule in tuple(rule.get("injury_lines") or ()):
                 lines.append(_injury_line_from_rule(line_rule, context))
@@ -224,6 +391,32 @@ def build_plotting_auto_text(item):
         lines.append("- Injuries -")
         for line_rule in tuple(rule.get("injury_lines") or ()):
             lines.append(_injury_line_from_rule(line_rule, context))
+    elif template == "head_resultant_injuries":
+        lines.append("- Injuries -")
+        for index, line_rule in enumerate(tuple(rule.get("injury_lines") or ())):
+            if index > 0:
+                lines.append("")
+            lines.append(_multiline_injury_block_from_rule(line_rule, context))
+    elif template == "neck_force_axes":
+        lines.append(str(rule.get("title") or "UPPER NECK FORCE"))
+        for index, axis_key in enumerate(tuple(rule.get("axis_keys") or ())):
+            lines.append("")
+            lines.extend(_neck_force_extrema_lines(axis_key, context))
+    elif template == "neck_moment_axes":
+        lines.append(str(rule.get("title") or "UPPER NECK MOMENT"))
+        for index, axis_key in enumerate(tuple(rule.get("axis_keys") or ())):
+            lines.append("")
+            lines.extend(_neck_moment_extrema_lines(axis_key, context))
+    elif template == "neck_mocy_summary":
+        lines.extend(_neck_mocy_summary_lines(context))
+    elif template == "neck_nij_components_summary":
+        lines.extend(_neck_nij_components_summary_lines(context))
+    elif template == "neck_nij_overall_summary":
+        lines.extend(_neck_nij_overall_summary_lines(context))
+    elif template == "chest_displacement_summary":
+        lines.extend(_chest_displacement_summary_lines(context))
+    elif template == "chest_vc_summary":
+        lines.extend(_chest_vc_summary_lines(context))
     text = "\n".join(line for line in lines if line is not None).strip()
     return text or (str(item.get("summary_text") or "-").strip() or "-")
 

@@ -38,14 +38,14 @@ PLOTTING_TEMPLATE_TEXT_MARKERS = {
 
 PLOTTING_GRAPH_TEXT_RULES = {
     ("head", "head_xyz"): {
-        "template": "acc_axes",
+        "template": "acc_axes_then_resultant",
         "axis_keys": ("x", "y", "z"),
-    },
-    ("head", "head_resultant"): {
-        "template": "acc_resultant_with_injuries",
         "resultant_key": "head_resultant",
         "resultant_label": "HEAD Resultant",
         "unit": "g",
+    },
+    ("head", "head_resultant"): {
+        "template": "head_resultant_injuries",
         "injury_lines": (
             {"type": "range", "label": "HIC15", "value_key": "hic15_value", "start_key": "hic15_start_time_s", "end_key": "hic15_end_time_s", "unit": ""},
             {"type": "range", "label": "HIC36", "value_key": "hic36_value", "start_key": "hic36_start_time_s", "end_key": "hic36_end_time_s", "unit": ""},
@@ -67,6 +67,12 @@ PLOTTING_GRAPH_TEXT_RULES = {
             {"type": "detail_at", "label": "Resultant Acc. Peak", "detail_key": "resultant_peak", "unit": "g"},
         ),
     },
+    ("chest", "disp"): {
+        "template": "chest_displacement_summary",
+    },
+    ("chest", "vc"): {
+        "template": "chest_vc_summary",
+    },
     ("pelvis", "accel_resultant"): {
         "template": "acc_axes_then_injuries",
         "axis_keys": ("x", "y", "z"),
@@ -78,5 +84,24 @@ PLOTTING_GRAPH_TEXT_RULES = {
             {"type": "detail_range", "label": "Multiple Peak 3ms_Clip", "detail_key": "multiple_peak_3ms", "unit": "g"},
             {"type": "detail_at", "label": "Resultant Acc. Peak", "detail_key": "resultant_peak", "unit": "g"},
         ),
+    },
+    ("neck", "fo"): {
+        "template": "neck_force_axes",
+        "axis_keys": ("Fx", "Fy", "Fz"),
+        "title": "UPPER NECK FORCE",
+    },
+    ("neck", "mo"): {
+        "template": "neck_moment_axes",
+        "axis_keys": ("Mx", "My", "Mz"),
+        "title": "UPPER NECK MOMENT",
+    },
+    ("neck", "mocy"): {
+        "template": "neck_mocy_summary",
+    },
+    ("neck", "nij_components"): {
+        "template": "neck_nij_components_summary",
+    },
+    ("neck", "nij_overall"): {
+        "template": "neck_nij_overall_summary",
     },
 }
