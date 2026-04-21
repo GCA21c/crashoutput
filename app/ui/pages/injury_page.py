@@ -2820,6 +2820,13 @@ class InjuryPage(tk.Frame):
             labels[axis_key] = f"ACC {axis_key.upper()} - {rewritten}"
         return labels
 
+    def _pelvis_accel_display_names(self, channels):
+        labels = {}
+        for axis_key, channel_name in zip(('x', 'y', 'z'), channels):
+            rewritten = str(rewrite_filter_code_in_text(channel_name, 'CFC 1000') or channel_name or '-').strip()
+            labels[axis_key] = f"ACC {axis_key.upper()} - {rewritten}"
+        return labels
+
     def _chest_dummy_profile_label(self, slot):
         state = dict(self.slot_states.get(slot) or {})
         return (
@@ -5019,6 +5026,7 @@ class InjuryPage(tk.Frame):
                     y_values=self._convert_channel_to_head_plot_unit(y_values, y_ch),
                     z_values=self._convert_channel_to_head_plot_unit(z_values, z_ch),
                     plot_unit=plot_unit,
+                    axis_display_names=self._pelvis_accel_display_names((x_ch, y_ch, z_ch)),
                     use_high_res_cumulative_3ms=self._slot_use_high_res_cumulative_3ms(slot),
                 )
                 state['pelvis_metrics'] = result['metrics']
@@ -5227,6 +5235,7 @@ class InjuryPage(tk.Frame):
                 y_values=self._convert_channel_to_head_plot_unit(y_values, y_ch),
                 z_values=self._convert_channel_to_head_plot_unit(z_values, z_ch),
                 plot_unit=self._head_plot_unit((x_ch, y_ch, z_ch)),
+                axis_display_names=self._pelvis_accel_display_names((x_ch, y_ch, z_ch)),
                 use_high_res_cumulative_3ms=self._current_use_high_res_cumulative_3ms(),
             )
             metrics = result['metrics']
