@@ -18,8 +18,9 @@
 - Are viewer labels aligned with the intended generated/result channels?
 
 ## HEAD graph notes
-- `HEAD X/Y/Z` should display only filtered HEAD X, Y, Z curves.
-- `HEAD RESULTANT` should display filtered HEAD X, Y, Z, HEAD Resultant, both HIC interval highlights, and the one Peak 3ms_Clip reference line.
+- `HEAD X/Y/Z` should display filtered HEAD X, Y, Z curves plus HEAD Resultant as an overlay.
+- `HEAD RESULTANT` should display only HEAD Resultant, both HIC interval highlights, and the one Peak 3ms_Clip reference line.
+- `HEAD RESULTANT` time axis should stay zoomed to `0 ~ 150 ms`.
 - HEAD graph changes should stay in display logic only unless the task explicitly changes the injury calculation path.
 
 ## NECK graph notes

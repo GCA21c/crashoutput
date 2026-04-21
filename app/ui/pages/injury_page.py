@@ -2977,7 +2977,7 @@ class InjuryPage(tk.Frame):
                 self.ax.plot(t_plot[valid], v_plot[valid], linewidth=width, label=label)
 
     def _plot_head_xyz(self, bundle, slot):
-        self._plot_head_curves(bundle, include_resultant=False)
+        self._plot_head_curves(bundle, include_resultant=True)
         self.ax.set_title(self._head_graph_title(slot, 'head_xyz'))
         self.ax.set_xlabel(self._x_axis_label())
         self.ax.set_ylabel(f"Acceleration ({bundle.get('plot_unit', 'g')})")
@@ -2988,7 +2988,12 @@ class InjuryPage(tk.Frame):
         self.canvas.draw_idle()
 
     def _plot_head_resultant(self, bundle, slot):
-        self._plot_head_curves(bundle, include_resultant=True)
+        self.ax.clear()
+        t = np.asarray(bundle.get('time', []), dtype=float)
+        resultant = np.asarray(bundle.get('resultant_g', []), dtype=float)
+        valid, t_plot, v_plot = self._time_value_valid_mask_ms(t, resultant)
+        if np.any(valid):
+            self.ax.plot(t_plot[valid], v_plot[valid], linewidth=1.6, label='HEAD Resultant')
         for hic_key, color, label in (
             ('hic15', '#fca5a5', 'HIC15 구간'),
             ('hic36', '#87ceeb', 'HIC36 구간'),
@@ -3015,6 +3020,7 @@ class InjuryPage(tk.Frame):
         self.ax.set_title(self._head_graph_title(slot, 'head_resultant'))
         self.ax.set_xlabel(self._x_axis_label())
         self.ax.set_ylabel(f"Acceleration ({bundle.get('plot_unit', 'g')})")
+        self.ax.set_xlim(0.0, 150.0)
         self.ax.grid(True)
         self.ax.legend(loc='best', fontsize=9)
         self.last_plot_title = f'{slot}_Head_Resultant_graph'
