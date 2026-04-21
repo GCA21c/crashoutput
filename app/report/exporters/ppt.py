@@ -70,10 +70,6 @@ def _duplicate_template_slide(presentation, source_slide):
         sp_tree.remove(shape.element)
     for shape in list(source_slide.shapes):
         sp_tree.insert_element_before(deepcopy(shape.element), "p:extLst")
-    for rel in list(source_slide.part.rels.values()):
-        if "notesSlide" in rel.reltype:
-            continue
-        slide.part.rels.add_relationship(rel.reltype, rel._target, rel.rId)
     return slide
 
 
@@ -166,13 +162,11 @@ def export_plotting_report_to_ppt(workbench, items, report_fields, output_path, 
     with rendered_plot_images(workbench, included_items) as rendered_items:
         if not rendered_items:
             raise PptExportError("No rendered plots available for export.")
-        base_item, base_image = rendered_items[0]
-        _apply_text_mapping(template_slide, base_item, report_fields, workbench)
-        _apply_plot_image(template_slide, base_image, MSO_SHAPE_TYPE)
-        written += 1
+        slides = [template_slide]
+        for _ in rendered_items[1:]:
+            slides.append(_duplicate_template_slide(presentation, template_slide))
 
-        for item, image_path in rendered_items[1:]:
-            slide = _duplicate_template_slide(presentation, template_slide)
+        for slide, (item, image_path) in zip(slides, rendered_items):
             _apply_text_mapping(slide, item, report_fields, workbench)
             _apply_plot_image(slide, image_path, MSO_SHAPE_TYPE)
             written += 1
