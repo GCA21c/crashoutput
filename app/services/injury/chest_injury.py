@@ -149,7 +149,7 @@ def calculate_chest_injury_bundle(
     lines.append('- Injuries -')
     lines.append(_clip_line('One Peak 3ms_Clip', 'g', metrics.get('one_peak_3ms_detail')))
     lines.append(_clip_line('Multiple Peak 3ms_Clip', 'g', metrics.get('multiple_peak_3ms_detail')))
-    lines.append(_peak_line('Res-Peak', 'g', metrics.get('resultant_peak', {}), decimals=4))
+    lines.append(_peak_line('Resultant Acc. Peak', 'g', metrics.get('resultant_peak', {}), decimals=4))
     lines.append('')
     lines.extend(_format_axis_peak_lines('Displacement', 'mm', metrics['time'], metrics.get('displacement_mm', [])))
     lines.append(_peak_line('Displacement Peak', 'mm', metrics.get('displacement_peak', {}), decimals=4))

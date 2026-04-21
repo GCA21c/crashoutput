@@ -101,7 +101,7 @@ def calculate_pelvis_injury_bundle(time, x_values, y_values, z_values, plot_unit
     summary_lines.append('- Injuries -')
     summary_lines.append(_interval_detail_line('One Peak 3ms_Clip', plot_unit, one_peak_3ms))
     summary_lines.append(_interval_detail_line('Multiple Peak 3ms_Clip', plot_unit, multiple_peak_3ms))
-    summary_lines.append(_detail_line('Res-Peak', plot_unit, resultant_peak))
+    summary_lines.append(_detail_line('Resultant Acc. Peak', plot_unit, resultant_peak))
 
     return {
         'metrics': {

@@ -57,7 +57,7 @@ EXCEL_IARV_EXPORT_RULES = {
     "FMVSS 208": {
         "exclude": {
             ("HEAD", "HIC36ms"),
-            ("HEAD", "Resultant Acc. 3ms Clip"),
+            ("HEAD", "Resultant Acc. Peak"),
             ("NECK", "Peak Extension MOCy"),
             ("NECK", "Peak Flexion MOCy"),
         },
@@ -74,8 +74,8 @@ EXCEL_VALUE_EXPORT_RULES = {
 
 EXCEL_RESULT_SOURCE_OVERRIDES = {
     "FMVSS 208": {
-        ("HEAD", "Resultant Acc. 3ms Clip"): ("Multiple Peak 3ms",),
-        ("CHEST", "Chest Acc. 3ms Clip"): ("Multiple Peak 3ms",),
+        ("HEAD", "Resultant Acc. 3ms Clip"): ("Resultant Acc. Peak",),
+        ("CHEST", "Chest Acc. 3ms Clip"): ("Resultant Acc. Peak",),
     },
 }
 
@@ -84,7 +84,7 @@ SUMMARY_CRITERIA_ALIASES = {
     "CHEST": {
         "One Peak 3ms": ("One Peak 3ms",),
         "Multiple Peak 3ms": ("Multiple Peak 3ms",),
-        "Chest Acc. 3ms Clip": ("Chest Acc. 3ms Clip",),
+        "Chest Acc. 3ms Clip": ("Resultant Acc. Peak", "Chest Acc. 3ms Clip"),
         "Chest Def.": ("Chest Deflection Peak",),
         "Chest V*C - ECE 94": ("V*C ECE94_CFC180",),
         "Chest V*C - SAE J1727": ("V*C SAE J1727_CFC600",),
@@ -98,7 +98,7 @@ SUMMARY_CRITERIA_ALIASES = {
         "HIC 36ms": ("HIC36ms",),
         "One Peak 3ms": ("One Peak 3ms",),
         "Multiple Peak 3ms": ("Multiple Peak 3ms",),
-        "Resultant Acc. 3ms Clip": ("Resultant Acc. 3ms Clip",),
+        "Resultant Acc. 3ms Clip": ("Resultant Acc. Peak", "Resultant Acc. 3ms Clip"),
     },
     "KNEE": {
         "Left Knee Disp.": ("Left KNEE Displacement Peak",),

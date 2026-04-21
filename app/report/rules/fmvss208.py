@@ -75,12 +75,12 @@ FMVSS_208_ITEMS = (
     ),
     _item(
         "head.resultant_acc_3ms_clip",
-        "Resultant Acc. 3ms Clip",
+        "Resultant Acc. Peak",
         "head",
         "head",
-        "head_3ms_clip",
+        "resultant_peak_g",
         unit="g",
-        payload_aliases=("one_peak_3ms_value", "clip3_value"),
+        payload_aliases=("resultant_peak_value", "resultant_peak.value"),
         limit_key="head_3ms_limit_g",
     ),
     _item(
@@ -181,12 +181,12 @@ FMVSS_208_ITEMS = (
     ),
     _item(
         "chest.acc_3ms_clip",
-        "Chest Acc. 3ms Clip",
+        "Resultant Acc. Peak",
         "chest",
         "chest",
-        "chest_3ms_clip",
+        "resultant_peak_g",
         unit="g",
-        payload_aliases=("one_peak_3ms_g", "one_peak_3ms_detail.value"),
+        payload_aliases=("resultant_peak.value",),
         limit_key="accel_3ms_limit_g",
     ),
     _item(
@@ -239,7 +239,7 @@ FMVSS_208_ITEMS = (
     ),
     _item(
         "pelvis.resultant_peak",
-        "Res-Peak",
+        "Resultant Acc. Peak",
         "pelvis",
         "pelvis",
         "pelvis_resultant_peak",

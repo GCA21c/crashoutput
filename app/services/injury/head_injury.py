@@ -192,7 +192,7 @@ def build_head_injury_bundle(
     summary_lines.append(_hic_metric_line('HIC36', hic36))
     summary_lines.append(_interval_metric_line('One Peak 3ms_Clip', plot_unit, one_peak_3ms))
     summary_lines.append(_interval_metric_line('Multiple Peak 3ms_Clip', plot_unit, multiple_peak_3ms))
-    summary_lines.append(_peak_metric_line('Res-Peak', plot_unit, resultant_peak))
+    summary_lines.append(_peak_metric_line('Resultant Acc. Peak', plot_unit, resultant_peak))
     summary_text = '\n'.join(summary_lines) if summary_lines else '-'
 
     metadata = {
