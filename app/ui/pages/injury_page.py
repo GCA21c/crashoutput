@@ -848,7 +848,6 @@ class InjuryPage(tk.Frame):
         self.chest_y_combo = self._combo_row(inputs, "Chest Acc Y", self.chest_y_var)
         self.chest_z_combo = self._combo_row(inputs, "Chest Acc Z", self.chest_z_var)
         self.chest_disp_combo = self._combo_row(inputs, "Displacement *", self.chest_disp_var)
-        tk.Label(box, textvariable=self.chest_guidance_var, bg="#ffffff", fg="#555555", justify="left", anchor="w", wraplength=420).pack(fill=tk.X, padx=10, pady=(0, 6))
         opt = tk.Frame(box, bg="#ffffff")
         opt.pack(fill=tk.X, padx=10, pady=(2, 4))
         tk.Checkbutton(
@@ -3735,15 +3734,6 @@ class InjuryPage(tk.Frame):
         self.pelvis_x_combo = self._combo_row(inputs, "Pelvis Acc X", self.pelvis_x_var)
         self.pelvis_y_combo = self._combo_row(inputs, "Pelvis Acc Y", self.pelvis_y_var)
         self.pelvis_z_combo = self._combo_row(inputs, "Pelvis Acc Z", self.pelvis_z_var)
-        tk.Label(
-            box,
-            textvariable=self.pelvis_guidance_var,
-            bg="#ffffff",
-            fg="#555555",
-            justify="left",
-            anchor="w",
-            wraplength=420,
-        ).pack(fill=tk.X, padx=10, pady=(0, 6))
         opt = tk.Frame(box, bg="#ffffff")
         opt.pack(fill=tk.X, padx=10, pady=(2, 4))
         tk.Checkbutton(
@@ -3773,15 +3763,6 @@ class InjuryPage(tk.Frame):
         inputs.pack(fill=tk.X, padx=10, pady=(0, 8))
         self.femur_left_combo = self._combo_row(inputs, "Left Femur *", self.femur_left_var)
         self.femur_right_combo = self._combo_row(inputs, "Right Femur *", self.femur_right_var)
-        tk.Label(
-            box,
-            textvariable=self.femur_guidance_var,
-            bg="#ffffff",
-            fg="#555555",
-            justify="left",
-            anchor="w",
-            wraplength=420,
-        ).pack(fill=tk.X, padx=10, pady=(0, 6))
         opt = tk.Frame(box, bg="#ffffff")
         opt.pack(fill=tk.X, padx=10, pady=(2, 4))
         tk.Button(opt, text="\uc804\uccb4 \uacc4\uc0b0", command=self.calculate_femur_all).pack(side=tk.RIGHT)
