@@ -4,9 +4,10 @@
 
 ## 시작 순서
 1. 이 파일을 먼저 읽는다.
-2. `_codex/02_rules/dev_rules.md`를 읽는다.
-3. 요청에 맞는 `_codex/03_workflows/` 및 `_codex/04_modules/` 문서를 읽는다.
-4. 필요한 코드 파일만 최소 범위로 확인한다.
+2. `_codex/07_handoffs/current_handoff.md`가 있으면 먼저 읽는다.
+3. `_codex/02_rules/dev_rules.md`를 읽는다.
+4. 요청에 맞는 `_codex/03_workflows/` 및 `_codex/04_modules/` 문서를 읽는다.
+5. 필요한 코드 파일만 최소 범위로 확인한다.
 
 ## 절대 규칙
 - 코드 수정은 사용자 요청 범위 안에서만 한다.
