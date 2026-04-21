@@ -3231,7 +3231,6 @@ class InjuryPage(tk.Frame):
                 'units': self._merge_metadata_dicts(getattr(viewer, 'external_units', {}) or {}, added_units),
                 'descriptions': self._merge_metadata_dicts(getattr(viewer, 'external_descriptions', {}) or {}, added_descriptions),
                 'channel_filter_labels': self._merge_metadata_dicts(self.workbench.channel_filter_labels or {}, added_filter_labels),
-                'neck_injury_metrics': {slot: st['neck_saved_payload']},
                 'derived_channels': dict((self.workbench.dataset_metadata or {}).get('derived_channels') or {}),
             }
             metadata_override['derived_channels'].update(renamed_meta)
