@@ -157,16 +157,13 @@ class CrashAnalysisWorkbench(tk.Frame):
         right_area = tk.Frame(main_pane, bg=PAGE_BG)
         main_pane.add(right_area, stretch="always", minsize=720)
 
-        top_status = tk.Frame(right_area, bg=STATUS_BG, bd=1, relief=tk.SOLID)
+        top_status = tk.Frame(right_area, bg=STATUS_BG, bd=1, relief=tk.SOLID, height=34)
         top_status.pack(side=tk.TOP, fill=tk.X, padx=8, pady=(8, 0))
         self.top_status = top_status
-        self.top_status_shimmer = tk.Canvas(top_status, bg=STATUS_BG, highlightthickness=0, bd=0)
+        self.top_status_shimmer = tk.Canvas(top_status, bg=STATUS_BG, height=34, highlightthickness=0, bd=0)
         self.top_status_shimmer.place(relx=0, rely=0, relwidth=1, relheight=1)
         self.top_status_shimmer.bind("<Configure>", lambda _event: self._render_top_status_shimmer())
-        self.top_status_dataset_label = tk.Label(top_status, textvariable=self.dataset_info_var, bg=STATUS_BG, anchor="w", fg=TITLE_FG)
-        self.top_status_dataset_label.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10, pady=6)
-        self.top_status_history_label = tk.Label(top_status, textvariable=self.history_info_var, bg=STATUS_BG, anchor="e", fg=TEXT_FG)
-        self.top_status_history_label.pack(side=tk.RIGHT, padx=10)
+        top_status.pack_propagate(False)
 
         self.content = tk.Frame(right_area, bg=PAGE_BG)
         self.content.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
@@ -242,36 +239,54 @@ class CrashAnalysisWorkbench(tk.Frame):
         height = max(1, int(canvas.winfo_height()))
         if not self._top_status_busy_reasons:
             canvas.create_rectangle(0, 0, width, height, fill=STATUS_BG, outline="", tags="shimmer")
-            return
-        offset = float(self._top_status_shimmer_offset)
-        canvas.create_rectangle(0, 0, width, height, fill=STATUS_BG, outline="", tags="shimmer")
-        canvas.create_polygon(
-            offset - 180, 0,
-            offset - 40, 0,
-            offset + 90, height,
-            offset - 50, height,
-            fill="#f4f8ff",
-            outline="",
-            stipple="gray25",
+        else:
+            offset = float(self._top_status_shimmer_offset)
+            canvas.create_rectangle(0, 0, width, height, fill=STATUS_BG, outline="", tags="shimmer")
+            canvas.create_polygon(
+                offset - 180, 0,
+                offset - 40, 0,
+                offset + 90, height,
+                offset - 50, height,
+                fill="#f4f8ff",
+                outline="",
+                stipple="gray25",
+                tags="shimmer",
+            )
+            canvas.create_polygon(
+                offset - 120, 0,
+                offset + 10, 0,
+                offset + 140, height,
+                offset + 10, height,
+                fill="#ffffff",
+                outline="",
+                stipple="gray50",
+                tags="shimmer",
+            )
+            canvas.create_polygon(
+                offset - 45, 0,
+                offset + 35, 0,
+                offset + 115, height,
+                offset + 35, height,
+                fill="#ffffff",
+                outline="",
+                tags="shimmer",
+            )
+        canvas.create_text(
+            12,
+            height / 2,
+            text=self.dataset_info_var.get(),
+            anchor="w",
+            fill=TITLE_FG,
+            font=NAV_FONT_BOLD,
             tags="shimmer",
         )
-        canvas.create_polygon(
-            offset - 120, 0,
-            offset + 10, 0,
-            offset + 140, height,
-            offset + 10, height,
-            fill="#ffffff",
-            outline="",
-            stipple="gray50",
-            tags="shimmer",
-        )
-        canvas.create_polygon(
-            offset - 45, 0,
-            offset + 35, 0,
-            offset + 115, height,
-            offset + 35, height,
-            fill="#ffffff",
-            outline="",
+        canvas.create_text(
+            max(12, width - 12),
+            height / 2,
+            text=self.history_info_var.get(),
+            anchor="e",
+            fill=TEXT_FG,
+            font=NAV_FONT,
             tags="shimmer",
         )
 
