@@ -2793,6 +2793,13 @@ class InjuryPage(tk.Frame):
     def _head_resultant_channel_name(self, slot):
         return f"{slot}_HEAD_RESULTANT_CFC1000"
 
+    def _head_axis_display_names(self, channels):
+        labels = {}
+        for axis_key, channel_name in zip(('x', 'y', 'z'), channels):
+            rewritten = str(rewrite_filter_code_in_text(channel_name, 'CFC 1000') or channel_name or '-').strip()
+            labels[axis_key] = f"ACC {axis_key.upper()} - {rewritten}"
+        return labels
+
     def _head_resultant_channel_metadata(self, slot, channels):
         x_ch, y_ch, z_ch = channels
         return {
@@ -2890,6 +2897,7 @@ class InjuryPage(tk.Frame):
                 z_plot=self._convert_channel_to_head_plot_unit(resolved_axes[2], channels[2]),
                 plot_unit=self._head_plot_unit(channels),
                 channels=channels,
+                axis_display_names=self._head_axis_display_names(channels),
                 resultant_channel=resultant_channel,
                 resultant_filter_label='CFC 1000',
                 use_high_res_cumulative_3ms=self._current_use_high_res_cumulative_3ms(),
