@@ -227,6 +227,16 @@ def _collect_page_plot_items(workbench, page_key, section_key):
     page = (getattr(workbench, "pages", {}) or {}).get(page_key)
     if page is None:
         return []
+    if hasattr(page, "apply_shared_dummy_config"):
+        try:
+            page.apply_shared_dummy_config()
+        except Exception:
+            pass
+    if hasattr(page, "_restore_saved_injury_results"):
+        try:
+            page._restore_saved_injury_results()
+        except Exception:
+            pass
     metadata = dict(getattr(workbench, "dataset_metadata", {}) or {})
     injury_saved = dict(metadata.get("injury_saved_results") or {})
     section_payload = dict(injury_saved.get(section_key) or {})
