@@ -1,5 +1,1 @@
 .DS_Store
-_codex/09_regression_snapshots/input_files/*
-!_codex/09_regression_snapshots/input_files/.gitkeep
-_codex/09_regression_snapshots/*.json
-_codex/09_regression_snapshots/**/*.json

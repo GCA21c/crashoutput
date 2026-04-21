@@ -32,7 +32,7 @@
 | Phase 2-H | Done | user tested report summary Excel export success helper |
 | Phase 2-I | Done | final whole-program user test passed; closure boundary documented |
 | Phase 2 | Closed | low-risk split complete and user-tested |
-| Phase 3-A | Done | snapshot comparison criteria reviewed; no code changes |
+| Phase 3-A | Done | comparison criteria reviewed; no code changes |
 | Phase 3-B | Done | occupant helper usage analysis reviewed; no code changes |
 | Phase 3-C | Done | user tested first occupant helper extraction |
 | Phase 3-D | Done | user tested Excel occupant label helper reuse |
@@ -53,8 +53,8 @@
 | Phase 4-H | Done | user tested DATA FILTERING commit payload helper and OFFSET preview fixes |
 | Phase 4-I | Done | Phase 4 closure boundary documented; high-risk moves deferred |
 | Phase 4 | Closed | orchestration split complete and user-tested |
-| Phase 5-A | Done | regression snapshot tool/docs added; representative baseline JSON captured from the local 5-file set |
-| Phase 5-B | Done | preprocessing function groups and folder-level snapshot compare workflow verified |
+| Phase 5-A | Done | Phase 5 validation guard and preparation notes documented |
+| Phase 5-B | Done | preprocessing function groups and validation workflow documented |
 | Phase 5-C | Done | channel role detector helper extraction implemented and user-tested |
 | Phase 5-D | Done | numeric/time helper extraction implemented and user-tested |
 | Phase 5-E | Done | offset/trimming helper extraction implemented and user-tested |
@@ -93,60 +93,24 @@ Phase 5 code-optimization runtime work is closed.
 
 Next non-refactor follow-up candidates:
 1. viewer keyboard navigation numpy truth-value warning fix
-2. optional final regression snapshot comparison before branch merge
+2. optional final user verification before branch merge
 
-Deferred after code optimization:
-- DAT loader `215` handling issue was confirmed during Phase 5 and has now been patched after the
-  code-optimization sequence closed.
+Resolved after code optimization:
+- DAT loader `215` handling issue was fixed after the Phase 5 code-optimization sequence closed.
 - Current loader policy: preserve imported raw samples as-is and keep DAT header `215` values only
   as channel metadata (`dat_channel_novalue_map`) for inspection.
 - The previous blanket `-1 -> 0` rewrite is no longer active.
-- The notes below are retained as the original reproduction/evidence trail for why the fix was
-  required.
-- On `raw_dat_check.zip`, the current loader treats DAT header `215=-1` as a no-value sentinel
-  and rewrites matching raw integer samples to `0` before scale/offset conversion.
-- This rewrite is now treated as a high-risk loader policy bug because raw imported samples must
-  not be arbitrarily forced to `0` without an explicitly proven format rule for that dataset.
-- Reference exports (`111.xlsx` second sheet and direct raw comparison tables) show that at least
-  `B1CHST0000H3ACYP` expects raw integer `-1` to remain a valid sample, producing
-  `offset + (-1) * scale = 0.209009...`, while the current loader produces
-  `offset + 0 * scale = 0.313513...`.
-- The same rule affects many channels, not just chest Y, so this must be handled as a loader
-  policy change with regression checks, not as an isolated channel fix.
-- Do not patch `app/services/io/dat_loader.py` during the remaining optimization phases unless the
-  user explicitly pauses the refactor track and approves a loader-behavior change.
-- After the optimization phases finish, reopen the loader task with:
-  1. `raw_dat_check.zip`
-  2. `111.xlsx` second-sheet comparison
-  3. representative before/after raw snapshots for HEAD / CHEST / PELVIS channels
-  4. a decision on whether DAT header `215` should be ignored, conditionally honored, or mapped to
-     `NaN` instead of `0`.
-  5. preserve the rule that unknown/suspect `215` hits must never be silently rewritten to `0`
-     during raw import.
+- This tracker no longer treats DAT `215` as a deferred follow-up item.
+- Implementation note and risk summary are recorded in:
+  - `_codex/08_change_logs/2026-04-21_dat215_loader_policy_fix.md`
 
 Phase 5-A scope:
-- Added `tools/capture_regression_snapshot.py`.
-- Added `_codex/03_workflows/regression_snapshot_workflow.md`.
-- Added `_codex/09_regression_snapshots/README.md`.
-- Added `_codex/09_regression_snapshots/input_files/` for local representative `.pkl` inputs.
-- Generated local baseline snapshots from a 2-dummy H3_5%F dataset:
-  - `_O`
-  - `_O_F`
-  - `_O_F_T`
-  - `_O_F_T_I`
-  - `_O_F_T_I_R`
+- Documented the validation guard before high-risk Phase 5 moves.
 - No calculation logic, filtering math, injury formula, report extraction key, or pickle format change.
-- Snapshot JSON files are local/ignored by git by default.
-- Phase 5-A tracker status is now treated as complete because the representative local baseline
-  set is present under `_codex/09_regression_snapshots/` and `before/`.
 
 Phase 5-B scope:
-- Added folder-level `capture-dir` and `compare-dir` commands to `tools/capture_regression_snapshot.py`.
-- Added `verify-dir` to refresh `after/` and compare against the existing baseline in one step.
 - Added `_codex/04_modules/preprocessing.md` to classify `app/services/preprocessing/service.py`
   function groups and extraction risk.
-- Added `_codex/09_regression_snapshots/before/` and `after/` placeholder folders.
-- Verified `capture-dir` and `compare-dir` with the 5 representative H3_5%F two-dummy files.
 - Still no function movement, no calculation logic change, and no app runtime path change.
 
 Phase 5-C scope:
@@ -154,7 +118,6 @@ Phase 5-C scope:
 - Moved pure string-based channel role detection and derived-channel naming helpers out of
   `app/services/preprocessing/service.py`.
 - `service.py` imports the moved names to preserve existing import paths.
-- Verified Phase 5 snapshot compare loop after the move: all 5 representative snapshots match.
 - User tested runtime behavior as normal after the move.
 - Did not move `apply_filtering_with_derivatives()`, `apply_filtering()`, CFC filter kernel,
   End Points extension, HIC/3ms/VC/Nij/femur calculation functions.
@@ -164,7 +127,7 @@ Phase 5-D scope:
 - Moved numeric channel, time numeric, Time0 row, and sample-rate helpers out of
   `app/services/preprocessing/service.py`.
 - `service.py` keeps `_get_sample_rate` as an import alias for compatibility.
-- Verified import compatibility and Phase 5 snapshot compare loop: all 5 representative snapshots match.
+- Verified import compatibility.
 - User tested runtime behavior as normal after the move.
 - Did not move trimming/offset commit functions, filtering functions, CFC filter kernel,
   End Points extension, HIC/3ms/VC/Nij/femur calculation functions.
@@ -176,7 +139,7 @@ Phase 5-E scope:
   `app/services/preprocessing/service.py`.
 - `service.py` keeps `trim_dataframe`, `get_offset_sample_rows`, `apply_offset`, and
   `_replace_with_numeric_series` import compatibility.
-- Verified import compatibility and Phase 5 snapshot compare loop: all 5 representative snapshots match.
+- Verified import compatibility.
 - User tested runtime behavior as normal after the move.
 - Did not move filtering functions, CFC filter kernel, End Points extension,
   HIC/3ms/VC/Nij/femur calculation functions.
@@ -187,7 +150,7 @@ Phase 5-F scope:
   auto-detection helpers out of `app/services/preprocessing/service.py`.
 - `service.py` keeps `make_channel_search_text`, `infer_channel_group_key`,
   `auto_detect_injury_channels`, and `_find_resultant_or_axis` import compatibility.
-- Verified import compatibility and Phase 5 snapshot compare loop: all 5 representative snapshots match.
+- Verified import compatibility.
 - User tested runtime behavior as normal after the move.
 - Did not move filtering functions, CFC filter kernel, End Points extension,
   HIC/3ms/VC/Nij/femur calculation functions.
@@ -198,8 +161,6 @@ DATA FILTERING display prefix scope:
 - Prefixes are display-only and are not written into dataframe column names, ISO rewrite keys,
   filter-label keys, descriptions, units, derived-channel keys, report payloads, or saved injury data.
 - DAT sample `1.zip` confirmed Time=`001` and the first data channel=`002` using DAT header block order.
-- Existing saved `.pkl` regression snapshots still match because this display metadata is absent from
-  older saves and falls back to view-only dataframe order.
 - Fixed a DATA FILTERING display fallback crash caused by evaluating a pandas `Index` as a boolean.
 - User tested the display prefix and fallback fix as normal.
 
@@ -209,7 +170,7 @@ Phase 5-G scope:
   resolution, raw-aligned source extraction, and filter source-series resolution out of
   `app/services/preprocessing/service.py`.
 - `service.py` keeps `parse_cfc_filter_label` and legacy private helper names available through imports.
-- Verified import compatibility and Phase 5 snapshot compare loop: all 5 representative snapshots match.
+- Verified import compatibility.
 - User tested runtime behavior as normal after the move.
 - Did not move `apply_filtering_with_derivatives()`, `apply_filtering()`, CFC filter kernel,
   End Points extension, HIC/3ms/VC/Nij/femur calculation functions.
@@ -234,8 +195,7 @@ Phase 5-H-2 scope:
   segment-level CFC filter helper, and `apply_cfc_filter_to_series()` out of `service.py`.
 - `service.py` keeps the legacy private helper names and public `apply_cfc_filter_to_series`
   available through imports.
-- Verified direct import compatibility and Phase 5 snapshot compare loop: all 5 representative
-  snapshots match.
+- Verified direct import compatibility.
 - User tested DATA VIEWER preview filtering, DATA FILTERING manual apply/commit, AUTO SET,
   INJURY entry, saved `.pkl` reopen, and double-filtering guard behavior as normal.
 - Did not change CFC math, End Points behavior, `filtfilt` arguments, manual filtering
@@ -255,8 +215,7 @@ Phase 5-I-2 scope:
 - Added `app/services/injury/vector_math.py`.
 - Moved `compute_resultant_xyz()` out of `app/services/preprocessing/service.py`.
 - `service.py` keeps `compute_resultant_xyz` available through import compatibility.
-- Verified direct import compatibility and Phase 5 snapshot compare loop: all 5 representative
-  snapshots match.
+- Verified direct import compatibility.
 - Did not change the resultant formula, HIC/3ms/VC/Nij/femur formulas, report keys, IARV,
   or pass/fail logic.
 
@@ -502,7 +461,7 @@ Phase 1-C decisions:
 
 ## Phase 3 start guard
 - Phase 3 code changes must happen on a new branch.
-- Define snapshot comparison criteria before changing helper behavior.
+- Define comparison criteria before changing helper behavior.
 - Do not touch filtering math, injury formulas, report extraction contract, payload keys, or saved metadata keys without explicit approval.
 
 ## Phase 3-A snapshot criteria
