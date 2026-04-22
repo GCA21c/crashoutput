@@ -31,6 +31,8 @@
 | `app/services/injury/common_engines.py` | shared injury helpers |
 | `app/services/injury/input_resolver.py` | injury input channel lookup helper |
 | `app/services/injury/*.py` | module-specific injury logic |
+| `app/services/state/injury_result_store.py` | canonical injury payload store / result-graph-slot registry helpers |
+| `app/services/state/injury_metric_canonical.py` | canonical injury metric, graph composition, and calculation-context builders |
 | `app/services/state/persistence.py` | saved dataset metadata assembly helper |
 
 ## UI pages
@@ -51,6 +53,7 @@
 | Path | Responsibility |
 |---|---|
 | `app/report/engine.py` | summary report snapshot / value extraction |
+| `app/report/formatters/*.py` | canonical payload accessor and formatter-side shared read helpers |
 | `app/report/occupants.py` | report occupant slot normalization and merge helpers |
 | `app/report/service.py` | summary report payload/cache orchestration helpers |
 | `app/report/registry.py` | report rule/template registry |
@@ -61,6 +64,7 @@
 | `_codex/04_modules/report.md` | report module maintenance workflow |
 | `_codex/04_modules/preprocessing.md` | preprocessing service split plan and risk map |
 | `_codex/05_reference/excel_export_mapping.md` | Excel export mapping reference |
+| `_codex/05_reference/injury_payload_field_roles.md` | payload field role classification and legacy cleanup baseline |
 
 ## UI components
 | Path | Responsibility |

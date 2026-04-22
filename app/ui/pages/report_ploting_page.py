@@ -10,6 +10,7 @@ from app.report.plotting_service import (
     merge_plot_items,
     plotting_default_template_path,
     plotting_item_display_name,
+    plotting_item_text,
     plotting_output_name_from_fields,
     plotting_payload_from_metadata,
     plotting_report_fields,
@@ -257,7 +258,11 @@ class ReportPlotingPage(tk.Frame):
             self.text_mode_var.set(str((item or {}).get("text_mode") or "auto"))
             self.text_editor.delete("1.0", tk.END)
             if item:
-                self.text_editor.insert(tk.END, str(item.get("custom_text") if str(item.get("text_mode")) == "custom" else item.get("summary_text") or ""))
+                if str(item.get("text_mode") or "auto").strip().lower() == "custom":
+                    text_value = str(item.get("custom_text") or "")
+                else:
+                    text_value = plotting_item_text(item)
+                self.text_editor.insert(tk.END, text_value)
         finally:
             self._building_ui = False
 
@@ -398,6 +403,17 @@ class ReportPlotingPage(tk.Frame):
             return
         if not self._items:
             self.load_plot_list()
+        else:
+            collected = collect_plot_items(self.workbench)
+            if collected:
+                self._all_items = [dict(item) for item in collected]
+                self._items = merge_plot_items({"items": self._items}, self._all_items)
+                self._refresh_loaded_count()
+                self._populate_tree()
+                self._refresh_add_options()
+                if self._selected_item_key:
+                    self._reselect_item(self._selected_item_key)
+                self._cache_state_in_memory()
         template_path = self._select_template_for_export()
         if not template_path:
             messagebox.showwarning("REPORT - PLOTTING", "PPT 템플릿 파일을 선택하세요.")

@@ -40,8 +40,16 @@ PLOTTING_GRAPH_TEXT_RULES = {
     ("head", "head_xyz"): {
         "template": "acc_axes_then_resultant",
         "axis_keys": ("x", "y", "z"),
+        "axis_value_indent": "  ",
         "resultant_key": "head_resultant",
         "resultant_label": "HEAD Resultant",
+        "resultant_max_value_key": "head_resultant_max",
+        "resultant_max_time_key": "head_resultant_max_time_s",
+        "resultant_min_value_key": "head_resultant_min",
+        "resultant_min_time_key": "head_resultant_min_time_s",
+        "resultant_multiline_value": True,
+        "resultant_value_indent": "  ",
+        "resultant_blank_between": False,
         "unit": "g",
     },
     ("head", "head_resultant"): {
@@ -58,9 +66,14 @@ PLOTTING_GRAPH_TEXT_RULES = {
     ("chest", "accel"): {
         "template": "acc_axes_then_injuries",
         "axis_keys": ("x", "y", "z"),
+        "axis_value_indent": "  ",
         "resultant_key": "resultant_g",
         "resultant_label": "CHEST Resultant",
+        "resultant_multiline_value": True,
+        "resultant_value_indent": "  ",
+        "resultant_blank_between": False,
         "unit": "g",
+        "injury_multiline_value": True,
         "injury_lines": (
             {"type": "range", "label": "One Peak 3ms_Clip", "detail_key": "one_peak_3ms_detail", "unit": "g"},
             {"type": "range", "label": "Multiple Peak 3ms_Clip", "detail_key": "multiple_peak_3ms_detail", "unit": "g"},
@@ -76,14 +89,34 @@ PLOTTING_GRAPH_TEXT_RULES = {
     ("pelvis", "accel_resultant"): {
         "template": "acc_axes_then_injuries",
         "axis_keys": ("x", "y", "z"),
+        "axis_value_indent": "  ",
         "resultant_key": "resultant",
         "resultant_label": "PELVIS Resultant",
+        "resultant_multiline_value": True,
+        "resultant_value_indent": "  ",
+        "resultant_blank_between": False,
         "unit": "g",
+        "injury_multiline_value": True,
         "injury_lines": (
             {"type": "detail_range", "label": "One Peak 3ms_Clip", "detail_key": "one_peak_3ms", "unit": "g"},
             {"type": "detail_range", "label": "Multiple Peak 3ms_Clip", "detail_key": "multiple_peak_3ms", "unit": "g"},
             {"type": "detail_at", "label": "Resultant Acc. Peak", "detail_key": "resultant_peak", "unit": "g"},
         ),
+    },
+    ("femur", "combined"): {
+        "template": "femur_combined_summary",
+    },
+    ("knee", "combined"): {
+        "template": "knee_combined_summary",
+    },
+    ("iliac", "force"): {
+        "template": "iliac_force_summary",
+    },
+    ("iliac", "moment"): {
+        "template": "iliac_moment_summary",
+    },
+    ("iliac", "crossplot"): {
+        "template": "iliac_crossplot_summary",
     },
     ("neck", "fo"): {
         "template": "neck_force_axes",

@@ -35,6 +35,15 @@ from app.services.injury import (
     calculate_tibia_injury_bundle,
 )
 from app.services.injury.input_resolver import find_derived_channel
+from app.services.state.injury_result_store import (
+    get_payload_store,
+    get_section_payload,
+    get_slot_payload,
+    set_active_slot as set_store_active_slot,
+    set_section_payload as set_store_section_payload,
+    update_graph_selection as update_store_graph_selection,
+)
+from app.services.state.injury_metric_canonical import build_canonical_context, build_canonical_graphs, build_canonical_metrics
 from app.core.utils.formatting import SUMMARY_FORMAT_VERSION, fmt_time_ms, fmt_value
 from app.ui.components.multi_dummy_panel import MultiDummyPanel
 from app.ui.components.scrollable_frame import VerticalScrolledFrame
@@ -398,6 +407,8 @@ class InjuryPage(tk.Frame):
                 'head_z_min': self._safe_metric_float(metrics.get('head_z_min_value')),
                 'head_resultant_max': self._safe_metric_float(metrics.get('head_resultant_max_value')),
                 'head_resultant_min': self._safe_metric_float(metrics.get('head_resultant_min_value')),
+                'head_resultant_max_time_s': self._safe_metric_float(metrics.get('head_resultant_max_time_s')),
+                'head_resultant_min_time_s': self._safe_metric_float(metrics.get('head_resultant_min_time_s')),
             }
         if self.initial_mode == 'nij':
             return {
@@ -472,6 +483,10 @@ class InjuryPage(tk.Frame):
             enriched[key] = value
         enriched['structured_metrics'] = self._to_storable_metric_value(metrics)
         enriched['metric_extrema'] = self._collect_metric_extrema(metrics, time_values)
+        enriched['canonical_schema_version'] = 1
+        enriched['canonical_metrics'] = build_canonical_metrics(self._section_key(), enriched, metrics)
+        enriched['calculation_context'] = build_canonical_context(self._section_key(), enriched, metrics, state)
+        enriched['canonical_graphs'] = build_canonical_graphs(self._section_key())
         return enriched
 
     def _section_key(self):
@@ -1328,7 +1343,7 @@ class InjuryPage(tk.Frame):
 
     def _injury_metadata_bundle(self):
         metadata = dict(getattr(self.workbench, 'dataset_metadata', {}) or {})
-        return dict(metadata.get('injury_saved_results') or {})
+        return get_payload_store(metadata)
 
     def _dataset_identity_text(self):
         metadata = dict(getattr(self.workbench, 'dataset_metadata', {}) or {})
@@ -1410,44 +1425,27 @@ class InjuryPage(tk.Frame):
             state[payload_key] = payload
 
         metadata = dict(getattr(self.workbench, 'dataset_metadata', {}) or {})
-        injury_saved = dict(metadata.get('injury_saved_results') or {})
-        section_payload = dict(injury_saved.get(self._section_key()) or {})
-        slots_payload = dict(section_payload.get('slots') or {})
-        slot_payload = dict(slots_payload.get(slot) or {})
-        slot_payload['graph_key'] = graph_key
-        slot_payload['graph_uid'] = graph_uid
-        slots_payload[slot] = slot_payload
-        section_payload['slots'] = slots_payload
-        injury_saved[self._section_key()] = section_payload
-
-        graph_registry = dict(metadata.get('injury_graph_registry') or {})
-        graph_registry[graph_uid] = {
-            'section_key': self._section_key(),
-            'slot': slot,
-            'result_uid': state.get('result_uid') or self._injury_result_uid(slot),
-            'graph_key': graph_key,
-            'dummy_name': state.get('dummy_name') or '',
-            'dummy_profile': state.get('dummy_profile') or '',
-            'source_file_path': self._dataset_identity_text(),
-            'storage': 'rebuild_from_dataset',
-        }
-
-        metadata['injury_saved_results'] = injury_saved
-        metadata['injury_graph_registry'] = graph_registry
+        metadata = update_store_graph_selection(
+            metadata,
+            section_key=self._section_key(),
+            slot=slot,
+            graph_key=graph_key,
+            graph_uid=graph_uid,
+            result_uid=state.get('result_uid') or self._injury_result_uid(slot),
+            dummy_name=state.get('dummy_name') or '',
+            dummy_profile=state.get('dummy_profile') or '',
+            source_file_path=self._dataset_identity_text(),
+        )
         self.workbench.dataset_metadata = metadata
         self._persist_graph_metadata_to_current_pickle()
 
     def _persist_active_slot_selection(self, slot=None):
         slot = slot or self._active_slot()
         metadata = dict(getattr(self.workbench, 'dataset_metadata', {}) or {})
-        injury_saved = dict(metadata.get('injury_saved_results') or {})
-        section_payload = dict(injury_saved.get(self._section_key()) or {})
+        section_payload = get_section_payload(metadata, self._section_key())
         if not section_payload:
             return
-        section_payload['active_slot'] = slot
-        injury_saved[self._section_key()] = section_payload
-        metadata['injury_saved_results'] = injury_saved
-        self.workbench.dataset_metadata = metadata
+        self.workbench.dataset_metadata = set_store_active_slot(metadata, self._section_key(), slot)
         self._persist_graph_metadata_to_current_pickle()
 
     def _legacy_build_section_payload(self):
@@ -1493,36 +1491,20 @@ class InjuryPage(tk.Frame):
     def _save_section_payload(self, history_text, dataframe=None, metadata_extra=None, op_suffix='_I'):
         viewer = self.workbench.viewer
         base_df = dataframe.copy(deep=True) if dataframe is not None else viewer.df.copy(deep=True)
-        injury_saved = self._injury_metadata_bundle()
-        injury_saved[self._section_key()] = self._build_section_payload()
         metadata = dict(getattr(self.workbench, 'dataset_metadata', {}) or {})
-        result_registry = dict(metadata.get('injury_result_registry') or {})
-        graph_registry = dict(metadata.get('injury_graph_registry') or {})
-        section_payload = injury_saved.get(self._section_key()) or {}
-        for slot, payload in dict(section_payload.get('slots') or {}).items():
-            uid = payload.get('result_uid') or self._injury_result_uid(slot)
-            result_registry[uid] = {
-                'section_key': self._section_key(),
-                'slot': slot,
-                'dummy_name': payload.get('dummy_name') or '',
-                'dummy_profile': payload.get('dummy_profile') or '',
-                'channels': dict(payload.get('channels') or {}),
-                'source_file_path': self._dataset_identity_text(),
-            }
-            graph_key = payload.get('graph_key')
-            if graph_key:
-                graph_uid = payload.get('graph_uid') or self._injury_graph_uid(slot, graph_key)
-                graph_registry[graph_uid] = {
-                    'section_key': self._section_key(),
-                    'slot': slot,
-                    'result_uid': uid,
-                    'graph_key': graph_key,
-                    'dummy_name': payload.get('dummy_name') or '',
-                    'dummy_profile': payload.get('dummy_profile') or '',
-                    'source_file_path': self._dataset_identity_text(),
-                    'storage': 'rebuild_from_dataset',
-                }
-        metadata_override = {'injury_saved_results': injury_saved, 'injury_result_registry': result_registry, 'injury_graph_registry': graph_registry}
+        section_payload = self._build_section_payload()
+        metadata = set_store_section_payload(
+            metadata,
+            self._section_key(),
+            section_payload,
+            source_file_path=self._dataset_identity_text(),
+        )
+        metadata_override = {
+            'injury_saved_results': get_payload_store(metadata),
+            'injury_result_registry': dict(metadata.get('injury_result_registry') or {}),
+            'injury_graph_registry': dict(metadata.get('injury_graph_registry') or {}),
+            'injury_slot_registry': dict(metadata.get('injury_slot_registry') or {}),
+        }
         if metadata_extra:
             metadata_override.update(metadata_extra)
         return self.workbench.apply_processed_dataframe(base_df, history_text, op_suffix=op_suffix, metadata_override=metadata_override)
@@ -3923,6 +3905,8 @@ class InjuryPage(tk.Frame):
             return [('accel', 'Acceleration'), ('disp', 'Displacement'), ('vc', 'V*C')]
         if self.initial_mode == 'pelvis':
             return [('accel_resultant', 'ACC-RESULTANT')]
+        if self.initial_mode == 'femur':
+            return [('combined', 'Combined')]
         if self.initial_mode == 'knee':
             return [('combined', 'Knee Slider')]
         if self.initial_mode == 'iliac':
@@ -4258,7 +4242,7 @@ class InjuryPage(tk.Frame):
         }
 
     def _restore_saved_injury_results(self):
-        saved = self._injury_metadata_bundle().get(self._section_key()) or {}
+        saved = get_section_payload(getattr(self.workbench, 'dataset_metadata', {}) or {}, self._section_key())
         if not saved:
             return
         count = int(saved.get('dummy_count') or 1)
@@ -4901,6 +4885,24 @@ class InjuryPage(tk.Frame):
 
     def _ensure_slot_plot_data(self, slot):
         state = self.slot_states.get(slot) or {}
+        if not state.get('channels'):
+            payload = get_slot_payload(getattr(self.workbench, 'dataset_metadata', {}) or {}, self._section_key(), slot)
+            if payload:
+                state['result_uid'] = payload.get('result_uid') or state.get('result_uid') or self._injury_result_uid(slot)
+                state['dummy_name'] = payload.get('dummy_name') or state.get('dummy_name') or ''
+                state['dummy_profile'] = payload.get('dummy_profile') or state.get('dummy_profile') or ''
+                state['criterion_key'] = payload.get('criterion_key') or state.get('criterion_key') or ''
+                state['channels'] = dict(payload.get('channels') or {})
+                state['neg_flags'] = dict(payload.get('neg_flags') or {})
+                state['summary_text'] = payload.get('summary_text') or state.get('summary_text') or '-'
+                restored_graph_key = payload.get('graph_key')
+                if self.initial_mode == 'nij':
+                    restored_graph_key = self._normalize_neck_graph_key(restored_graph_key)
+                state['graph_key'] = restored_graph_key or state.get('graph_key')
+                state['graph_uid'] = payload.get('graph_uid') or state.get('graph_uid') or ''
+                payload_key = self._slot_saved_payload_key()
+                if payload_key:
+                    state[payload_key] = dict(payload)
         viewer = self.workbench.viewer
         if viewer.df is None or viewer.time_column is None:
             return False
@@ -5645,12 +5647,9 @@ class InjuryPage(tk.Frame):
             if not silent:
                 messagebox.showwarning('\uacbd\uace0', '\uba3c\uc800 FEMUR \uacc4\uc0b0\uc744 \uc2e4\ud589\ud574\uc8fc\uc138\uc694.')
             return
-        if mode == 'left':
-            self._plot_femur_side(metrics, slot, 'left')
-        elif mode == 'right':
-            self._plot_femur_side(metrics, slot, 'right')
-        else:
-            self._plot_femur_combined(metrics, slot)
+        if mode != 'combined':
+            mode = 'combined'
+        self._plot_femur_combined(metrics, slot)
         self.slot_states[slot]['graph_key'] = mode
         self.slot_states[slot]['graph_uid'] = self._injury_graph_uid(slot, mode)
         self._select_graph_tab(mode)
