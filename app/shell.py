@@ -544,6 +544,7 @@ class CrashAnalysisWorkbench(tk.Frame):
         label = self.source_file_label or "선택된 파일 없음"
         self.dataset_info_var.set(f"파일: {label}")
         self.history_info_var.set(f"History: {len(self.history_entries or self.history)}")
+        self._render_top_status_shimmer()
 
     def _normalize_history_entry(self, item):
         if isinstance(item, dict):
