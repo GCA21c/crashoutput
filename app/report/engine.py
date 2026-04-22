@@ -95,6 +95,8 @@ def _extract_numeric_field(slot_payload, primary_key, aliases=(), *, transform_n
     slot_payload = dict(slot_payload or {})
     candidate_paths = _candidate_paths(primary_key, aliases)
     for source_name, container in (
+        ("canonical_metrics", slot_payload.get("canonical_metrics")),
+        ("calculation_context", slot_payload.get("calculation_context")),
         ("report_values", slot_payload.get("report_values")),
         ("structured_metrics", slot_payload.get("structured_metrics")),
         ("top_level", slot_payload),
@@ -107,6 +109,18 @@ def _extract_numeric_field(slot_payload, primary_key, aliases=(), *, transform_n
 
 
 def _extract_metric_value(item, slot_payload):
+    canonical_aliases = tuple(item.get("canonical_aliases") or ())
+    context_aliases = tuple(item.get("context_aliases") or ())
+    canonical_paths = tuple(path for path in (*canonical_aliases, *context_aliases) if str(path or "").strip())
+    if canonical_paths:
+        extracted = _extract_numeric_field(
+            slot_payload,
+            "",
+            canonical_paths,
+            transform_name=item.get("value_transform"),
+        )
+        if extracted[0] is not None:
+            return extracted
     return _extract_numeric_field(
         slot_payload,
         item.get("value_key"),
@@ -124,6 +138,23 @@ def _format_time_text(time_value=None, start_time=None, end_time=None):
 
 
 def _extract_row_time(item, slot_payload):
+    canonical_start_aliases = tuple(item.get("canonical_time_start_aliases") or ())
+    canonical_end_aliases = tuple(item.get("canonical_time_end_aliases") or ())
+    if canonical_start_aliases or canonical_end_aliases:
+        start_value, start_source, start_path = _extract_numeric_field(slot_payload, "", canonical_start_aliases)
+        end_value, end_source, end_path = _extract_numeric_field(slot_payload, "", canonical_end_aliases)
+        if start_value is not None and end_value is not None:
+            source = start_source if start_source == end_source else "mixed"
+            path = f"{start_path} ~ {end_path}".strip()
+            return {
+                "time": _format_time_text(start_time=start_value, end_time=end_value),
+                "time_value": None,
+                "time_start": start_value,
+                "time_end": end_value,
+                "time_source": source,
+                "time_path": path,
+            }
+
     start_value, start_source, start_path = _extract_numeric_field(
         slot_payload,
         item.get("time_start_key"),
@@ -145,11 +176,20 @@ def _extract_row_time(item, slot_payload):
             "time_source": source,
             "time_path": path,
         }
-    time_value, time_source, time_path = _extract_numeric_field(
-        slot_payload,
-        item.get("time_key"),
-        item.get("time_aliases"),
-    )
+    canonical_time_aliases = tuple(item.get("canonical_time_aliases") or ())
+    if canonical_time_aliases:
+        time_value, time_source, time_path = _extract_numeric_field(slot_payload, "", canonical_time_aliases)
+        if time_value is not None:
+            return {
+                "time": _format_time_text(time_value=time_value),
+                "time_value": time_value,
+                "time_start": None,
+                "time_end": None,
+                "time_source": time_source,
+                "time_path": time_path,
+            }
+
+    time_value, time_source, time_path = _extract_numeric_field(slot_payload, item.get("time_key"), item.get("time_aliases"))
     return {
         "time": _format_time_text(time_value=time_value),
         "time_value": time_value,
