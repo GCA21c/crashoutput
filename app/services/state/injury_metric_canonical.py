@@ -169,11 +169,22 @@ def _chest_canonical(payload, metrics):
     metric_extrema = dict(payload.get("metric_extrema") or {})
     resultant_extrema = dict(metric_extrema.get("resultant_g") or {})
     displacement_extrema = dict(metric_extrema.get("displacement_mm") or {})
+    def _metric_extrema_block(key_name, *, channel="", display_name="", unit=""):
+        detail = dict(metric_extrema.get(key_name) or {})
+        return _extrema(
+            detail.get("max_value"),
+            detail.get("max_time_s"),
+            detail.get("min_value"),
+            detail.get("min_time_s"),
+            unit=unit,
+            channel=channel,
+            display_name=display_name,
+        )
     return {
         "acc": {
-            "x": _extrema(channel=channels.get("x"), display_name="ACC X", unit=unit, **dict(metric_extrema.get("x_g") or {})),
-            "y": _extrema(channel=channels.get("y"), display_name="ACC Y", unit=unit, **dict(metric_extrema.get("y_g") or {})),
-            "z": _extrema(channel=channels.get("z"), display_name="ACC Z", unit=unit, **dict(metric_extrema.get("z_g") or {})),
+            "x": _metric_extrema_block("x_g", channel=channels.get("x"), display_name="ACC X", unit=unit),
+            "y": _metric_extrema_block("y_g", channel=channels.get("y"), display_name="ACC Y", unit=unit),
+            "z": _metric_extrema_block("z_g", channel=channels.get("z"), display_name="ACC Z", unit=unit),
             "resultant": _extrema(
                 resultant_extrema.get("max_value"),
                 resultant_extrema.get("max_time_s"),
