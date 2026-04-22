@@ -238,3 +238,112 @@ def build_canonical_metrics(section_key, payload, metrics):
     if section == "chest":
         return _chest_canonical(payload, metrics)
     return {}
+
+
+def build_canonical_graphs(section_key):
+    section = _text(section_key).lower()
+    if section == "head":
+        return {
+            "head_xyz": {
+                "graph_type": "overlay",
+                "series_refs": (
+                    "metrics.acc.x",
+                    "metrics.acc.y",
+                    "metrics.acc.z",
+                    "metrics.acc.resultant",
+                ),
+                "annotations": tuple(),
+            },
+            "head_resultant": {
+                "graph_type": "single",
+                "series_refs": ("metrics.acc.resultant",),
+                "annotations": (
+                    "metrics.injury.hic15",
+                    "metrics.injury.hic36",
+                    "metrics.injury.one_peak_3ms",
+                    "metrics.injury.multiple_peak_3ms",
+                    "metrics.injury.resultant_peak",
+                    "metrics.injury.fmvss_head_80g_3ms_limit",
+                ),
+            },
+        }
+    if section == "neck":
+        return {
+            "fo": {
+                "graph_type": "overlay",
+                "series_refs": (
+                    "metrics.force.x",
+                    "metrics.force.y",
+                    "metrics.force.z",
+                ),
+                "annotations": (
+                    "metrics.injury.nte",
+                    "metrics.injury.ntf",
+                    "metrics.injury.nce",
+                    "metrics.injury.ncf",
+                ),
+            },
+            "mo": {
+                "graph_type": "overlay",
+                "series_refs": (
+                    "metrics.moment.x",
+                    "metrics.moment.y",
+                    "metrics.moment.z",
+                ),
+                "annotations": tuple(),
+            },
+            "mocy": {
+                "graph_type": "single",
+                "series_refs": ("metrics.moment.mocy",),
+                "annotations": (
+                    "metrics.moment.mocy.peak_flexion",
+                    "metrics.moment.mocy.peak_extension",
+                ),
+            },
+            "nij_components": {
+                "graph_type": "overlay",
+                "series_refs": (
+                    "metrics.injury.nte",
+                    "metrics.injury.ntf",
+                    "metrics.injury.nce",
+                    "metrics.injury.ncf",
+                ),
+                "annotations": ("metrics.injury.nij",),
+            },
+            "nij_overall": {
+                "graph_type": "single",
+                "series_refs": ("metrics.injury.nij",),
+                "annotations": tuple(),
+            },
+        }
+    if section == "chest":
+        return {
+            "accel": {
+                "graph_type": "overlay",
+                "series_refs": (
+                    "metrics.acc.x",
+                    "metrics.acc.y",
+                    "metrics.acc.z",
+                    "metrics.acc.resultant",
+                ),
+                "annotations": (
+                    "metrics.injury.one_peak_3ms",
+                    "metrics.injury.multiple_peak_3ms",
+                    "metrics.injury.resultant_peak",
+                ),
+            },
+            "disp": {
+                "graph_type": "single",
+                "series_refs": ("metrics.displacement",),
+                "annotations": ("metrics.displacement.peak",),
+            },
+            "vc": {
+                "graph_type": "overlay",
+                "series_refs": (
+                    "metrics.vc.sae_j1727_cfc600",
+                    "metrics.vc.ece94_cfc180",
+                ),
+                "annotations": tuple(),
+            },
+        }
+    return {}

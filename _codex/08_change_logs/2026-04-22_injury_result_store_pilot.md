@@ -7,6 +7,7 @@
 - switched injury save / graph selection / reload hydration to the common store helper path
 - switched report snapshot and plotting collection to read payloads through the common store helper
 - added canonical metric payload blocks for `HEAD`, `NECK`, and `CHEST` under `canonical_metrics`
+- added canonical graph composition blocks for `HEAD`, `NECK`, and `CHEST` under `canonical_graphs`
 
 ## Why
 - result storage and lookup had drifted across `slot_states`, per-section saved payload caches, metadata payloads, and registry dicts
@@ -22,4 +23,5 @@
 ## Risk
 - `slot_states` still remains as UI/runtime cache, so this is a pilot unification rather than full legacy removal
 - graph rendering still rebuilds runtime metrics from slot state when arrays are not resident; payload store now hydrates that state first
+- canonical graph composition is stored, but formatters still mostly read legacy graph-key-specific rules rather than the canonical graph layer
 - Windows runtime should be rechecked because `_I` reload, plotting load, and report snapshot all changed their lookup path
