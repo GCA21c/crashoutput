@@ -137,6 +137,15 @@ def _canonical_metric_detail(context, *path):
     return dict(current or {}) if isinstance(current, dict) else {}
 
 
+def _canonical_injury_detail(context, detail_key):
+    key = str(detail_key or "").strip()
+    if not key:
+        return {}
+    if key.endswith("_detail"):
+        key = key[:-7]
+    return _canonical_metric_detail(context, "injury", key)
+
+
 def _axis_extrema_lines(axis_key, unit, context):
     channels = dict(context.get("channels") or {})
     metric_extrema = dict(context.get("metric_extrema") or {})
@@ -416,6 +425,17 @@ def _injury_line_from_rule(line_rule, context):
     def _value_from_rule(key_name):
         return report_values.get(key_name) if report_values.get(key_name) is not None else details.get(key_name)
     if kind == "range":
+        if line_rule.get("detail_key"):
+            detail = dict(details.get(line_rule.get("detail_key")) or {})
+            if not detail:
+                detail = _canonical_injury_detail(context, line_rule.get("detail_key"))
+            return fmt_metric_range(
+                label,
+                detail.get("value"),
+                unit=unit,
+                start_s=detail.get("start_time_s"),
+                end_s=detail.get("end_time_s"),
+            )
         return fmt_metric_range(
             label,
             _value_from_rule(line_rule.get("value_key")),
@@ -424,6 +444,11 @@ def _injury_line_from_rule(line_rule, context):
             end_s=details.get(line_rule.get("end_key")),
         )
     if kind == "at":
+        if line_rule.get("detail_key"):
+            detail = dict(details.get(line_rule.get("detail_key")) or {})
+            if not detail:
+                detail = _canonical_injury_detail(context, line_rule.get("detail_key"))
+            return fmt_metric_at(label, detail.get("value"), unit=unit, time_s=detail.get("time_s"))
         return fmt_metric_at(
             label,
             _value_from_rule(line_rule.get("value_key")),
@@ -432,9 +457,13 @@ def _injury_line_from_rule(line_rule, context):
         )
     if kind in {"detail_range", "range_detail"}:
         detail = dict(details.get(line_rule.get("detail_key")) or {})
+        if not detail:
+            detail = _canonical_injury_detail(context, line_rule.get("detail_key"))
         return fmt_metric_range(label, detail.get("value"), unit=unit, start_s=detail.get("start_time_s"), end_s=detail.get("end_time_s"))
     if kind == "detail_at":
         detail = dict(details.get(line_rule.get("detail_key")) or {})
+        if not detail:
+            detail = _canonical_injury_detail(context, line_rule.get("detail_key"))
         return fmt_metric_at(label, detail.get("value"), unit=unit, time_s=detail.get("time_s"))
     if kind == "fmvss_head_80g":
         slot = str(context.get("slot") or "-")
@@ -464,6 +493,18 @@ def _multiline_injury_block_from_rule(line_rule, context):
         return report_values.get(key_name) if report_values.get(key_name) is not None else details.get(key_name)
 
     if kind == "range":
+        if line_rule.get("detail_key"):
+            detail = dict(details.get(line_rule.get("detail_key")) or {})
+            if not detail:
+                detail = _canonical_injury_detail(context, line_rule.get("detail_key"))
+            value_text = fmt_metric_range(
+                "",
+                detail.get("value"),
+                unit=unit,
+                start_s=detail.get("start_time_s"),
+                end_s=detail.get("end_time_s"),
+            ).lstrip(": ").strip()
+            return f"{label}: \n{value_text}"
         value_text = fmt_metric_range(
             "",
             _value_from_rule(line_rule.get("value_key")),
@@ -473,6 +514,12 @@ def _multiline_injury_block_from_rule(line_rule, context):
         ).lstrip(": ").strip()
         return f"{label}: \n{value_text}"
     if kind == "at":
+        if line_rule.get("detail_key"):
+            detail = dict(details.get(line_rule.get("detail_key")) or {})
+            if not detail:
+                detail = _canonical_injury_detail(context, line_rule.get("detail_key"))
+            value_text = fmt_metric_at("", detail.get("value"), unit=unit, time_s=detail.get("time_s")).lstrip(": ").strip()
+            return f"{label}: \n{value_text}"
         value_text = fmt_metric_at(
             "",
             _value_from_rule(line_rule.get("value_key")),
@@ -482,10 +529,14 @@ def _multiline_injury_block_from_rule(line_rule, context):
         return f"{label}: \n{value_text}"
     if kind in {"detail_range", "range_detail"}:
         detail = dict(details.get(line_rule.get("detail_key")) or {})
+        if not detail:
+            detail = _canonical_injury_detail(context, line_rule.get("detail_key"))
         value_text = fmt_metric_range("", detail.get("value"), unit=unit, start_s=detail.get("start_time_s"), end_s=detail.get("end_time_s")).lstrip(": ").strip()
         return f"{label}: \n{value_text}"
     if kind == "detail_at":
         detail = dict(details.get(line_rule.get("detail_key")) or {})
+        if not detail:
+            detail = _canonical_injury_detail(context, line_rule.get("detail_key"))
         value_text = fmt_metric_at("", detail.get("value"), unit=unit, time_s=detail.get("time_s")).lstrip(": ").strip()
         return f"{label}: \n{value_text}"
     if kind == "fmvss_head_80g":
