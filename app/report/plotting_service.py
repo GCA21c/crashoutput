@@ -159,7 +159,7 @@ def _context_dummy_profile(context, default="-"):
     return context_dummy_profile(context, default)
 
 
-def _axis_extrema_lines(axis_key, unit, context):
+def _axis_extrema_lines(axis_key, unit, context, *, value_indent=""):
     channels = dict(context.get("channels") or {})
     metric_extrema = dict(context.get("metric_extrema") or {})
     channel_name = _context_input_channel(context, str(axis_key or "").lower()) or channels.get(axis_key) or ""
@@ -172,8 +172,8 @@ def _axis_extrema_lines(axis_key, unit, context):
         unit = canonical_detail.get("unit") or unit
         return [
             _axis_display_name(str(display_name).split()[-1] if display_name.startswith("ACC ") else axis_key, channel_name),
-            f"Max : {fmt_value(max_detail.get('value'), unit, unit_style='suffix')} at {fmt_time_ms(max_detail.get('time_s'))}",
-            f"Min : {fmt_value(min_detail.get('value'), unit, unit_style='suffix')} at {fmt_time_ms(min_detail.get('time_s'))}",
+            f"{value_indent}Max : {fmt_value(max_detail.get('value'), unit, unit_style='suffix')} at {fmt_time_ms(max_detail.get('time_s'))}",
+            f"{value_indent}Min : {fmt_value(min_detail.get('value'), unit, unit_style='suffix')} at {fmt_time_ms(min_detail.get('time_s'))}",
         ]
     lookup_key = {
         "x": ("head_x", "x_g", "x_plot"),
@@ -187,8 +187,8 @@ def _axis_extrema_lines(axis_key, unit, context):
             break
     return [
         _axis_display_name(axis_key, channel_name),
-        f"Max : {fmt_value((detail or {}).get('max_value'), unit, unit_style='suffix')} at {fmt_time_ms((detail or {}).get('max_time_s'))}",
-        f"Min : {fmt_value((detail or {}).get('min_value'), unit, unit_style='suffix')} at {fmt_time_ms((detail or {}).get('min_time_s'))}",
+        f"{value_indent}Max : {fmt_value((detail or {}).get('max_value'), unit, unit_style='suffix')} at {fmt_time_ms((detail or {}).get('max_time_s'))}",
+        f"{value_indent}Min : {fmt_value((detail or {}).get('min_value'), unit, unit_style='suffix')} at {fmt_time_ms((detail or {}).get('min_time_s'))}",
     ]
 
 
@@ -197,17 +197,28 @@ def _resultant_extrema_lines(resultant_label, resultant_key, unit, context, rule
     report_values = dict(context.get("report_values") or {})
     payload = dict(context.get("payload") or {})
     rule = dict(rule or {})
+    multiline_value = bool(rule.get("resultant_multiline_value"))
+    value_indent = str(rule.get("resultant_value_indent") or "")
+    blank_between = bool(rule.get("resultant_blank_between", False))
+    max_prefix = f"{resultant_label} MAX"
+    min_prefix = f"{resultant_label} MIN"
     canonical_detail = _canonical_metric_detail(context, "acc", "resultant")
+    def _render_value_lines(prefix, value, time_s):
+        if multiline_value:
+            return [
+                prefix,
+                f"{value_indent}: {fmt_value(value, unit, unit_style='suffix')} at {fmt_time_ms(time_s)}",
+            ]
+        return [f"{prefix}: ", f"{fmt_value(value, unit, unit_style='suffix')} at {fmt_time_ms(time_s)}"]
     if canonical_detail:
         max_detail = dict(canonical_detail.get("max") or {})
         min_detail = dict(canonical_detail.get("min") or {})
         unit = canonical_detail.get("unit") or unit
-        return [
-            f"{resultant_label} MAX: ",
-            f"{fmt_value(max_detail.get('value'), unit, unit_style='suffix')} at {fmt_time_ms(max_detail.get('time_s'))}",
-            f"{resultant_label} MIN: ",
-            f"{fmt_value(min_detail.get('value'), unit, unit_style='suffix')} at {fmt_time_ms(min_detail.get('time_s'))}",
-        ]
+        lines = [*_render_value_lines(max_prefix, max_detail.get("value"), max_detail.get("time_s"))]
+        if blank_between:
+            lines.append("")
+        lines.extend(_render_value_lines(min_prefix, min_detail.get("value"), min_detail.get("time_s")))
+        return lines
     detail = dict(metric_extrema.get(resultant_key) or {})
     if not detail:
         detail = {
@@ -224,12 +235,11 @@ def _resultant_extrema_lines(resultant_label, resultant_key, unit, context, rule
         detail["max_value"] = payload.get(rule.get("resultant_max_value_key"))
     if detail.get("min_value") is None:
         detail["min_value"] = payload.get(rule.get("resultant_min_value_key"))
-    return [
-        f"{resultant_label} MAX: ",
-        f"{fmt_value(detail.get('max_value'), unit, unit_style='suffix')} at {fmt_time_ms(detail.get('max_time_s'))}",
-        f"{resultant_label} MIN: ",
-        f"{fmt_value(detail.get('min_value'), unit, unit_style='suffix')} at {fmt_time_ms(detail.get('min_time_s'))}",
-    ]
+    lines = [*_render_value_lines(max_prefix, detail.get("max_value"), detail.get("max_time_s"))]
+    if blank_between:
+        lines.append("")
+    lines.extend(_render_value_lines(min_prefix, detail.get("min_value"), detail.get("min_time_s")))
+    return lines
 
 
 def _neck_axis_display_name(axis_key, context):
@@ -271,15 +281,23 @@ def _neck_force_extrema_lines(axis_key, context):
     max_label = "Max"
     min_label = "Min"
     if axis_key == "Fx":
-        max_label = "MAX(Rear Shear)"
-        min_label = "MIN(Forward Shear)"
+        max_label = "Max(Rear Shear)"
+        min_label = "Min(Forward Shear)"
     elif axis_key == "Fz":
-        max_label = "MAX(Tension)"
-        min_label = "MIN(Compression)"
+        max_label = "Max(Tension)"
+        min_label = "Min(Compression)"
+    if axis_key == "Fy":
+        return [
+            label,
+            f"  {max_label} : {fmt_value((detail or {}).get('max_value'), unit, unit_style='suffix')} at {fmt_time_ms((detail or {}).get('max_time_s'))}",
+            f"  {min_label} : {fmt_value((detail or {}).get('min_value'), unit, unit_style='suffix')} at {fmt_time_ms((detail or {}).get('min_time_s'))}",
+        ]
     return [
         label,
-        f"{max_label}: {fmt_value((detail or {}).get('max_value'), unit, unit_style='suffix')} at {fmt_time_ms((detail or {}).get('max_time_s'))}",
-        f"{min_label}: {fmt_value((detail or {}).get('min_value'), unit, unit_style='suffix')} at {fmt_time_ms((detail or {}).get('min_time_s'))}",
+        f"  {max_label}",
+        f"    : {fmt_value((detail or {}).get('max_value'), unit, unit_style='suffix')} at {fmt_time_ms((detail or {}).get('max_time_s'))}",
+        f"  {min_label}",
+        f"    : {fmt_value((detail or {}).get('min_value'), unit, unit_style='suffix')} at {fmt_time_ms((detail or {}).get('min_time_s'))}",
     ]
 
 
@@ -303,10 +321,17 @@ def _neck_moment_extrema_lines(axis_key, context):
     if axis_key == "My":
         max_label = "MAX(Flexion)"
         min_label = "MIN(Extension)"
+        return [
+            label,
+            f"  {max_label}",
+            f"    : {fmt_value((detail or {}).get('max_value'), unit, unit_style='suffix')} at {fmt_time_ms((detail or {}).get('max_time_s'))}",
+            f"  {min_label}",
+            f"    : {fmt_value((detail or {}).get('min_value'), unit, unit_style='suffix')} at {fmt_time_ms((detail or {}).get('min_time_s'))}",
+        ]
     return [
         label,
-        f"{max_label}: {fmt_value((detail or {}).get('max_value'), unit, unit_style='suffix')} at {fmt_time_ms((detail or {}).get('max_time_s'))}",
-        f"{min_label}: {fmt_value((detail or {}).get('min_value'), unit, unit_style='suffix')} at {fmt_time_ms((detail or {}).get('min_time_s'))}",
+        f"  {max_label}: {fmt_value((detail or {}).get('max_value'), unit, unit_style='suffix')} at {fmt_time_ms((detail or {}).get('max_time_s'))}",
+        f"  {min_label}: {fmt_value((detail or {}).get('min_value'), unit, unit_style='suffix')} at {fmt_time_ms((detail or {}).get('min_time_s'))}",
     ]
 
 
@@ -332,11 +357,15 @@ def _neck_mocy_summary_lines(context):
     return [
         f"Dummy Family: {dummy_family}",
         f"Moment Input: {input_moment}",
-        f"Lever arm D: {moc_d_value:.6f} m | MOC 적용: {moc_applied}",
+        f"Lever arm D: {moc_d_value:.6f} m",
+        f"MOC 적용: {moc_applied}",
         "",
         "- Injuries -",
-        fmt_metric_at("Peak Flexion MOCy", peak_flexion, unit="Nm", time_s=peak_flexion_time),
-        fmt_metric_at("Peak Extension MOCy", peak_extension, unit="Nm", time_s=peak_extension_time),
+        "Peak Flexion MOCy",
+        f"  : {fmt_value(peak_flexion, 'Nm', unit_style='suffix')} at {fmt_time_ms(peak_flexion_time)}",
+        "",
+        "Peak Extension MOCy",
+        f"  : {fmt_value(peak_extension, 'Nm', unit_style='suffix')} at {fmt_time_ms(peak_extension_time)}",
     ]
 
 
@@ -350,7 +379,7 @@ def _neck_nij_components_summary_lines(context):
     nij = dict(canonical_injury.get("nij") or {})
     overall = dict(nij.get("overall") or {})
     return [
-        "- Injuries -",
+        "- Injuries –",
         "",
         fmt_metric_at("NTE", nte.get("value", structured.get("peak_nte")), time_s=nte.get("time_s", structured.get("peak_nte_time"))),
         fmt_metric_at("NTF", ntf.get("value", structured.get("peak_ntf")), time_s=ntf.get("time_s", structured.get("peak_ntf_time"))),
@@ -391,10 +420,13 @@ def _chest_displacement_summary_lines(context):
         peak_detail = dict((context.get("details") or {}).get("displacement_peak") or {})
     return [
         "- Injuries -",
-        f"Displacement MAX: {fmt_value(detail.get('max_value'), 'mm', unit_style='suffix')} at {fmt_time_ms(detail.get('max_time_s'))}",
-        f"Displacement MIN: {fmt_value(detail.get('min_value'), 'mm', unit_style='suffix')} at {fmt_time_ms(detail.get('min_time_s'))}",
+        "Displacement Max",
+        f"  : {fmt_value(detail.get('max_value'), 'mm', unit_style='suffix')} at {fmt_time_ms(detail.get('max_time_s'))}",
+        "Displacement Min",
+        f"  : {fmt_value(detail.get('min_value'), 'mm', unit_style='suffix')} at {fmt_time_ms(detail.get('min_time_s'))}",
         "",
-        fmt_metric_at("Displacement Peak", peak_detail.get("value"), unit="mm", time_s=peak_detail.get("time_s")),
+        "Displacement Peak",
+        f"  : {fmt_value(peak_detail.get('value'), 'mm', unit_style='suffix')} at {fmt_time_ms(peak_detail.get('time_s'))}",
     ]
 
 
@@ -427,6 +459,127 @@ def _chest_vc_summary_lines(context):
         f"Max: {fmt_value(ece.get('max_value'), 'm/s', unit_style='suffix')} at {fmt_time_ms(ece.get('max_time_s'))}",
         f"Min: {fmt_value(ece.get('min_value'), 'm/s', unit_style='suffix')} at {fmt_time_ms(ece.get('min_time_s'))}",
     ]
+
+
+def _femur_combined_summary_lines(context):
+    left_force = _canonical_metric_detail(context, "force", "left")
+    right_force = _canonical_metric_detail(context, "force", "right")
+    injury = _canonical_metric_detail(context, "injury")
+    left_peak = dict(injury.get("left_peak") or {})
+    right_peak = dict(injury.get("right_peak") or {})
+    left_channel = _context_input_channel(context, "left") or str(left_force.get("channel") or "").strip() or "-"
+    right_channel = _context_input_channel(context, "right") or str(right_force.get("channel") or "").strip() or "-"
+    left_max = dict(left_force.get("max") or {})
+    left_min = dict(left_force.get("min") or {})
+    right_max = dict(right_force.get("max") or {})
+    right_min = dict(right_force.get("min") or {})
+    return [
+        "FEMUR FORCE LEFT Max",
+        f"  - {left_channel}",
+        f"    : {fmt_value(left_max.get('value'), 'N', unit_style='suffix')} at {fmt_time_ms(left_max.get('time_s'))}",
+        "FEMUR FORCE LEFT Min",
+        f"  - {left_channel}",
+        f"    : {fmt_value(left_min.get('value'), 'N', unit_style='suffix')} at {fmt_time_ms(left_min.get('time_s'))}",
+        "",
+        "FEMUR FORCE RIGHT Max",
+        f"  - {right_channel}",
+        f"    : {fmt_value(right_max.get('value'), 'N', unit_style='suffix')} at {fmt_time_ms(right_max.get('time_s'))}",
+        "FEMUR FORCE RIGHT Min",
+        f"  - {right_channel}",
+        f"    : {fmt_value(right_min.get('value'), 'N', unit_style='suffix')} at {fmt_time_ms(right_min.get('time_s'))}",
+        "",
+        "- Injuries -",
+        "Left Peak Axial Force",
+        f"  : {fmt_value(left_peak.get('value'), 'N', unit_style='suffix')} at {fmt_time_ms(left_peak.get('time_s'))}",
+        "Right Peak Axial Force",
+        f"  : {fmt_value(right_peak.get('value'), 'N', unit_style='suffix')} at {fmt_time_ms(right_peak.get('time_s'))}",
+    ]
+
+
+def _knee_combined_summary_lines(context):
+    left_disp = _canonical_metric_detail(context, "displacement", "left")
+    right_disp = _canonical_metric_detail(context, "displacement", "right")
+    left_peak = dict(left_disp.get("peak") or {})
+    right_peak = dict(right_disp.get("peak") or {})
+    return [
+        "Left Knee Slider Peak",
+        f"  : {fmt_value(left_peak.get('value'), 'mm', unit_style='suffix')} at {fmt_time_ms(left_peak.get('time_s'))}",
+        "",
+        "Right Knee Slider Peak",
+        f"  : {fmt_value(right_peak.get('value'), 'mm', unit_style='suffix')} at {fmt_time_ms(right_peak.get('time_s'))}",
+    ]
+
+
+def _iliac_force_summary_lines(context):
+    left_fx = _canonical_metric_detail(context, "force", "left_fx")
+    right_fx = _canonical_metric_detail(context, "force", "right_fx")
+
+    def _extrema_block(title, channel_name, detail, unit):
+        detail = dict(detail or {})
+        max_detail = dict(detail.get("max") or {})
+        min_detail = dict(detail.get("min") or {})
+        return [
+            title,
+            f"  Max : {fmt_value(max_detail.get('value'), unit, unit_style='suffix')} at {fmt_time_ms(max_detail.get('time_s'))}",
+            f"  Min : {fmt_value(min_detail.get('value'), unit, unit_style='suffix')} at {fmt_time_ms(min_detail.get('time_s'))}",
+        ]
+
+    lines = ["ILIAC - LEFT"]
+    lines.extend(_extrema_block(f"Fx - {str(left_fx.get('channel') or '-').strip() or '-'}", left_fx.get("channel"), left_fx, "N"))
+    lines.append("")
+    lines.append("ILIAC - RIGHT")
+    lines.extend(_extrema_block(f"Fx - {str(right_fx.get('channel') or '-').strip() or '-'}", right_fx.get("channel"), right_fx, "N"))
+    return lines
+
+
+def _iliac_moment_summary_lines(context):
+    left_my = _canonical_metric_detail(context, "moment", "left_my")
+    right_my = _canonical_metric_detail(context, "moment", "right_my")
+
+    def _extrema_block(title, detail, unit):
+        detail = dict(detail or {})
+        max_detail = dict(detail.get("max") or {})
+        min_detail = dict(detail.get("min") or {})
+        return [
+            title,
+            f"  Max : {fmt_value(max_detail.get('value'), unit, unit_style='suffix')} at {fmt_time_ms(max_detail.get('time_s'))}",
+            f"  Min : {fmt_value(min_detail.get('value'), unit, unit_style='suffix')} at {fmt_time_ms(min_detail.get('time_s'))}",
+        ]
+
+    lines = ["ILIAC - LEFT"]
+    lines.extend(_extrema_block(f"My - {str(left_my.get('channel') or '-').strip() or '-'}", left_my, "Nm"))
+    lines.append("")
+    lines.append("ILIAC - RIGHT")
+    lines.extend(_extrema_block(f"My - {str(right_my.get('channel') or '-').strip() or '-'}", right_my, "Nm"))
+    return lines
+
+
+def _iliac_crossplot_summary_lines(context):
+    left_fx = _canonical_metric_detail(context, "force", "left_fx")
+    right_fx = _canonical_metric_detail(context, "force", "right_fx")
+    left_my = _canonical_metric_detail(context, "moment", "left_my")
+    right_my = _canonical_metric_detail(context, "moment", "right_my")
+
+    def _extrema_block(title, detail, unit):
+        detail = dict(detail or {})
+        max_detail = dict(detail.get("max") or {})
+        min_detail = dict(detail.get("min") or {})
+        return [
+            title,
+            f"  Max : {fmt_value(max_detail.get('value'), unit, unit_style='suffix')} at {fmt_time_ms(max_detail.get('time_s'))}",
+            f"  Min : {fmt_value(min_detail.get('value'), unit, unit_style='suffix')} at {fmt_time_ms(min_detail.get('time_s'))}",
+        ]
+
+    lines = ["ILIAC - LEFT"]
+    lines.extend(_extrema_block(f"Fx - {str(left_fx.get('channel') or '-').strip() or '-'}", left_fx, "N"))
+    lines.append("")
+    lines.extend(_extrema_block(f"My - {str(left_my.get('channel') or '-').strip() or '-'}", left_my, "Nm"))
+    lines.append("")
+    lines.append("ILIAC - RIGHT")
+    lines.extend(_extrema_block(f"Fx - {str(right_fx.get('channel') or '-').strip() or '-'}", right_fx, "N"))
+    lines.append("")
+    lines.extend(_extrema_block(f"My - {str(right_my.get('channel') or '-').strip() or '-'}", right_my, "Nm"))
+    return lines
 
 
 def _injury_line_from_rule(line_rule, context):
@@ -489,8 +642,8 @@ def _injury_line_from_rule(line_rule, context):
                 duration_text = f"{duration_text}.0"
             duration_text = f"{duration_text}ms"
         return "\n".join([
-            f"[{slot} - FMVSS Head Acceleration 80g / 3ms Limit]",
-            f"  - Result : {status} ({duration_text})",
+            f"[{slot} - FMVSS Head 80g / 3ms Limit]",
+            f"  Result : {status} ({duration_text})",
         ])
     return "-"
 
@@ -517,7 +670,7 @@ def _multiline_injury_block_from_rule(line_rule, context):
                 start_s=detail.get("start_time_s"),
                 end_s=detail.get("end_time_s"),
             ).lstrip(": ").strip()
-            return f"{label}: \n{value_text}"
+            return f"{label}\n  : {value_text}"
         value_text = fmt_metric_range(
             "",
             _value_from_rule(line_rule.get("value_key")),
@@ -525,33 +678,33 @@ def _multiline_injury_block_from_rule(line_rule, context):
             start_s=details.get(line_rule.get("start_key")),
             end_s=details.get(line_rule.get("end_key")),
         ).lstrip(": ").strip()
-        return f"{label}: \n{value_text}"
+        return f"{label}\n  : {value_text}"
     if kind == "at":
         if line_rule.get("detail_key"):
             detail = dict(details.get(line_rule.get("detail_key")) or {})
             if not detail:
                 detail = _canonical_injury_detail(context, line_rule.get("detail_key"))
             value_text = fmt_metric_at("", detail.get("value"), unit=unit, time_s=detail.get("time_s")).lstrip(": ").strip()
-            return f"{label}: \n{value_text}"
+            return f"{label}\n  : {value_text}"
         value_text = fmt_metric_at(
             "",
             _value_from_rule(line_rule.get("value_key")),
             unit=unit,
             time_s=details.get(line_rule.get("time_key")),
         ).lstrip(": ").strip()
-        return f"{label}: \n{value_text}"
+        return f"{label}\n  : {value_text}"
     if kind in {"detail_range", "range_detail"}:
         detail = dict(details.get(line_rule.get("detail_key")) or {})
         if not detail:
             detail = _canonical_injury_detail(context, line_rule.get("detail_key"))
         value_text = fmt_metric_range("", detail.get("value"), unit=unit, start_s=detail.get("start_time_s"), end_s=detail.get("end_time_s")).lstrip(": ").strip()
-        return f"{label}: \n{value_text}"
+        return f"{label}\n  : {value_text}"
     if kind == "detail_at":
         detail = dict(details.get(line_rule.get("detail_key")) or {})
         if not detail:
             detail = _canonical_injury_detail(context, line_rule.get("detail_key"))
         value_text = fmt_metric_at("", detail.get("value"), unit=unit, time_s=detail.get("time_s")).lstrip(": ").strip()
-        return f"{label}: \n{value_text}"
+        return f"{label}\n  : {value_text}"
     if kind == "fmvss_head_80g":
         return _injury_line_from_rule(line_rule, context)
     return "-"
@@ -572,21 +725,24 @@ def build_plotting_auto_text(item):
         for index, axis_key in enumerate(axis_keys):
             if index > 0:
                 lines.append("")
-            lines.extend(_axis_extrema_lines(axis_key, rule.get("unit") or "g", context))
+            lines.extend(_axis_extrema_lines(axis_key, rule.get("unit") or "g", context, value_indent=str(rule.get("axis_value_indent") or "")))
         if template in {"acc_axes_then_resultant", "acc_axes_then_injuries"}:
             lines.append("")
             lines.extend(_resultant_extrema_lines(rule.get("resultant_label") or "Resultant", rule.get("resultant_key") or "resultant", rule.get("unit") or "g", context, rule))
         if template == "acc_axes_then_injuries":
             lines.append("- Injuries -")
             for line_rule in tuple(rule.get("injury_lines") or ()):
-                lines.append(_injury_line_from_rule(line_rule, context))
+                if rule.get("injury_multiline_value"):
+                    lines.append(_multiline_injury_block_from_rule(line_rule, context))
+                else:
+                    lines.append(_injury_line_from_rule(line_rule, context))
     elif template == "acc_resultant_with_injuries":
         lines.extend(_resultant_extrema_lines(rule.get("resultant_label") or "Resultant", rule.get("resultant_key") or "resultant", rule.get("unit") or "g", context, rule))
         lines.append("- Injuries -")
         for line_rule in tuple(rule.get("injury_lines") or ()):
             lines.append(_injury_line_from_rule(line_rule, context))
     elif template == "head_resultant_injuries":
-        lines.append("- Injuries -")
+        lines.append("- Injuries  -")
         for index, line_rule in enumerate(tuple(rule.get("injury_lines") or ())):
             if index > 0:
                 lines.append("")
@@ -611,7 +767,19 @@ def build_plotting_auto_text(item):
         lines.extend(_chest_displacement_summary_lines(context))
     elif template == "chest_vc_summary":
         lines.extend(_chest_vc_summary_lines(context))
-    text = "\n".join(line for line in lines if line is not None).strip()
+    elif template == "femur_combined_summary":
+        lines.extend(_femur_combined_summary_lines(context))
+    elif template == "knee_combined_summary":
+        lines.extend(_knee_combined_summary_lines(context))
+    elif template == "iliac_force_summary":
+        lines.extend(_iliac_force_summary_lines(context))
+    elif template == "iliac_moment_summary":
+        lines.extend(_iliac_moment_summary_lines(context))
+    elif template == "iliac_crossplot_summary":
+        lines.extend(_iliac_crossplot_summary_lines(context))
+    while lines and str(lines[-1] or "").strip() == "":
+        lines.pop()
+    text = "\n".join(line for line in lines if line is not None)
     return text or (str(item.get("summary_text") or "-").strip() or "-")
 
 

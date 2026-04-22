@@ -362,26 +362,44 @@ def _iliac_canonical(payload, metrics):
     right = dict(metrics.get("right_summary") or {})
     return {
         "force": {
-            "left_fx": {
-                "channel": _text(channels.get("left_fx")),
-                "compression": _point(left.get("compression_force_n"), left.get("compression_time_s"), unit="N"),
-                "tension": _point(left.get("tension_force_n"), left.get("tension_time_s"), unit="N"),
-            },
-            "right_fx": {
-                "channel": _text(channels.get("right_fx")),
-                "compression": _point(right.get("compression_force_n"), right.get("compression_time_s"), unit="N"),
-                "tension": _point(right.get("tension_force_n"), right.get("tension_time_s"), unit="N"),
-            },
+            "left_fx": _extrema(
+                left.get("tension_force_n"),
+                left.get("tension_time_s"),
+                left.get("compression_force_n"),
+                left.get("compression_time_s"),
+                unit="N",
+                channel=_text(channels.get("left_fx")),
+                display_name="Fx",
+            ),
+            "right_fx": _extrema(
+                right.get("tension_force_n"),
+                right.get("tension_time_s"),
+                right.get("compression_force_n"),
+                right.get("compression_time_s"),
+                unit="N",
+                channel=_text(channels.get("right_fx")),
+                display_name="Fx",
+            ),
         },
         "moment": {
-            "left_my": {
-                "channel": _text(channels.get("left_my")),
-                "peak": _point(left.get("peak_moment_nm"), left.get("peak_moment_time_s"), unit="Nm"),
-            },
-            "right_my": {
-                "channel": _text(channels.get("right_my")),
-                "peak": _point(right.get("peak_moment_nm"), right.get("peak_moment_time_s"), unit="Nm"),
-            },
+            "left_my": _extrema(
+                left.get("max_moment_nm"),
+                left.get("max_moment_time_s"),
+                left.get("min_moment_nm"),
+                left.get("min_moment_time_s"),
+                unit="Nm",
+                channel=_text(channels.get("left_my")),
+                display_name="My",
+            ),
+            "right_my": _extrema(
+                right.get("max_moment_nm"),
+                right.get("max_moment_time_s"),
+                right.get("min_moment_nm"),
+                right.get("min_moment_time_s"),
+                unit="Nm",
+                channel=_text(channels.get("right_my")),
+                display_name="My",
+            ),
         },
         "injury": {
             "left_resultant": _point(left.get("combined_resultant"), left.get("combined_resultant_time_s")),

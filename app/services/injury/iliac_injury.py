@@ -100,6 +100,8 @@ def _resultant(force_n, moment_nm):
 def _side_summary(side_label, force_n, moment_nm, time_s):
     comp = _peak_min(force_n, time_s)
     tens = _peak_max(force_n, time_s)
+    moment_max = _peak_max(moment_nm, time_s)
+    moment_min = _peak_min(moment_nm, time_s)
     moment = _peak_abs(moment_nm, time_s)
     resultant = _peak_abs(_resultant(force_n, moment_nm), time_s)
     return {
@@ -108,6 +110,10 @@ def _side_summary(side_label, force_n, moment_nm, time_s):
         'compression_time_s': comp['time_s'],
         'tension_force_n': tens['value'],
         'tension_time_s': tens['time_s'],
+        'max_moment_nm': moment_max['value'],
+        'max_moment_time_s': moment_max['time_s'],
+        'min_moment_nm': moment_min['value'],
+        'min_moment_time_s': moment_min['time_s'],
         'peak_moment_nm': moment['value'],
         'peak_moment_time_s': moment['time_s'],
         'combined_resultant': resultant['value'],

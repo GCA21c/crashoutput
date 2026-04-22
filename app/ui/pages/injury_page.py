@@ -3905,6 +3905,8 @@ class InjuryPage(tk.Frame):
             return [('accel', 'Acceleration'), ('disp', 'Displacement'), ('vc', 'V*C')]
         if self.initial_mode == 'pelvis':
             return [('accel_resultant', 'ACC-RESULTANT')]
+        if self.initial_mode == 'femur':
+            return [('combined', 'Combined')]
         if self.initial_mode == 'knee':
             return [('combined', 'Knee Slider')]
         if self.initial_mode == 'iliac':
@@ -5645,12 +5647,9 @@ class InjuryPage(tk.Frame):
             if not silent:
                 messagebox.showwarning('\uacbd\uace0', '\uba3c\uc800 FEMUR \uacc4\uc0b0\uc744 \uc2e4\ud589\ud574\uc8fc\uc138\uc694.')
             return
-        if mode == 'left':
-            self._plot_femur_side(metrics, slot, 'left')
-        elif mode == 'right':
-            self._plot_femur_side(metrics, slot, 'right')
-        else:
-            self._plot_femur_combined(metrics, slot)
+        if mode != 'combined':
+            mode = 'combined'
+        self._plot_femur_combined(metrics, slot)
         self.slot_states[slot]['graph_key'] = mode
         self.slot_states[slot]['graph_uid'] = self._injury_graph_uid(slot, mode)
         self._select_graph_tab(mode)
