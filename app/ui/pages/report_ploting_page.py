@@ -403,6 +403,17 @@ class ReportPlotingPage(tk.Frame):
             return
         if not self._items:
             self.load_plot_list()
+        else:
+            collected = collect_plot_items(self.workbench)
+            if collected:
+                self._all_items = [dict(item) for item in collected]
+                self._items = merge_plot_items({"items": self._items}, self._all_items)
+                self._refresh_loaded_count()
+                self._populate_tree()
+                self._refresh_add_options()
+                if self._selected_item_key:
+                    self._reselect_item(self._selected_item_key)
+                self._cache_state_in_memory()
         template_path = self._select_template_for_export()
         if not template_path:
             messagebox.showwarning("REPORT - PLOTTING", "PPT 템플릿 파일을 선택하세요.")

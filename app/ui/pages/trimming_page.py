@@ -256,6 +256,11 @@ class TrimmingPage(tk.Frame):
             "time_column": viewer.time_column,
             "units": dict(getattr(viewer, "external_units", {}) or {}),
             "descriptions": dict(getattr(viewer, "external_descriptions", {}) or {}),
+            "injury_saved_results": {},
+            "injury_result_registry": {},
+            "injury_graph_registry": {},
+            "injury_slot_registry": {},
+            "report_saved_results": {},
         }
         self.workbench.apply_processed_dataframe(
             out,
