@@ -256,6 +256,7 @@ class InjuryPage(tk.Frame):
             'result_uid': '',
             'dummy_name': '',
             'dummy_profile': '',
+            'criterion_key': '',
             'channels': {},
             'neg_flags': {},
             'summary_text': '-',
@@ -719,7 +720,7 @@ class InjuryPage(tk.Frame):
 
     def _on_slot_profile_changed(self, slot, value):
         self.slot_states[slot]['dummy_profile'] = (value or '').strip()
-        if slot == self._active_slot():
+        if slot == self._active_slot() and self.initial_mode != 'nij':
             self._dummy_profile_var().set((value or '').strip())
 
     def _update_combined_summary(self):
@@ -734,7 +735,11 @@ class InjuryPage(tk.Frame):
     def _apply_slot_meta_to_ui(self, slot):
         state = self.slot_states[slot]
         profile = state.get('dummy_profile') or ''
-        self._dummy_profile_var().set(profile)
+        criterion_key = state.get('criterion_key') or ''
+        if self.initial_mode == 'nij':
+            self._dummy_profile_var().set(criterion_key or self.nij_dummy_var.get())
+        else:
+            self._dummy_profile_var().set(profile)
         self.multi_dummy_panel.profile_var(slot).set(profile)
         self.multi_dummy_panel.name_var(slot).set(state.get('dummy_name') or '')
 
@@ -1537,6 +1542,7 @@ class InjuryPage(tk.Frame):
             st['result_uid'] = payload.get('result_uid') or st.get('result_uid') or self._injury_result_uid(slot)
             st['dummy_name'] = payload.get('dummy_name') or st.get('dummy_name') or ''
             st['dummy_profile'] = payload.get('dummy_profile') or st.get('dummy_profile') or ''
+            st['criterion_key'] = payload.get('criterion_key') or st.get('criterion_key') or ''
             st['channels'] = dict(payload.get('channels') or {})
             st['neg_flags'] = dict(payload.get('neg_flags') or {})
             payload_version = int(payload.get('summary_format_version') or 0)
@@ -1631,7 +1637,8 @@ class InjuryPage(tk.Frame):
                     selected=selected,
                     sign_flags=sign_flags,
                     viewer=viewer,
-                    criterion_key=state.get('dummy_profile') or self.nij_dummy_var.get(),
+                    criterion_key=state.get('criterion_key') or self.nij_dummy_var.get(),
+                    dummy_profile_label=state.get('dummy_profile') or self.multi_dummy_panel.profile_var(slot).get().strip(),
                     unit_getter=self._unit_text,
                     channel_desc_getter=lambda ch: viewer.get_channel_display_name(ch) if ch else '-',
                     resolve_series_for_calc=lambda source_channel, role, desired_cfc, sign: self._resolve_standard_series_for_calc(source_channel, 'neck_injury', role, desired_cfc, sign),
@@ -1641,7 +1648,7 @@ class InjuryPage(tk.Frame):
                     state['neck_saved_payload'] = {
                         'result_uid': state.get('result_uid') or self._injury_result_uid(slot),
                         'summary_text': result['summary_text'],
-                        'criterion_key': state.get('dummy_profile') or self.nij_dummy_var.get(),
+                        'criterion_key': state.get('criterion_key') or self.nij_dummy_var.get(),
                         'dummy_name': state.get('dummy_name') or '',
                         'dummy_profile': state.get('dummy_profile') or '',
                         'channels': dict(selected),
@@ -3132,15 +3139,16 @@ class InjuryPage(tk.Frame):
             st = self.slot_states[slot]
             st['dummy_name'] = self.multi_dummy_panel.name_var(slot).get().strip()
             st['dummy_profile'] = self.multi_dummy_panel.profile_var(slot).get().strip()
+            st['criterion_key'] = self.nij_dummy_var.get().strip()
             st['channels'] = dict(selected)
-            st['neg_flags'] = {}
+            st['neg_flags'] = {key: bool(value < 0) for key, value in sign_flags.items()}
             st['summary_text'] = result['summary_text']
             st['result_uid'] = st.get('result_uid') or self._injury_result_uid(slot)
             st['neck_metrics'] = metrics
             st['neck_saved_payload'] = {
                 'result_uid': st['result_uid'],
                 'summary_text': result['summary_text'],
-                'criterion_key': self.nij_dummy_var.get(),
+                'criterion_key': st['criterion_key'],
                 'overall_nij': float(metrics['overall_nij']) if metrics.get('overall_nij') is not None else None,
                 'dominant_mode': metrics.get('dominant_mode'),
                 'dummy_name': st['dummy_name'],
@@ -3224,7 +3232,6 @@ class InjuryPage(tk.Frame):
                 'units': self._merge_metadata_dicts(getattr(viewer, 'external_units', {}) or {}, added_units),
                 'descriptions': self._merge_metadata_dicts(getattr(viewer, 'external_descriptions', {}) or {}, added_descriptions),
                 'channel_filter_labels': self._merge_metadata_dicts(self.workbench.channel_filter_labels or {}, added_filter_labels),
-                'neck_injury_metrics': {slot: st['neck_saved_payload']},
                 'derived_channels': dict((self.workbench.dataset_metadata or {}).get('derived_channels') or {}),
             }
             metadata_override['derived_channels'].update(renamed_meta)
@@ -4006,9 +4013,11 @@ class InjuryPage(tk.Frame):
         state['dummy_name'] = self.multi_dummy_panel.name_var(slot).get().strip()
         state['dummy_profile'] = self.multi_dummy_panel.profile_var(slot).get().strip()
         if self.initial_mode == 'hic':
+            state['criterion_key'] = ''
             state['channels'] = {'x': self._selected_channel(self.hic_x_var), 'y': self._selected_channel(self.hic_y_var), 'z': self._selected_channel(self.hic_z_var)}
             state['neg_flags'] = {}
         elif self.initial_mode == 'nij':
+            state['criterion_key'] = self.nij_dummy_var.get().strip()
             state['channels'] = {
                 'Fx': self._selected_channel(self.nij_fx_var),
                 'Fy': self._selected_channel(self.nij_fy_var),
@@ -4084,15 +4093,22 @@ class InjuryPage(tk.Frame):
         self._last_ui_slot = slot
         state = self.slot_states[slot]
         profile_var = self._dummy_profile_var()
-        if state.get('dummy_profile'):
-            profile_var.set(state['dummy_profile'])
-        else:
-            inferred = self._infer_profile_for_slot(slot)
-            if inferred:
-                state['dummy_profile'] = inferred
-                profile_var.set(inferred)
+        if self.initial_mode == 'nij':
+            criterion_key = state.get('criterion_key') or ''
+            if criterion_key:
+                profile_var.set(criterion_key)
             elif not profile_var.get() and self._profile_options():
                 profile_var.set(self._profile_options()[0])
+        else:
+            if state.get('dummy_profile'):
+                profile_var.set(state['dummy_profile'])
+            else:
+                inferred = self._infer_profile_for_slot(slot)
+                if inferred:
+                    state['dummy_profile'] = inferred
+                    profile_var.set(inferred)
+                elif not profile_var.get() and self._profile_options():
+                    profile_var.set(self._profile_options()[0])
         self._apply_slot_meta_to_ui(slot)
         self._apply_slot_channels_to_ui(state.get('channels') or {})
         if self.initial_mode == 'nij':
@@ -4256,6 +4272,7 @@ class InjuryPage(tk.Frame):
             st['result_uid'] = payload.get('result_uid') or st.get('result_uid') or self._injury_result_uid(slot)
             st['dummy_name'] = payload.get('dummy_name') or st.get('dummy_name') or ''
             st['dummy_profile'] = payload.get('dummy_profile') or st.get('dummy_profile') or ''
+            st['criterion_key'] = payload.get('criterion_key') or st.get('criterion_key') or ''
             st['channels'] = dict(payload.get('channels') or {})
             st['neg_flags'] = dict(payload.get('neg_flags') or {})
             payload_version = int(payload.get('summary_format_version') or 0)
@@ -4938,7 +4955,8 @@ class InjuryPage(tk.Frame):
                     selected=selected,
                     sign_flags=sign_flags,
                     viewer=viewer,
-                    criterion_key=state.get('dummy_profile') or self.nij_dummy_var.get(),
+                    criterion_key=state.get('criterion_key') or self.nij_dummy_var.get(),
+                    dummy_profile_label=state.get('dummy_profile') or self.multi_dummy_panel.profile_var(slot).get().strip(),
                     unit_getter=self._unit_text,
                     channel_desc_getter=lambda ch: viewer.get_channel_display_name(ch) if ch else '-',
                     resolve_series_for_calc=lambda source_channel, role, desired_cfc, sign: self._resolve_standard_series_for_calc(source_channel, 'neck_injury', role, desired_cfc, sign),
@@ -4948,7 +4966,7 @@ class InjuryPage(tk.Frame):
                     state['neck_saved_payload'] = {
                         'result_uid': state.get('result_uid') or self._injury_result_uid(slot),
                         'summary_text': result['summary_text'],
-                        'criterion_key': state.get('dummy_profile') or self.nij_dummy_var.get(),
+                        'criterion_key': state.get('criterion_key') or self.nij_dummy_var.get(),
                         'dummy_name': state.get('dummy_name') or '',
                         'dummy_profile': state.get('dummy_profile') or '',
                         'channels': dict(selected),

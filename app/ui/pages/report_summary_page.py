@@ -28,7 +28,6 @@ from app.ui.pages.report_summary_constants import (
     REGULATION_MODE_LABEL,
     REPORT_INPUT_FIELDS,
     SELECTED_REGULATION_FIELDS,
-    SOURCE_DISPLAY_NAMES,
     DIALOG_TITLE_REPORT,
     HISTORY_SUMMARY_SAVED,
     HISTORY_SUMMARY_SAVED_DISPLAY,
@@ -269,14 +268,21 @@ class ReportSummaryPage(tk.Frame):
                 "region": row.get("region") or str(row.get("section_key") or item.get("section_key") or "-").upper(),
                 "result_key": row.get("result_key"),
                 "label": row.get("label") or item.get("label") or "-",
+                "category": row.get("category") or row.get("label") or item.get("label") or "-",
                 "unit": row.get("unit") or item.get("unit") or "",
                 "value": value,
+                "time": row.get("time") or "-",
+                "time_value": row.get("time_value"),
+                "time_start": row.get("time_start"),
+                "time_end": row.get("time_end"),
                 "limit": row.get("limit"),
                 "status": row.get("status"),
                 "comparison": row.get("comparison") or item.get("comparison"),
                 "result_uid": row.get("result_uid") or "",
                 "value_source": row.get("value_source"),
                 "value_path": row.get("value_path") or "",
+                "time_source": row.get("time_source") or "",
+                "time_path": row.get("time_path") or "",
                 "limit_source": row.get("limit_source") or "",
             })
 
@@ -297,9 +303,8 @@ class ReportSummaryPage(tk.Frame):
         for row in snapshot.get("rows", []):
             dummy_label = row.get("dummy_profile") or "-"
             value_text = self._tree_value_text(row.get("value"))
+            time_text = row.get("time") or "-"
             limit_text = self._tree_value_text(row.get("limit"))
-            source_name = row.get("value_source")
-            source_text = SOURCE_DISPLAY_NAMES.get(source_name, "-")
             tag = row.get("status") or "N/A"
             self.tree.insert(
                 "",
@@ -308,13 +313,13 @@ class ReportSummaryPage(tk.Frame):
                     row.get("slot_label") or row.get("slot") or "-",
                     dummy_label,
                     row.get("region") or str(row.get("section_key") or "-").upper(),
-                    row.get("label") or "-",
+                    row.get("category") or row.get("label") or "-",
                     value_text,
                     row.get("unit") or "-",
+                    time_text,
                     limit_text,
                     tag,
                     row.get("result_uid") or "-",
-                    source_text,
                 ),
                 tags=(tag,),
             )

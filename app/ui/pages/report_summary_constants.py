@@ -31,21 +31,21 @@ SELECTED_REGULATION_FIELDS = (
 
 SUMMARY_GUIDE_TEXT = (
     "Status: PASS=limit 만족, FAIL=limit 초과, MISSING=저장된 결과값 없음, N/A=비교 limit 없음 | "
-    "Source: Saved value=uid 결과 payload에 구조화된 수치가 저장되어 그 값을 직접 읽음"
+    "Time: 단일 시점은 t, 구간 값은 t1 ~ t2 형식으로 표시"
 )
 
-SUMMARY_TABLE_COLUMNS = ("slot", "dummy", "region", "criterion", "value", "unit", "limit", "status", "uid", "source")
+SUMMARY_TABLE_COLUMNS = ("slot", "dummy", "region", "category", "value", "unit", "time", "limit", "status", "uid")
 SUMMARY_TABLE_COLUMN_SPECS = (
     ("slot", "Slot", 60),
     ("dummy", "Dummy", 160),
     ("region", "Injury/Region", 105),
-    ("criterion", "Criteria", 230),
+    ("category", "Category", 230),
     ("value", "Value", 90),
     ("unit", "Unit", 70),
+    ("time", "Time", 130),
     ("limit", "Limit", 90),
     ("status", "Status", 80),
     ("uid", "Result UID", 290),
-    ("source", "Source", 90),
 )
 
 TREE_STATUS_TAG_COLORS = {
@@ -53,12 +53,6 @@ TREE_STATUS_TAG_COLORS = {
     "FAIL": "#b91c1c",
     "MISSING": "#6b7280",
     "N/A": "#1f2937",
-}
-
-SOURCE_DISPLAY_NAMES = {
-    "report_values": "Saved value (report_values)",
-    "structured_metrics": "Saved value (structured_metrics)",
-    "top_level": "Saved value (top-level payload)",
 }
 
 STATUS_READY = "Summary report is ready."
