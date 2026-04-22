@@ -504,9 +504,13 @@ def merge_plot_items(existing_payload, collected_items):
         if not fresh:
             continue
         previous = dict(existing_items.get(item_key) or {})
+        previous_mode = str(previous.get("text_mode") or "auto").strip().lower()
+        previous_custom = str(previous.get("custom_text") or "")
+        previous_summary = str(previous.get("summary_text") or "").strip()
+        stale_auto_copy = previous_mode == "custom" and previous_custom.strip() == previous_summary and previous_summary not in ("", "-")
         fresh["included"] = bool(previous.get("included", True))
-        fresh["text_mode"] = str(previous.get("text_mode") or "auto")
-        fresh["custom_text"] = str(previous.get("custom_text") or "")
+        fresh["text_mode"] = "auto" if stale_auto_copy else str(previous.get("text_mode") or "auto")
+        fresh["custom_text"] = "" if stale_auto_copy else previous_custom
         merged.append(fresh)
         seen.add(item_key)
     for item in collected_items or []:
