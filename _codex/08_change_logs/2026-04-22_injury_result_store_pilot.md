@@ -11,6 +11,10 @@
 - switched plotting text helpers to read canonical payload blocks first for `HEAD`, `NECK`, and `CHEST`, with legacy payload fields left as fallback
 - added `calculation_context` payload blocks for `HEAD`, `NECK`, and `CHEST` so inputs, criterion/dummy, flags, and key parameters are stored separately from computed metrics
 - switched `SUMMARY REPORT` extraction for `HEAD`, `NECK`, and `CHEST` to read canonical payload aliases first, with legacy aliases left as fallback
+- added canonical metric payload blocks for `PELVIS`, `FEMUR`, `KNEE`, `ILIAC`, and `TIBIA`
+- added canonical graph composition blocks for `PELVIS`, `FEMUR`, `KNEE`, `ILIAC`, and `TIBIA`
+- added `calculation_context` payload blocks for `PELVIS`, `FEMUR`, `KNEE`, `ILIAC`, and `TIBIA`
+- switched `SUMMARY REPORT` extraction for pelvis/femur/knee FMVSS rows to read canonical aliases first, with legacy aliases left as fallback
 
 ## Why
 - result storage and lookup had drifted across `slot_states`, per-section saved payload caches, metadata payloads, and registry dicts
@@ -22,6 +26,7 @@
 - `app/report/engine.py`
 - `app/report/plotting_service.py`
 - `app/services/state/injury_metric_canonical.py`
+- `app/report/rules/fmvss208.py`
 
 ## Risk
 - `slot_states` still remains as UI/runtime cache, so this is a pilot unification rather than full legacy removal

@@ -242,6 +242,184 @@ def _chest_canonical(payload, metrics):
     }
 
 
+def _pelvis_canonical(payload, metrics):
+    payload = dict(payload or {})
+    metrics = dict(metrics or {})
+    channels = dict(payload.get("channels") or {})
+    unit = _text(metrics.get("plot_unit") or payload.get("report_values", {}).get("plot_unit") or "g", "g")
+    metric_extrema = dict(payload.get("metric_extrema") or {})
+
+    def _axis(key_name, channel_key, display_name):
+        detail = dict(metric_extrema.get(key_name) or {})
+        return _extrema(
+            detail.get("max_value"),
+            detail.get("max_time_s"),
+            detail.get("min_value"),
+            detail.get("min_time_s"),
+            unit=unit,
+            channel=channels.get(channel_key),
+            display_name=display_name,
+        )
+
+    return {
+        "acc": {
+            "x": _axis("x_plot", "x", "ACC X"),
+            "y": _axis("y_plot", "y", "ACC Y"),
+            "z": _axis("z_plot", "z", "ACC Z"),
+            "resultant": _extrema(
+                dict(metric_extrema.get("resultant") or {}).get("max_value"),
+                dict(metric_extrema.get("resultant") or {}).get("max_time_s"),
+                dict(metric_extrema.get("resultant") or {}).get("min_value"),
+                dict(metric_extrema.get("resultant") or {}).get("min_time_s"),
+                unit=unit,
+                display_name="PELVIS Resultant",
+            ),
+        },
+        "injury": {
+            "one_peak_3ms": _range(
+                (metrics.get("one_peak_3ms") or {}).get("value"),
+                (metrics.get("one_peak_3ms") or {}).get("start_time_s"),
+                (metrics.get("one_peak_3ms") or {}).get("end_time_s"),
+                unit=unit,
+            ),
+            "multiple_peak_3ms": _range(
+                (metrics.get("multiple_peak_3ms") or {}).get("value"),
+                (metrics.get("multiple_peak_3ms") or {}).get("start_time_s"),
+                (metrics.get("multiple_peak_3ms") or {}).get("end_time_s"),
+                unit=unit,
+            ),
+            "resultant_peak": _point(
+                (metrics.get("resultant_peak") or {}).get("value"),
+                (metrics.get("resultant_peak") or {}).get("time_s"),
+                unit=unit,
+            ),
+        },
+    }
+
+
+def _femur_canonical(payload, metrics):
+    payload = dict(payload or {})
+    metrics = dict(metrics or {})
+    channels = dict(payload.get("channels") or {})
+    metric_extrema = dict(payload.get("metric_extrema") or {})
+    criteria = dict(metrics.get("criteria") or {})
+
+    def _force_side(side_key):
+        series_key = f"{side_key}_force_n"
+        detail = dict(metric_extrema.get(series_key) or {})
+        return _extrema(
+            detail.get("max_value"),
+            detail.get("max_time_s"),
+            detail.get("min_value"),
+            detail.get("min_time_s"),
+            unit="N",
+            channel=channels.get(side_key),
+            display_name=f"FEMUR {side_key.upper()}",
+        )
+
+    return {
+        "force": {
+            "left": _force_side("left"),
+            "right": _force_side("right"),
+        },
+        "injury": {
+            "left_peak": _point((metrics.get("left_peak_abs") or {}).get("value"), (metrics.get("left_peak_abs") or {}).get("time_s"), unit="N"),
+            "right_peak": _point((metrics.get("right_peak_abs") or {}).get("value"), (metrics.get("right_peak_abs") or {}).get("time_s"), unit="N"),
+            "overall_peak": _point((metrics.get("overall_peak") or {}).get("value"), (metrics.get("overall_peak") or {}).get("time_s"), unit="N"),
+        },
+        "criteria": {
+            "femur_force_limit_n": _float_or_none(criteria.get("femur_force_limit_n")),
+            "required_cfc": _float_or_none(criteria.get("required_cfc")),
+            "passes_limit": bool(metrics.get("passes_limit")),
+        },
+    }
+
+
+def _knee_canonical(payload, metrics):
+    payload = dict(payload or {})
+    metrics = dict(metrics or {})
+    channels = dict(payload.get("channels") or {})
+    unit = _text(metrics.get("plot_unit") or "mm", "mm")
+    return {
+        "displacement": {
+            "left": {
+                "channel": _text(channels.get("left")),
+                "peak": _point((metrics.get("left_peak") or {}).get("value"), (metrics.get("left_peak") or {}).get("time_s"), unit=unit),
+            },
+            "right": {
+                "channel": _text(channels.get("right")),
+                "peak": _point((metrics.get("right_peak") or {}).get("value"), (metrics.get("right_peak") or {}).get("time_s"), unit=unit),
+            },
+        }
+    }
+
+
+def _iliac_canonical(payload, metrics):
+    payload = dict(payload or {})
+    metrics = dict(metrics or {})
+    channels = dict(payload.get("channels") or {})
+    left = dict(metrics.get("left_summary") or {})
+    right = dict(metrics.get("right_summary") or {})
+    return {
+        "force": {
+            "left_fx": {
+                "channel": _text(channels.get("left_fx")),
+                "compression": _point(left.get("compression_force_n"), left.get("compression_time_s"), unit="N"),
+                "tension": _point(left.get("tension_force_n"), left.get("tension_time_s"), unit="N"),
+            },
+            "right_fx": {
+                "channel": _text(channels.get("right_fx")),
+                "compression": _point(right.get("compression_force_n"), right.get("compression_time_s"), unit="N"),
+                "tension": _point(right.get("tension_force_n"), right.get("tension_time_s"), unit="N"),
+            },
+        },
+        "moment": {
+            "left_my": {
+                "channel": _text(channels.get("left_my")),
+                "peak": _point(left.get("peak_moment_nm"), left.get("peak_moment_time_s"), unit="Nm"),
+            },
+            "right_my": {
+                "channel": _text(channels.get("right_my")),
+                "peak": _point(right.get("peak_moment_nm"), right.get("peak_moment_time_s"), unit="Nm"),
+            },
+        },
+        "injury": {
+            "left_resultant": _point(left.get("combined_resultant"), left.get("combined_resultant_time_s")),
+            "right_resultant": _point(right.get("combined_resultant"), right.get("combined_resultant_time_s")),
+        },
+    }
+
+
+def _tibia_station_context(metrics, station_key):
+    station = dict(metrics.get(station_key) or {})
+    return {
+        "peak_tibia_index": _point((station.get("peak_tibia_index") or {}).get("value"), (station.get("peak_tibia_index") or {}).get("time_s")),
+        "peak_compression": _point((station.get("peak_compression") or {}).get("value"), (station.get("peak_compression") or {}).get("time_s"), unit="N"),
+        "peak_moment_resultant": _point((station.get("peak_moment_resultant") or {}).get("value"), (station.get("peak_moment_resultant") or {}).get("time_s"), unit="Nm"),
+    }
+
+
+def _tibia_canonical(payload, metrics):
+    payload = dict(payload or {})
+    metrics = dict(metrics or {})
+    return {
+        "injury": {
+            "left_upper": _tibia_station_context(metrics, "left_upper"),
+            "left_lower": _tibia_station_context(metrics, "left_lower"),
+            "right_upper": _tibia_station_context(metrics, "right_upper"),
+            "right_lower": _tibia_station_context(metrics, "right_lower"),
+            "overall_peak": _point((metrics.get("overall_peak_tibia_index") or {}).get("value"), (metrics.get("overall_peak_tibia_index") or {}).get("time_s")),
+        },
+        "criteria": {
+            "force_crit_n": _float_or_none(metrics.get("force_crit_n")),
+            "moment_crit_nm": _float_or_none(metrics.get("moment_crit_nm")),
+            "ti_reference_line": _float_or_none(metrics.get("ti_reference_line")),
+            "ti_secondary_line": _float_or_none(metrics.get("ti_secondary_line")),
+            "overall_peak_label": _text(metrics.get("overall_peak_label")),
+        },
+    }
+
+
 def build_canonical_metrics(section_key, payload, metrics):
     section = _text(section_key).lower()
     if section == "head":
@@ -250,6 +428,16 @@ def build_canonical_metrics(section_key, payload, metrics):
         return _neck_canonical(payload, metrics)
     if section == "chest":
         return _chest_canonical(payload, metrics)
+    if section == "pelvis":
+        return _pelvis_canonical(payload, metrics)
+    if section == "femur":
+        return _femur_canonical(payload, metrics)
+    if section == "knee":
+        return _knee_canonical(payload, metrics)
+    if section == "iliac":
+        return _iliac_canonical(payload, metrics)
+    if section == "tibia":
+        return _tibia_canonical(payload, metrics)
     return {}
 
 
@@ -350,6 +538,136 @@ def _chest_context(payload, metrics, state):
     }
 
 
+def _pelvis_context(payload, metrics, state):
+    payload = dict(payload or {})
+    state = dict(state or {})
+    channels = dict(payload.get("channels") or state.get("channels") or {})
+    return {
+        "engine_key": "pelvis_injury_bundle_v1",
+        "rule_key": "pelvis_accel_3ms",
+        "section": "pelvis",
+        "slot": _text(payload.get("slot") or state.get("slot")),
+        "dummy_profile": _text(payload.get("dummy_profile") or state.get("dummy_profile")),
+        "criterion_key": _text(payload.get("criterion_key") or state.get("criterion_key")),
+        "inputs": {
+            "channels": {
+                "x": _channel_input_entry(channels.get("x"), axis="x", role="acc"),
+                "y": _channel_input_entry(channels.get("y"), axis="y", role="acc"),
+                "z": _channel_input_entry(channels.get("z"), axis="z", role="acc"),
+            },
+        },
+        "parameters": {
+            "plot_unit": _text((metrics or {}).get("plot_unit") or "g", "g"),
+        },
+        "flags": {"neg_flags": dict(payload.get("neg_flags") or state.get("neg_flags") or {})},
+    }
+
+
+def _femur_context(payload, metrics, state):
+    payload = dict(payload or {})
+    metrics = dict(metrics or {})
+    state = dict(state or {})
+    channels = dict(payload.get("channels") or state.get("channels") or {})
+    criteria = dict(metrics.get("criteria") or {})
+    return {
+        "engine_key": "femur_injury_bundle_v1",
+        "rule_key": "femur_axial_force",
+        "section": "femur",
+        "slot": _text(payload.get("slot") or state.get("slot")),
+        "dummy_profile": _text(payload.get("dummy_profile") or state.get("dummy_profile")),
+        "criterion_key": _text(payload.get("criterion_key") or state.get("criterion_key")),
+        "inputs": {
+            "channels": {
+                "left": _channel_input_entry(channels.get("left"), role="force"),
+                "right": _channel_input_entry(channels.get("right"), role="force"),
+            },
+        },
+        "parameters": {
+            "femur_force_limit_n": _float_or_none(criteria.get("femur_force_limit_n")),
+            "required_cfc": _float_or_none(criteria.get("required_cfc")),
+        },
+        "flags": {"neg_flags": dict(payload.get("neg_flags") or state.get("neg_flags") or {})},
+    }
+
+
+def _knee_context(payload, metrics, state):
+    payload = dict(payload or {})
+    metrics = dict(metrics or {})
+    state = dict(state or {})
+    channels = dict(payload.get("channels") or state.get("channels") or {})
+    return {
+        "engine_key": "knee_injury_bundle_v1",
+        "rule_key": "knee_slider_peak",
+        "section": "knee",
+        "slot": _text(payload.get("slot") or state.get("slot")),
+        "dummy_profile": _text(payload.get("dummy_profile") or state.get("dummy_profile")),
+        "criterion_key": _text(payload.get("criterion_key") or state.get("criterion_key")),
+        "inputs": {
+            "channels": {
+                "left": _channel_input_entry(channels.get("left"), role="slider"),
+                "right": _channel_input_entry(channels.get("right"), role="slider"),
+            },
+        },
+        "parameters": {
+            "plot_unit": _text(metrics.get("plot_unit") or "mm", "mm"),
+        },
+        "flags": {"neg_flags": dict(payload.get("neg_flags") or state.get("neg_flags") or {})},
+    }
+
+
+def _iliac_context(payload, metrics, state):
+    payload = dict(payload or {})
+    metrics = dict(metrics or {})
+    state = dict(state or {})
+    channels = dict(payload.get("channels") or state.get("channels") or {})
+    return {
+        "engine_key": "iliac_injury_bundle_v1",
+        "rule_key": "iliac_fx_my",
+        "section": "iliac",
+        "slot": _text(payload.get("slot") or state.get("slot")),
+        "dummy_profile": _text(payload.get("dummy_profile") or state.get("dummy_profile")),
+        "criterion_key": _text(payload.get("criterion_key") or state.get("criterion_key") or metrics.get("criterion_key")),
+        "inputs": {
+            "channels": {
+                "left_fx": _channel_input_entry(channels.get("left_fx"), role="force"),
+                "left_my": _channel_input_entry(channels.get("left_my"), role="moment"),
+                "right_fx": _channel_input_entry(channels.get("right_fx"), role="force"),
+                "right_my": _channel_input_entry(channels.get("right_my"), role="moment"),
+            },
+        },
+        "parameters": {
+            "criterion_label": _text(metrics.get("criterion_label")),
+            "criterion_source": _text(metrics.get("criterion_source")),
+        },
+        "flags": {"neg_flags": dict(payload.get("neg_flags") or state.get("neg_flags") or {})},
+    }
+
+
+def _tibia_context(payload, metrics, state):
+    payload = dict(payload or {})
+    metrics = dict(metrics or {})
+    state = dict(state or {})
+    channels = dict(payload.get("channels") or state.get("channels") or {})
+    return {
+        "engine_key": "tibia_injury_bundle_v1",
+        "rule_key": "tibia_index",
+        "section": "tibia",
+        "slot": _text(payload.get("slot") or state.get("slot")),
+        "dummy_profile": _text(payload.get("dummy_profile") or state.get("dummy_profile")),
+        "criterion_key": _text(payload.get("criterion_key") or state.get("criterion_key") or metrics.get("criterion_key")),
+        "inputs": {
+            "channels": {key: _channel_input_entry(value) for key, value in channels.items()}
+        },
+        "parameters": {
+            "criterion_label": _text(metrics.get("criterion_label")),
+            "criterion_source": _text(metrics.get("criterion_source")),
+            "force_crit_n": _float_or_none(metrics.get("force_crit_n")),
+            "moment_crit_nm": _float_or_none(metrics.get("moment_crit_nm")),
+        },
+        "flags": {"neg_flags": dict(payload.get("neg_flags") or state.get("neg_flags") or {})},
+    }
+
+
 def build_canonical_context(section_key, payload, metrics, state=None):
     section = _text(section_key).lower()
     if section == "head":
@@ -358,6 +676,16 @@ def build_canonical_context(section_key, payload, metrics, state=None):
         return _neck_context(payload, metrics, state)
     if section == "chest":
         return _chest_context(payload, metrics, state)
+    if section == "pelvis":
+        return _pelvis_context(payload, metrics, state)
+    if section == "femur":
+        return _femur_context(payload, metrics, state)
+    if section == "knee":
+        return _knee_context(payload, metrics, state)
+    if section == "iliac":
+        return _iliac_context(payload, metrics, state)
+    if section == "tibia":
+        return _tibia_context(payload, metrics, state)
     payload = dict(payload or {})
     state = dict(state or {})
     return {
@@ -479,6 +807,72 @@ def build_canonical_graphs(section_key):
                 "series_refs": (
                     "metrics.vc.sae_j1727_cfc600",
                     "metrics.vc.ece94_cfc180",
+                ),
+                "annotations": tuple(),
+            },
+        }
+    if section == "pelvis":
+        return {
+            "accel_resultant": {
+                "graph_type": "overlay",
+                "series_refs": (
+                    "metrics.acc.x",
+                    "metrics.acc.y",
+                    "metrics.acc.z",
+                    "metrics.acc.resultant",
+                ),
+                "annotations": (
+                    "metrics.injury.one_peak_3ms",
+                    "metrics.injury.multiple_peak_3ms",
+                    "metrics.injury.resultant_peak",
+                ),
+            },
+        }
+    if section == "femur":
+        return {
+            "left": {"graph_type": "single", "series_refs": ("metrics.force.left",), "annotations": ("metrics.injury.left_peak",)},
+            "right": {"graph_type": "single", "series_refs": ("metrics.force.right",), "annotations": ("metrics.injury.right_peak",)},
+            "combined": {"graph_type": "overlay", "series_refs": ("metrics.force.left", "metrics.force.right"), "annotations": ("metrics.injury.left_peak", "metrics.injury.right_peak", "metrics.injury.overall_peak")},
+        }
+    if section == "knee":
+        return {
+            "combined": {"graph_type": "overlay", "series_refs": ("metrics.displacement.left", "metrics.displacement.right"), "annotations": tuple()},
+        }
+    if section == "iliac":
+        return {
+            "force": {"graph_type": "overlay", "series_refs": ("metrics.force.left_fx", "metrics.force.right_fx"), "annotations": tuple()},
+            "moment": {"graph_type": "overlay", "series_refs": ("metrics.moment.left_my", "metrics.moment.right_my"), "annotations": tuple()},
+            "crossplot": {"graph_type": "crossplot", "series_refs": ("metrics.force.left_fx", "metrics.moment.left_my", "metrics.force.right_fx", "metrics.moment.right_my"), "annotations": ("metrics.injury.left_resultant", "metrics.injury.right_resultant")},
+        }
+    if section == "tibia":
+        return {
+            "tibia_index": {
+                "graph_type": "overlay",
+                "series_refs": (
+                    "metrics.injury.left_upper.peak_tibia_index",
+                    "metrics.injury.left_lower.peak_tibia_index",
+                    "metrics.injury.right_upper.peak_tibia_index",
+                    "metrics.injury.right_lower.peak_tibia_index",
+                ),
+                "annotations": ("metrics.injury.overall_peak",),
+            },
+            "axial_force": {
+                "graph_type": "overlay",
+                "series_refs": (
+                    "metrics.injury.left_upper.peak_compression",
+                    "metrics.injury.left_lower.peak_compression",
+                    "metrics.injury.right_upper.peak_compression",
+                    "metrics.injury.right_lower.peak_compression",
+                ),
+                "annotations": tuple(),
+            },
+            "moment_resultant": {
+                "graph_type": "overlay",
+                "series_refs": (
+                    "metrics.injury.left_upper.peak_moment_resultant",
+                    "metrics.injury.left_lower.peak_moment_resultant",
+                    "metrics.injury.right_upper.peak_moment_resultant",
+                    "metrics.injury.right_lower.peak_moment_resultant",
                 ),
                 "annotations": tuple(),
             },
