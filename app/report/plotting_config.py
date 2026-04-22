@@ -42,6 +42,10 @@ PLOTTING_GRAPH_TEXT_RULES = {
         "axis_keys": ("x", "y", "z"),
         "resultant_key": "head_resultant",
         "resultant_label": "HEAD Resultant",
+        "resultant_max_value_key": "head_resultant_max",
+        "resultant_max_time_key": "head_resultant_max_time_s",
+        "resultant_min_value_key": "head_resultant_min",
+        "resultant_min_time_key": "head_resultant_min_time_s",
         "unit": "g",
     },
     ("head", "head_resultant"): {

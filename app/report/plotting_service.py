@@ -142,9 +142,18 @@ def _axis_extrema_lines(axis_key, unit, context):
     ]
 
 
-def _resultant_extrema_lines(resultant_label, resultant_key, unit, context):
+def _resultant_extrema_lines(resultant_label, resultant_key, unit, context, rule=None):
     metric_extrema = dict(context.get("metric_extrema") or {})
+    report_values = dict(context.get("report_values") or {})
+    rule = dict(rule or {})
     detail = dict(metric_extrema.get(resultant_key) or {})
+    if not detail:
+        detail = {
+            "max_value": report_values.get(rule.get("resultant_max_value_key")),
+            "max_time_s": report_values.get(rule.get("resultant_max_time_key")),
+            "min_value": report_values.get(rule.get("resultant_min_value_key")),
+            "min_time_s": report_values.get(rule.get("resultant_min_time_key")),
+        }
     return [
         f"{resultant_label} MAX: ",
         f"{fmt_value(detail.get('max_value'), unit, unit_style='suffix')} at {fmt_time_ms(detail.get('max_time_s'))}",
@@ -382,13 +391,13 @@ def build_plotting_auto_text(item):
             lines.extend(_axis_extrema_lines(axis_key, rule.get("unit") or "g", context))
         if template in {"acc_axes_then_resultant", "acc_axes_then_injuries"}:
             lines.append("")
-            lines.extend(_resultant_extrema_lines(rule.get("resultant_label") or "Resultant", rule.get("resultant_key") or "resultant", rule.get("unit") or "g", context))
+            lines.extend(_resultant_extrema_lines(rule.get("resultant_label") or "Resultant", rule.get("resultant_key") or "resultant", rule.get("unit") or "g", context, rule))
         if template == "acc_axes_then_injuries":
             lines.append("- Injuries -")
             for line_rule in tuple(rule.get("injury_lines") or ()):
                 lines.append(_injury_line_from_rule(line_rule, context))
     elif template == "acc_resultant_with_injuries":
-        lines.extend(_resultant_extrema_lines(rule.get("resultant_label") or "Resultant", rule.get("resultant_key") or "resultant", rule.get("unit") or "g", context))
+        lines.extend(_resultant_extrema_lines(rule.get("resultant_label") or "Resultant", rule.get("resultant_key") or "resultant", rule.get("unit") or "g", context, rule))
         lines.append("- Injuries -")
         for line_rule in tuple(rule.get("injury_lines") or ()):
             lines.append(_injury_line_from_rule(line_rule, context))

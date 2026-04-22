@@ -406,6 +406,8 @@ class InjuryPage(tk.Frame):
                 'head_z_min': self._safe_metric_float(metrics.get('head_z_min_value')),
                 'head_resultant_max': self._safe_metric_float(metrics.get('head_resultant_max_value')),
                 'head_resultant_min': self._safe_metric_float(metrics.get('head_resultant_min_value')),
+                'head_resultant_max_time_s': self._safe_metric_float(metrics.get('head_resultant_max_time_s')),
+                'head_resultant_min_time_s': self._safe_metric_float(metrics.get('head_resultant_min_time_s')),
             }
         if self.initial_mode == 'nij':
             return {
