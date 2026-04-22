@@ -43,7 +43,7 @@ from app.services.state.injury_result_store import (
     set_section_payload as set_store_section_payload,
     update_graph_selection as update_store_graph_selection,
 )
-from app.services.state.injury_metric_canonical import build_canonical_graphs, build_canonical_metrics
+from app.services.state.injury_metric_canonical import build_canonical_context, build_canonical_graphs, build_canonical_metrics
 from app.core.utils.formatting import SUMMARY_FORMAT_VERSION, fmt_time_ms, fmt_value
 from app.ui.components.multi_dummy_panel import MultiDummyPanel
 from app.ui.components.scrollable_frame import VerticalScrolledFrame
@@ -485,6 +485,7 @@ class InjuryPage(tk.Frame):
         enriched['metric_extrema'] = self._collect_metric_extrema(metrics, time_values)
         enriched['canonical_schema_version'] = 1
         enriched['canonical_metrics'] = build_canonical_metrics(self._section_key(), enriched, metrics)
+        enriched['calculation_context'] = build_canonical_context(self._section_key(), enriched, metrics, state)
         enriched['canonical_graphs'] = build_canonical_graphs(self._section_key())
         return enriched
 

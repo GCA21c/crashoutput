@@ -2,7 +2,9 @@
 
 This module normalizes section-specific computed results into a shared
 `section + metric + axis/component` structure so formatters can stop depending
-on legacy per-module field names over time.
+on legacy per-module field names over time. It also stores calculation context
+separately from computed metric payloads so formatters can explain how a result
+was produced without re-reading UI state.
 """
 
 from __future__ import annotations
@@ -46,6 +48,17 @@ def _extrema(max_value=None, max_time_s=None, min_value=None, min_time_s=None, u
         "max": _point(max_value, max_time_s, unit=unit),
         "min": _point(min_value, min_time_s, unit=unit),
     }
+
+
+def _channel_input_entry(channel_name="", *, axis=None, role=None, unit=None):
+    entry = {
+        "channel": _text(channel_name),
+        "axis": _text(axis),
+        "role": _text(role),
+    }
+    if unit is not None:
+        entry["unit"] = _text(unit)
+    return entry
 
 
 def _head_canonical(payload, metrics):
@@ -238,6 +251,130 @@ def build_canonical_metrics(section_key, payload, metrics):
     if section == "chest":
         return _chest_canonical(payload, metrics)
     return {}
+
+
+def _head_context(payload, metrics, state):
+    payload = dict(payload or {})
+    metrics = dict(metrics or {})
+    state = dict(state or {})
+    channels = dict(payload.get("channels") or state.get("channels") or {})
+    return {
+        "engine_key": "head_injury_bundle_v1",
+        "rule_key": "head_hic",
+        "section": "head",
+        "slot": _text(payload.get("slot") or state.get("slot")),
+        "dummy_profile": _text(payload.get("dummy_profile") or state.get("dummy_profile")),
+        "criterion_key": _text(payload.get("criterion_key") or state.get("criterion_key")),
+        "inputs": {
+            "channels": {
+                "x": _channel_input_entry(channels.get("x"), axis="x", role="acc"),
+                "y": _channel_input_entry(channels.get("y"), axis="y", role="acc"),
+                "z": _channel_input_entry(channels.get("z"), axis="z", role="acc"),
+            },
+            "derived_channels": {
+                "resultant": _channel_input_entry(payload.get("resultant_channel"), role="resultant"),
+            },
+        },
+        "parameters": {
+            "hic_windows_ms": (15, 36),
+            "plot_unit": _text(payload.get("plot_unit") or payload.get("report_values", {}).get("plot_unit") or "g", "g"),
+        },
+        "flags": {
+            "neg_flags": dict(payload.get("neg_flags") or state.get("neg_flags") or {}),
+        },
+    }
+
+
+def _neck_context(payload, metrics, state):
+    payload = dict(payload or {})
+    metrics = dict(metrics or {})
+    state = dict(state or {})
+    channels = dict(payload.get("channels") or state.get("channels") or {})
+    criteria = dict(metrics.get("criteria") or {})
+    return {
+        "engine_key": "neck_injury_bundle_v1",
+        "rule_key": "neck_nij",
+        "section": "neck",
+        "slot": _text(payload.get("slot") or state.get("slot")),
+        "dummy_profile": _text(payload.get("dummy_profile") or state.get("dummy_profile")),
+        "criterion_key": _text(payload.get("criterion_key") or state.get("criterion_key")),
+        "inputs": {
+            "channels": {
+                "Fx": _channel_input_entry(channels.get("Fx"), axis="x", role="force"),
+                "Fy": _channel_input_entry(channels.get("Fy"), axis="y", role="force"),
+                "Fz": _channel_input_entry(channels.get("Fz"), axis="z", role="force"),
+                "Mx": _channel_input_entry(channels.get("Mx"), axis="x", role="moment"),
+                "My": _channel_input_entry(channels.get("My"), axis="y", role="moment"),
+                "Mz": _channel_input_entry(channels.get("Mz"), axis="z", role="moment"),
+            },
+        },
+        "parameters": {
+            "input_moment": _text(criteria.get("input_moment"), "My"),
+            "moc_d_m": _float_or_none(criteria.get("moc_d")),
+            "moc_applied": bool(criteria.get("moc_applied")),
+        },
+        "flags": {
+            "neg_flags": dict(payload.get("neg_flags") or state.get("neg_flags") or {}),
+        },
+    }
+
+
+def _chest_context(payload, metrics, state):
+    payload = dict(payload or {})
+    metrics = dict(metrics or {})
+    state = dict(state or {})
+    channels = dict(payload.get("channels") or state.get("channels") or {})
+    return {
+        "engine_key": "chest_injury_bundle_v1",
+        "rule_key": "chest_accel_disp_vc",
+        "section": "chest",
+        "slot": _text(payload.get("slot") or state.get("slot")),
+        "dummy_profile": _text(payload.get("dummy_profile") or state.get("dummy_profile")),
+        "criterion_key": _text(payload.get("criterion_key") or state.get("criterion_key")),
+        "inputs": {
+            "channels": {
+                "x": _channel_input_entry(channels.get("x"), axis="x", role="acc"),
+                "y": _channel_input_entry(channels.get("y"), axis="y", role="acc"),
+                "z": _channel_input_entry(channels.get("z"), axis="z", role="acc"),
+                "disp": _channel_input_entry(channels.get("disp"), role="displacement"),
+            },
+        },
+        "parameters": {
+            "plot_unit": "g",
+            "displacement_unit": "mm",
+            "vc_variants": ("sae_j1727_cfc600", "ece94_cfc180"),
+        },
+        "flags": {
+            "neg_flags": dict(payload.get("neg_flags") or state.get("neg_flags") or {}),
+        },
+    }
+
+
+def build_canonical_context(section_key, payload, metrics, state=None):
+    section = _text(section_key).lower()
+    if section == "head":
+        return _head_context(payload, metrics, state)
+    if section == "neck":
+        return _neck_context(payload, metrics, state)
+    if section == "chest":
+        return _chest_context(payload, metrics, state)
+    payload = dict(payload or {})
+    state = dict(state or {})
+    return {
+        "engine_key": "",
+        "rule_key": "",
+        "section": section,
+        "slot": _text(payload.get("slot") or state.get("slot")),
+        "dummy_profile": _text(payload.get("dummy_profile") or state.get("dummy_profile")),
+        "criterion_key": _text(payload.get("criterion_key") or state.get("criterion_key")),
+        "inputs": {
+            "channels": dict(payload.get("channels") or state.get("channels") or {}),
+        },
+        "parameters": {},
+        "flags": {
+            "neg_flags": dict(payload.get("neg_flags") or state.get("neg_flags") or {}),
+        },
+    }
 
 
 def build_canonical_graphs(section_key):

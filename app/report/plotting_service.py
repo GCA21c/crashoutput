@@ -92,6 +92,7 @@ def _build_auto_text_context(section_key, slot_payload):
         "metric_extrema": dict(slot_payload.get("metric_extrema") or {}),
         "structured_metrics": structured,
         "canonical_metrics": dict(slot_payload.get("canonical_metrics") or {}),
+        "calculation_context": dict(slot_payload.get("calculation_context") or {}),
         "canonical_graphs": dict(slot_payload.get("canonical_graphs") or {}),
         "slot": str(slot_payload.get("slot") or ""),
     }
