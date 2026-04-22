@@ -68,6 +68,10 @@ class CrashAnalysisWorkbench(tk.Frame):
         self.current_page_key = None
         self.is_resizing = False
         self._resize_after_id = None
+        self._page_switch_busy_after_id = None
+        self._top_status_busy_reasons = set()
+        self._top_status_shimmer_job = None
+        self._top_status_shimmer_offset = -160
         self._last_root_size = None
         self._resize_commit_delay_ms = 600
         self.original_df = None
@@ -153,10 +157,13 @@ class CrashAnalysisWorkbench(tk.Frame):
         right_area = tk.Frame(main_pane, bg=PAGE_BG)
         main_pane.add(right_area, stretch="always", minsize=720)
 
-        top_status = tk.Frame(right_area, bg=STATUS_BG, bd=1, relief=tk.SOLID)
+        top_status = tk.Frame(right_area, bg=STATUS_BG, bd=1, relief=tk.SOLID, height=34)
         top_status.pack(side=tk.TOP, fill=tk.X, padx=8, pady=(8, 0))
-        tk.Label(top_status, textvariable=self.dataset_info_var, bg=STATUS_BG, anchor="w", fg=TITLE_FG).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=10, pady=6)
-        tk.Label(top_status, textvariable=self.history_info_var, bg=STATUS_BG, anchor="e", fg=TEXT_FG).pack(side=tk.RIGHT, padx=10)
+        self.top_status = top_status
+        self.top_status_shimmer = tk.Canvas(top_status, bg=STATUS_BG, height=34, highlightthickness=0, bd=0)
+        self.top_status_shimmer.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self.top_status_shimmer.bind("<Configure>", lambda _event: self._render_top_status_shimmer())
+        top_status.pack_propagate(False)
 
         self.content = tk.Frame(right_area, bg=PAGE_BG)
         self.content.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
@@ -222,6 +229,98 @@ class CrashAnalysisWorkbench(tk.Frame):
         # Internal key/class spelling is kept for compatibility; user-facing text says PLOTTING.
         self.pages["report_ploting"] = ReportPlotingPage(self.page_host, self)
         self._apply_injury_mode_nav()
+
+    def _render_top_status_shimmer(self):
+        canvas = getattr(self, "top_status_shimmer", None)
+        if canvas is None:
+            return
+        canvas.delete("shimmer")
+        width = max(1, int(canvas.winfo_width()))
+        height = max(1, int(canvas.winfo_height()))
+        if not self._top_status_busy_reasons:
+            canvas.create_rectangle(0, 0, width, height, fill=STATUS_BG, outline="", tags="shimmer")
+        else:
+            offset = float(self._top_status_shimmer_offset)
+            canvas.create_rectangle(0, 0, width, height, fill=STATUS_BG, outline="", tags="shimmer")
+            canvas.create_polygon(
+                offset - 180, 0,
+                offset - 40, 0,
+                offset + 90, height,
+                offset - 50, height,
+                fill="#f4f8ff",
+                outline="",
+                stipple="gray25",
+                tags="shimmer",
+            )
+            canvas.create_polygon(
+                offset - 120, 0,
+                offset + 10, 0,
+                offset + 140, height,
+                offset + 10, height,
+                fill="#ffffff",
+                outline="",
+                stipple="gray50",
+                tags="shimmer",
+            )
+            canvas.create_polygon(
+                offset - 45, 0,
+                offset + 35, 0,
+                offset + 115, height,
+                offset + 35, height,
+                fill="#ffffff",
+                outline="",
+                tags="shimmer",
+            )
+        canvas.create_text(
+            12,
+            height / 2,
+            text=self.dataset_info_var.get(),
+            anchor="w",
+            fill=TITLE_FG,
+            font=NAV_FONT_BOLD,
+            tags="shimmer",
+        )
+        canvas.create_text(
+            max(12, width - 12),
+            height / 2,
+            text=self.history_info_var.get(),
+            anchor="e",
+            fill=TEXT_FG,
+            font=NAV_FONT,
+            tags="shimmer",
+        )
+
+    def _animate_top_status_shimmer(self):
+        self._top_status_shimmer_job = None
+        canvas = getattr(self, "top_status_shimmer", None)
+        if canvas is None or not self._top_status_busy_reasons:
+            return
+        width = max(1, int(canvas.winfo_width()))
+        self._top_status_shimmer_offset += max(18, width // 16)
+        if self._top_status_shimmer_offset > (width + 160):
+            self._top_status_shimmer_offset = -160
+        self._render_top_status_shimmer()
+        self._top_status_shimmer_job = self.after(28, self._animate_top_status_shimmer)
+
+    def start_busy_top_status(self, reason="busy"):
+        self._top_status_busy_reasons.add(str(reason or "busy"))
+        if self._top_status_shimmer_job is not None:
+            return
+        self._top_status_shimmer_offset = -160
+        self._render_top_status_shimmer()
+        self._top_status_shimmer_job = self.after(1, self._animate_top_status_shimmer)
+
+    def stop_busy_top_status(self, reason="busy"):
+        self._top_status_busy_reasons.discard(str(reason or "busy"))
+        if self._top_status_busy_reasons:
+            return
+        if self._top_status_shimmer_job is not None:
+            try:
+                self.after_cancel(self._top_status_shimmer_job)
+            except Exception:
+                pass
+            self._top_status_shimmer_job = None
+        self._render_top_status_shimmer()
 
     def _add_nav_section(self, text):
         tk.Label(self.sidebar, text=text, font=NAV_FONT_BOLD, bg=SIDEBAR_BG, fg=SECTION_FG, anchor="w", padx=14, pady=8).pack(fill=tk.X, pady=(10, 2))
@@ -324,6 +423,13 @@ class CrashAnalysisWorkbench(tk.Frame):
             if not allowed:
                 return
             key = allowed[0]
+        self.start_busy_top_status("page_switch")
+        if self._page_switch_busy_after_id is not None:
+            try:
+                self.after_cancel(self._page_switch_busy_after_id)
+            except Exception:
+                pass
+            self._page_switch_busy_after_id = None
         if self.is_resizing:
             self._finish_resize(commit_render=False)
         if self.current_page_key and self.current_page_key in self.pages and self.current_page_key != key:
@@ -334,6 +440,7 @@ class CrashAnalysisWorkbench(tk.Frame):
         self._refresh_nav_styles()
         if hasattr(self.pages[key], "on_show"):
             self.pages[key].on_show()
+        self._page_switch_busy_after_id = self.after(260, lambda: self.stop_busy_top_status("page_switch"))
 
     def _place_page(self, key):
         page = self.pages.get(key)
@@ -437,6 +544,7 @@ class CrashAnalysisWorkbench(tk.Frame):
         label = self.source_file_label or "선택된 파일 없음"
         self.dataset_info_var.set(f"파일: {label}")
         self.history_info_var.set(f"History: {len(self.history_entries or self.history)}")
+        self._render_top_status_shimmer()
 
     def _normalize_history_entry(self, item):
         if isinstance(item, dict):

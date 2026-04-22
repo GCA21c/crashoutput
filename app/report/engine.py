@@ -1,4 +1,7 @@
 from app.core.dummy.engine import get_dummy_module_factors
+from app.core.utils.formatting import fmt_range_ms, fmt_time_ms
+from app.report.formatters import read_path
+from app.services.state.injury_result_store import get_payload_store, get_slot_payload
 
 from .registry import get_regulation_definition
 
@@ -25,10 +28,10 @@ def _as_float(value):
     return result if result == result else None
 
 
-def _candidate_paths(item):
-    value_key = str(item.get("value_key") or "").strip()
-    aliases = [str(path).strip() for path in (item.get("payload_aliases") or ()) if str(path or "").strip()]
-    return tuple(path for path in (value_key, *aliases) if path)
+def _candidate_paths(primary_key, aliases):
+    primary = str(primary_key or "").strip()
+    alias_values = [str(path).strip() for path in (aliases or ()) if str(path or "").strip()]
+    return tuple(path for path in (primary, *alias_values) if path)
 
 
 def _region_label(item):
@@ -49,30 +52,21 @@ def _apply_transform(value, transform_name):
     return numeric
 
 
-def _read_path(container, path):
-    current = container
-    for part in str(path or "").split("."):
-        if not isinstance(current, dict):
-            return None
-        current = current.get(part)
-        if current is None:
-            return None
-    return current
-
-
 def _extract_from_container(container, paths, source_name):
     container = dict(container or {})
     for path in paths:
-        value = _as_float(_read_path(container, path))
+        value = _as_float(read_path(container, path))
         if value is not None:
             return value, source_name, path
     return None
 
 
-def _extract_metric_value(item, slot_payload):
+def _extract_numeric_field(slot_payload, primary_key, aliases=(), *, transform_name=None):
     slot_payload = dict(slot_payload or {})
-    candidate_paths = _candidate_paths(item)
+    candidate_paths = _candidate_paths(primary_key, aliases)
     for source_name, container in (
+        ("canonical_metrics", slot_payload.get("canonical_metrics")),
+        ("calculation_context", slot_payload.get("calculation_context")),
         ("report_values", slot_payload.get("report_values")),
         ("structured_metrics", slot_payload.get("structured_metrics")),
         ("top_level", slot_payload),
@@ -80,8 +74,100 @@ def _extract_metric_value(item, slot_payload):
         extracted = _extract_from_container(container, candidate_paths, source_name)
         if extracted:
             value, resolved_source, resolved_path = extracted
-            return _apply_transform(value, item.get("value_transform")), resolved_source, resolved_path
+            return _apply_transform(value, transform_name), resolved_source, resolved_path
     return None, "missing", ""
+
+
+def _extract_metric_value(item, slot_payload):
+    canonical_aliases = tuple(item.get("canonical_aliases") or ())
+    context_aliases = tuple(item.get("context_aliases") or ())
+    canonical_paths = tuple(path for path in (*canonical_aliases, *context_aliases) if str(path or "").strip())
+    if canonical_paths:
+        extracted = _extract_numeric_field(
+            slot_payload,
+            "",
+            canonical_paths,
+            transform_name=item.get("value_transform"),
+        )
+        if extracted[0] is not None:
+            return extracted
+    return _extract_numeric_field(
+        slot_payload,
+        item.get("value_key"),
+        item.get("payload_aliases"),
+        transform_name=item.get("value_transform"),
+    )
+
+
+def _format_time_text(time_value=None, start_time=None, end_time=None):
+    if _as_float(start_time) is not None and _as_float(end_time) is not None:
+        return fmt_range_ms(start_time, end_time)
+    if _as_float(time_value) is not None:
+        return fmt_time_ms(time_value)
+    return "-"
+
+
+def _extract_row_time(item, slot_payload):
+    canonical_start_aliases = tuple(item.get("canonical_time_start_aliases") or ())
+    canonical_end_aliases = tuple(item.get("canonical_time_end_aliases") or ())
+    if canonical_start_aliases or canonical_end_aliases:
+        start_value, start_source, start_path = _extract_numeric_field(slot_payload, "", canonical_start_aliases)
+        end_value, end_source, end_path = _extract_numeric_field(slot_payload, "", canonical_end_aliases)
+        if start_value is not None and end_value is not None:
+            source = start_source if start_source == end_source else "mixed"
+            path = f"{start_path} ~ {end_path}".strip()
+            return {
+                "time": _format_time_text(start_time=start_value, end_time=end_value),
+                "time_value": None,
+                "time_start": start_value,
+                "time_end": end_value,
+                "time_source": source,
+                "time_path": path,
+            }
+
+    start_value, start_source, start_path = _extract_numeric_field(
+        slot_payload,
+        item.get("time_start_key"),
+        item.get("time_start_aliases"),
+    )
+    end_value, end_source, end_path = _extract_numeric_field(
+        slot_payload,
+        item.get("time_end_key"),
+        item.get("time_end_aliases"),
+    )
+    if start_value is not None and end_value is not None:
+        source = start_source if start_source == end_source else "mixed"
+        path = f"{start_path} ~ {end_path}".strip()
+        return {
+            "time": _format_time_text(start_time=start_value, end_time=end_value),
+            "time_value": None,
+            "time_start": start_value,
+            "time_end": end_value,
+            "time_source": source,
+            "time_path": path,
+        }
+    canonical_time_aliases = tuple(item.get("canonical_time_aliases") or ())
+    if canonical_time_aliases:
+        time_value, time_source, time_path = _extract_numeric_field(slot_payload, "", canonical_time_aliases)
+        if time_value is not None:
+            return {
+                "time": _format_time_text(time_value=time_value),
+                "time_value": time_value,
+                "time_start": None,
+                "time_end": None,
+                "time_source": time_source,
+                "time_path": time_path,
+            }
+
+    time_value, time_source, time_path = _extract_numeric_field(slot_payload, item.get("time_key"), item.get("time_aliases"))
+    return {
+        "time": _format_time_text(time_value=time_value),
+        "time_value": time_value,
+        "time_start": None,
+        "time_end": None,
+        "time_source": time_source,
+        "time_path": time_path,
+    }
 
 
 def _resolve_limit_value(item, slot_payload, test_mode):
@@ -134,8 +220,7 @@ def _resolve_slots(metadata, injury_saved):
 
 
 def _slot_payload(injury_saved, section_key, slot):
-    section_payload = dict((injury_saved.get(section_key) or {}) if isinstance(injury_saved, dict) else {})
-    return dict((section_payload.get("slots") or {}).get(slot) or {})
+    return get_slot_payload({ "injury_saved_results": injury_saved }, section_key, slot)
 
 
 def _slot_identity(slot, slot_payload, slot_meta):
@@ -164,7 +249,7 @@ def build_report_snapshot(metadata, regulation_name):
             "value_count": 0,
         }
 
-    injury_saved = dict(metadata.get("injury_saved_results") or {})
+    injury_saved = get_payload_store(metadata)
     slot_meta_map = _shared_slot_meta(metadata)
     test_mode = str((metadata.get("shared_dummy_config") or {}).get("injury_test_mode") or "FRONTAL").strip().upper() or "FRONTAL"
     slots = _resolve_slots(metadata, injury_saved)
@@ -185,6 +270,7 @@ def build_report_snapshot(metadata, regulation_name):
             slot_payload = _slot_payload(injury_saved, item.get("section_key"), slot)
             value, value_source, value_path = _extract_metric_value(item, slot_payload)
             limit, limit_source = _resolve_limit_value(item, slot_payload, test_mode)
+            time_info = _extract_row_time(item, slot_payload)
             status = _evaluate_status(value, limit, item.get("comparison"))
             if value is not None:
                 value_count += 1
@@ -198,14 +284,21 @@ def build_report_snapshot(metadata, regulation_name):
                 "region": _region_label(item),
                 "result_key": item.get("result_key"),
                 "label": item.get("label"),
+                "category": item.get("label"),
                 "unit": item.get("unit") or "",
                 "value": value,
+                "time": time_info["time"],
+                "time_value": time_info["time_value"],
+                "time_start": time_info["time_start"],
+                "time_end": time_info["time_end"],
                 "limit": limit,
                 "status": status,
                 "comparison": item.get("comparison"),
                 "result_uid": slot_payload.get("result_uid") or "",
                 "value_source": value_source,
                 "value_path": value_path,
+                "time_source": time_info["time_source"],
+                "time_path": time_info["time_path"],
                 "limit_source": limit_source,
             })
 

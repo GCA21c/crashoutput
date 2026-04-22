@@ -35,6 +35,15 @@ from app.services.injury import (
     calculate_tibia_injury_bundle,
 )
 from app.services.injury.input_resolver import find_derived_channel
+from app.services.state.injury_result_store import (
+    get_payload_store,
+    get_section_payload,
+    get_slot_payload,
+    set_active_slot as set_store_active_slot,
+    set_section_payload as set_store_section_payload,
+    update_graph_selection as update_store_graph_selection,
+)
+from app.services.state.injury_metric_canonical import build_canonical_context, build_canonical_graphs, build_canonical_metrics
 from app.core.utils.formatting import SUMMARY_FORMAT_VERSION, fmt_time_ms, fmt_value
 from app.ui.components.multi_dummy_panel import MultiDummyPanel
 from app.ui.components.scrollable_frame import VerticalScrolledFrame
@@ -256,6 +265,7 @@ class InjuryPage(tk.Frame):
             'result_uid': '',
             'dummy_name': '',
             'dummy_profile': '',
+            'criterion_key': '',
             'channels': {},
             'neg_flags': {},
             'summary_text': '-',
@@ -388,6 +398,7 @@ class InjuryPage(tk.Frame):
                 'head_multiple_3ms_clip': self._safe_metric_float(metrics.get('multiple_peak_3ms_value')),
                 'head_3ms_clip': self._safe_metric_float(metrics.get('one_peak_3ms_value') or metrics.get('clip3_value')),
                 'resultant_peak_g': self._safe_metric_float(metrics.get('resultant_peak_value')),
+                'head_accel_80g_3ms_duration_ms': self._safe_metric_float(metrics.get('fmvss_head_acc_80g_3ms_duration_ms')),
                 'head_x_max': self._safe_metric_float(metrics.get('head_x_max_value')),
                 'head_x_min': self._safe_metric_float(metrics.get('head_x_min_value')),
                 'head_y_max': self._safe_metric_float(metrics.get('head_y_max_value')),
@@ -396,6 +407,8 @@ class InjuryPage(tk.Frame):
                 'head_z_min': self._safe_metric_float(metrics.get('head_z_min_value')),
                 'head_resultant_max': self._safe_metric_float(metrics.get('head_resultant_max_value')),
                 'head_resultant_min': self._safe_metric_float(metrics.get('head_resultant_min_value')),
+                'head_resultant_max_time_s': self._safe_metric_float(metrics.get('head_resultant_max_time_s')),
+                'head_resultant_min_time_s': self._safe_metric_float(metrics.get('head_resultant_min_time_s')),
             }
         if self.initial_mode == 'nij':
             return {
@@ -470,6 +483,10 @@ class InjuryPage(tk.Frame):
             enriched[key] = value
         enriched['structured_metrics'] = self._to_storable_metric_value(metrics)
         enriched['metric_extrema'] = self._collect_metric_extrema(metrics, time_values)
+        enriched['canonical_schema_version'] = 1
+        enriched['canonical_metrics'] = build_canonical_metrics(self._section_key(), enriched, metrics)
+        enriched['calculation_context'] = build_canonical_context(self._section_key(), enriched, metrics, state)
+        enriched['canonical_graphs'] = build_canonical_graphs(self._section_key())
         return enriched
 
     def _section_key(self):
@@ -718,7 +735,7 @@ class InjuryPage(tk.Frame):
 
     def _on_slot_profile_changed(self, slot, value):
         self.slot_states[slot]['dummy_profile'] = (value or '').strip()
-        if slot == self._active_slot():
+        if slot == self._active_slot() and self.initial_mode != 'nij':
             self._dummy_profile_var().set((value or '').strip())
 
     def _update_combined_summary(self):
@@ -733,7 +750,11 @@ class InjuryPage(tk.Frame):
     def _apply_slot_meta_to_ui(self, slot):
         state = self.slot_states[slot]
         profile = state.get('dummy_profile') or ''
-        self._dummy_profile_var().set(profile)
+        criterion_key = state.get('criterion_key') or ''
+        if self.initial_mode == 'nij':
+            self._dummy_profile_var().set(criterion_key or self.nij_dummy_var.get())
+        else:
+            self._dummy_profile_var().set(profile)
         self.multi_dummy_panel.profile_var(slot).set(profile)
         self.multi_dummy_panel.name_var(slot).set(state.get('dummy_name') or '')
 
@@ -832,7 +853,6 @@ class InjuryPage(tk.Frame):
         self.nij_mx_combo = self._combo_row(inputs, "Moment Mx", self.nij_mx_var, self.nij_mx_neg_var)
         self.nij_my_combo = self._combo_row(inputs, "Moment My *", self.nij_my_var, self.nij_my_neg_var)
         self.nij_mz_combo = self._combo_row(inputs, "Moment Mz", self.nij_mz_var, self.nij_mz_neg_var)
-        tk.Label(box, textvariable=self.nij_guidance_var, bg="#ffffff", fg="#555555", justify="left", anchor="w", wraplength=420).pack(fill=tk.X, padx=10, pady=(0, 6))
         opt = tk.Frame(box, bg="#ffffff")
         opt.pack(fill=tk.X, padx=10, pady=(2, 4))
         tk.Button(opt, text="전체 계산", command=self.calculate_nij_all).pack(side=tk.RIGHT)
@@ -849,7 +869,6 @@ class InjuryPage(tk.Frame):
         self.chest_y_combo = self._combo_row(inputs, "Chest Acc Y", self.chest_y_var)
         self.chest_z_combo = self._combo_row(inputs, "Chest Acc Z", self.chest_z_var)
         self.chest_disp_combo = self._combo_row(inputs, "Displacement *", self.chest_disp_var)
-        tk.Label(box, textvariable=self.chest_guidance_var, bg="#ffffff", fg="#555555", justify="left", anchor="w", wraplength=420).pack(fill=tk.X, padx=10, pady=(0, 6))
         opt = tk.Frame(box, bg="#ffffff")
         opt.pack(fill=tk.X, padx=10, pady=(2, 4))
         tk.Checkbutton(
@@ -1152,6 +1171,7 @@ class InjuryPage(tk.Frame):
         self.requested_row_positions = self.multi_dummy_panel.get_row_positions()
         self.active_positions = self.multi_dummy_panel.get_selected_positions() or self.active_positions
         self._load_active_slot_state()
+        self._persist_active_slot_selection()
         self.refresh_channel_lists(keep_existing=True)
 
     def _legacy_save_slot_state(self, slot):
@@ -1323,7 +1343,7 @@ class InjuryPage(tk.Frame):
 
     def _injury_metadata_bundle(self):
         metadata = dict(getattr(self.workbench, 'dataset_metadata', {}) or {})
-        return dict(metadata.get('injury_saved_results') or {})
+        return get_payload_store(metadata)
 
     def _dataset_identity_text(self):
         metadata = dict(getattr(self.workbench, 'dataset_metadata', {}) or {})
@@ -1405,31 +1425,27 @@ class InjuryPage(tk.Frame):
             state[payload_key] = payload
 
         metadata = dict(getattr(self.workbench, 'dataset_metadata', {}) or {})
-        injury_saved = dict(metadata.get('injury_saved_results') or {})
-        section_payload = dict(injury_saved.get(self._section_key()) or {})
-        slots_payload = dict(section_payload.get('slots') or {})
-        slot_payload = dict(slots_payload.get(slot) or {})
-        slot_payload['graph_key'] = graph_key
-        slot_payload['graph_uid'] = graph_uid
-        slots_payload[slot] = slot_payload
-        section_payload['slots'] = slots_payload
-        injury_saved[self._section_key()] = section_payload
-
-        graph_registry = dict(metadata.get('injury_graph_registry') or {})
-        graph_registry[graph_uid] = {
-            'section_key': self._section_key(),
-            'slot': slot,
-            'result_uid': state.get('result_uid') or self._injury_result_uid(slot),
-            'graph_key': graph_key,
-            'dummy_name': state.get('dummy_name') or '',
-            'dummy_profile': state.get('dummy_profile') or '',
-            'source_file_path': self._dataset_identity_text(),
-            'storage': 'rebuild_from_dataset',
-        }
-
-        metadata['injury_saved_results'] = injury_saved
-        metadata['injury_graph_registry'] = graph_registry
+        metadata = update_store_graph_selection(
+            metadata,
+            section_key=self._section_key(),
+            slot=slot,
+            graph_key=graph_key,
+            graph_uid=graph_uid,
+            result_uid=state.get('result_uid') or self._injury_result_uid(slot),
+            dummy_name=state.get('dummy_name') or '',
+            dummy_profile=state.get('dummy_profile') or '',
+            source_file_path=self._dataset_identity_text(),
+        )
         self.workbench.dataset_metadata = metadata
+        self._persist_graph_metadata_to_current_pickle()
+
+    def _persist_active_slot_selection(self, slot=None):
+        slot = slot or self._active_slot()
+        metadata = dict(getattr(self.workbench, 'dataset_metadata', {}) or {})
+        section_payload = get_section_payload(metadata, self._section_key())
+        if not section_payload:
+            return
+        self.workbench.dataset_metadata = set_store_active_slot(metadata, self._section_key(), slot)
         self._persist_graph_metadata_to_current_pickle()
 
     def _legacy_build_section_payload(self):
@@ -1475,36 +1491,20 @@ class InjuryPage(tk.Frame):
     def _save_section_payload(self, history_text, dataframe=None, metadata_extra=None, op_suffix='_I'):
         viewer = self.workbench.viewer
         base_df = dataframe.copy(deep=True) if dataframe is not None else viewer.df.copy(deep=True)
-        injury_saved = self._injury_metadata_bundle()
-        injury_saved[self._section_key()] = self._build_section_payload()
         metadata = dict(getattr(self.workbench, 'dataset_metadata', {}) or {})
-        result_registry = dict(metadata.get('injury_result_registry') or {})
-        graph_registry = dict(metadata.get('injury_graph_registry') or {})
-        section_payload = injury_saved.get(self._section_key()) or {}
-        for slot, payload in dict(section_payload.get('slots') or {}).items():
-            uid = payload.get('result_uid') or self._injury_result_uid(slot)
-            result_registry[uid] = {
-                'section_key': self._section_key(),
-                'slot': slot,
-                'dummy_name': payload.get('dummy_name') or '',
-                'dummy_profile': payload.get('dummy_profile') or '',
-                'channels': dict(payload.get('channels') or {}),
-                'source_file_path': self._dataset_identity_text(),
-            }
-            graph_key = payload.get('graph_key')
-            if graph_key:
-                graph_uid = payload.get('graph_uid') or self._injury_graph_uid(slot, graph_key)
-                graph_registry[graph_uid] = {
-                    'section_key': self._section_key(),
-                    'slot': slot,
-                    'result_uid': uid,
-                    'graph_key': graph_key,
-                    'dummy_name': payload.get('dummy_name') or '',
-                    'dummy_profile': payload.get('dummy_profile') or '',
-                    'source_file_path': self._dataset_identity_text(),
-                    'storage': 'rebuild_from_dataset',
-                }
-        metadata_override = {'injury_saved_results': injury_saved, 'injury_result_registry': result_registry, 'injury_graph_registry': graph_registry}
+        section_payload = self._build_section_payload()
+        metadata = set_store_section_payload(
+            metadata,
+            self._section_key(),
+            section_payload,
+            source_file_path=self._dataset_identity_text(),
+        )
+        metadata_override = {
+            'injury_saved_results': get_payload_store(metadata),
+            'injury_result_registry': dict(metadata.get('injury_result_registry') or {}),
+            'injury_graph_registry': dict(metadata.get('injury_graph_registry') or {}),
+            'injury_slot_registry': dict(metadata.get('injury_slot_registry') or {}),
+        }
         if metadata_extra:
             metadata_override.update(metadata_extra)
         return self.workbench.apply_processed_dataframe(base_df, history_text, op_suffix=op_suffix, metadata_override=metadata_override)
@@ -1524,6 +1524,7 @@ class InjuryPage(tk.Frame):
             st['result_uid'] = payload.get('result_uid') or st.get('result_uid') or self._injury_result_uid(slot)
             st['dummy_name'] = payload.get('dummy_name') or st.get('dummy_name') or ''
             st['dummy_profile'] = payload.get('dummy_profile') or st.get('dummy_profile') or ''
+            st['criterion_key'] = payload.get('criterion_key') or st.get('criterion_key') or ''
             st['channels'] = dict(payload.get('channels') or {})
             st['neg_flags'] = dict(payload.get('neg_flags') or {})
             payload_version = int(payload.get('summary_format_version') or 0)
@@ -1587,12 +1588,13 @@ class InjuryPage(tk.Frame):
                     x_plot=self._convert_channel_to_head_plot_unit(x, x_ch),
                     y_plot=self._convert_channel_to_head_plot_unit(y, y_ch),
                     z_plot=self._convert_channel_to_head_plot_unit(z, z_ch),
-                    plot_unit=self._head_plot_unit((x_ch, y_ch, z_ch)),
-                    channels=(x_ch, y_ch, z_ch),
-                    resultant_channel=resultant_channel,
-                    resultant_filter_label='CFC 1000',
-                    use_high_res_cumulative_3ms=self._slot_use_high_res_cumulative_3ms(slot),
-                )
+                plot_unit=self._head_plot_unit((x_ch, y_ch, z_ch)),
+                channels=(x_ch, y_ch, z_ch),
+                slot_label=slot,
+                resultant_channel=resultant_channel,
+                resultant_filter_label='CFC 1000',
+                use_high_res_cumulative_3ms=self._slot_use_high_res_cumulative_3ms(slot),
+            )
                 state['head_bundle'] = result['bundle']
                 meta = dict(result.get('metadata') or {})
                 meta['dummy_name'] = state.get('dummy_name') or ''
@@ -1617,7 +1619,8 @@ class InjuryPage(tk.Frame):
                     selected=selected,
                     sign_flags=sign_flags,
                     viewer=viewer,
-                    criterion_key=state.get('dummy_profile') or self.nij_dummy_var.get(),
+                    criterion_key=state.get('criterion_key') or self.nij_dummy_var.get(),
+                    dummy_profile_label=state.get('dummy_profile') or self.multi_dummy_panel.profile_var(slot).get().strip(),
                     unit_getter=self._unit_text,
                     channel_desc_getter=lambda ch: viewer.get_channel_display_name(ch) if ch else '-',
                     resolve_series_for_calc=lambda source_channel, role, desired_cfc, sign: self._resolve_standard_series_for_calc(source_channel, 'neck_injury', role, desired_cfc, sign),
@@ -1627,7 +1630,7 @@ class InjuryPage(tk.Frame):
                     state['neck_saved_payload'] = {
                         'result_uid': state.get('result_uid') or self._injury_result_uid(slot),
                         'summary_text': result['summary_text'],
-                        'criterion_key': state.get('dummy_profile') or self.nij_dummy_var.get(),
+                        'criterion_key': state.get('criterion_key') or self.nij_dummy_var.get(),
                         'dummy_name': state.get('dummy_name') or '',
                         'dummy_profile': state.get('dummy_profile') or '',
                         'channels': dict(selected),
@@ -2553,6 +2556,14 @@ class InjuryPage(tk.Frame):
             return messagebox.askyesno('확인', f'{slot} 위치에 데이터는 있으나 더미 유형 설정이 없습니다. 계속 진행하시겠습니까?')
         return True
 
+    def _start_file_bar_busy(self, reason='injury_calc'):
+        if hasattr(self.workbench, 'start_busy_top_status'):
+            self.workbench.start_busy_top_status(reason)
+
+    def _stop_file_bar_busy(self, reason='injury_calc'):
+        if hasattr(self.workbench, 'stop_busy_top_status'):
+            self.workbench.stop_busy_top_status(reason)
+
     def _calculate_all_slots(self, single_calc):
         viewer = self.workbench.viewer
         if viewer.df is None or viewer.time_column is None:
@@ -2560,20 +2571,24 @@ class InjuryPage(tk.Frame):
             return
         previous = self._active_slot()
         any_success = False
-        for slot in self._active_positions():
-            if not self._confirm_missing_dummy_profile(slot):
-                continue
-            self.active_dummy_var.set(slot)
-            try:
-                single_calc()
-                any_success = True
-            except Exception as exc:
-                messagebox.showwarning('경고', f'{slot} 계산 중 오류가 발생했습니다.\n{exc}')
-        self.active_dummy_var.set(previous if previous in self._active_positions() else self._first_active_position())
-        self._update_combined_summary()
-        if any_success:
-            if hasattr(self.workbench, 'add_history_entry'):
-                self._log_history(f'Calculation completed successfully for {len(self._active_positions())} active dummy position(s)', event_type='batch_calculation', slot=self._active_slot(), persist=True)
+        self._start_file_bar_busy('injury_batch')
+        try:
+            for slot in self._active_positions():
+                if not self._confirm_missing_dummy_profile(slot):
+                    continue
+                self.active_dummy_var.set(slot)
+                try:
+                    single_calc()
+                    any_success = True
+                except Exception as exc:
+                    messagebox.showwarning('경고', f'{slot} 계산 중 오류가 발생했습니다.\n{exc}')
+            self.active_dummy_var.set(previous if previous in self._active_positions() else self._first_active_position())
+            self._update_combined_summary()
+            if any_success:
+                if hasattr(self.workbench, 'add_history_entry'):
+                    self._log_history(f'Calculation completed successfully for {len(self._active_positions())} active dummy position(s)', event_type='batch_calculation', slot=self._active_slot(), persist=True)
+        finally:
+            self._stop_file_bar_busy('injury_batch')
 
     def calculate_hic_bundle_all(self):
         self._calculate_all_slots(self.calculate_hic_bundle)
@@ -2793,6 +2808,35 @@ class InjuryPage(tk.Frame):
     def _head_resultant_channel_name(self, slot):
         return f"{slot}_HEAD_RESULTANT_CFC1000"
 
+    def _head_axis_display_names(self, channels):
+        labels = {}
+        for axis_key, channel_name in zip(('x', 'y', 'z'), channels):
+            rewritten = str(rewrite_filter_code_in_text(channel_name, 'CFC 1000') or channel_name or '-').strip()
+            labels[axis_key] = f"ACC {axis_key.upper()} - {rewritten}"
+        return labels
+
+    def _chest_accel_display_names(self, channels):
+        labels = {}
+        for axis_key, channel_name in zip(('x', 'y', 'z'), channels):
+            rewritten = str(rewrite_filter_code_in_text(channel_name, 'CFC 180') or channel_name or '-').strip()
+            labels[axis_key] = f"ACC {axis_key.upper()} - {rewritten}"
+        return labels
+
+    def _pelvis_accel_display_names(self, channels):
+        labels = {}
+        for axis_key, channel_name in zip(('x', 'y', 'z'), channels):
+            rewritten = str(rewrite_filter_code_in_text(channel_name, 'CFC 1000') or channel_name or '-').strip()
+            labels[axis_key] = f"ACC {axis_key.upper()} - {rewritten}"
+        return labels
+
+    def _chest_dummy_profile_label(self, slot):
+        state = dict(self.slot_states.get(slot) or {})
+        return (
+            self.multi_dummy_panel.profile_var(slot).get().strip()
+            or str(state.get('dummy_profile') or '').strip()
+            or self.chest_dummy_var.get().strip()
+        )
+
     def _head_resultant_channel_metadata(self, slot, channels):
         x_ch, y_ch, z_ch = channels
         return {
@@ -2879,6 +2923,7 @@ class InjuryPage(tk.Frame):
             return
         slot = self._active_slot()
         self._save_active_slot_state()
+        self._start_file_bar_busy('injury_calc')
         try:
             time, resultant, channels, resolved_axes, used_channels = self._get_xyz_resultant()
             resultant_channel = self._head_resultant_channel_name(slot)
@@ -2890,6 +2935,8 @@ class InjuryPage(tk.Frame):
                 z_plot=self._convert_channel_to_head_plot_unit(resolved_axes[2], channels[2]),
                 plot_unit=self._head_plot_unit(channels),
                 channels=channels,
+                axis_display_names=self._head_axis_display_names(channels),
+                slot_label=slot,
                 resultant_channel=resultant_channel,
                 resultant_filter_label='CFC 1000',
                 use_high_res_cumulative_3ms=self._current_use_high_res_cumulative_3ms(),
@@ -2934,6 +2981,8 @@ class InjuryPage(tk.Frame):
             self.show_hic_bundle_graph(preferred_graph_key, slot=slot)
         except Exception as exc:
             messagebox.showwarning('경고', str(exc))
+        finally:
+            self._stop_file_bar_busy('injury_calc')
 
     def show_hic_bundle_graph(self, metric_key, slot=None, silent=False):
         slot = slot or self._active_slot()
@@ -2977,7 +3026,7 @@ class InjuryPage(tk.Frame):
                 self.ax.plot(t_plot[valid], v_plot[valid], linewidth=width, label=label)
 
     def _plot_head_xyz(self, bundle, slot):
-        self._plot_head_curves(bundle, include_resultant=False)
+        self._plot_head_curves(bundle, include_resultant=True)
         self.ax.set_title(self._head_graph_title(slot, 'head_xyz'))
         self.ax.set_xlabel(self._x_axis_label())
         self.ax.set_ylabel(f"Acceleration ({bundle.get('plot_unit', 'g')})")
@@ -2988,7 +3037,12 @@ class InjuryPage(tk.Frame):
         self.canvas.draw_idle()
 
     def _plot_head_resultant(self, bundle, slot):
-        self._plot_head_curves(bundle, include_resultant=True)
+        self.ax.clear()
+        t = np.asarray(bundle.get('time', []), dtype=float)
+        resultant = np.asarray(bundle.get('resultant_g', []), dtype=float)
+        valid, t_plot, v_plot = self._time_value_valid_mask_ms(t, resultant)
+        if np.any(valid):
+            self.ax.plot(t_plot[valid], v_plot[valid], linewidth=1.6, label='HEAD Resultant')
         for hic_key, color, label in (
             ('hic15', '#fca5a5', 'HIC15 구간'),
             ('hic36', '#87ceeb', 'HIC36 구간'),
@@ -3015,6 +3069,7 @@ class InjuryPage(tk.Frame):
         self.ax.set_title(self._head_graph_title(slot, 'head_resultant'))
         self.ax.set_xlabel(self._x_axis_label())
         self.ax.set_ylabel(f"Acceleration ({bundle.get('plot_unit', 'g')})")
+        self.ax.set_xlim(0.0, 150.0)
         self.ax.grid(True)
         self.ax.legend(loc='best', fontsize=9)
         self.last_plot_title = f'{slot}_Head_Resultant_graph'
@@ -3049,6 +3104,7 @@ class InjuryPage(tk.Frame):
             'My': -1.0 if self.nij_my_neg_var.get() else 1.0,
             'Mz': -1.0 if self.nij_mz_neg_var.get() else 1.0,
         }
+        self._start_file_bar_busy('injury_calc')
         try:
             result = calculate_neck_injury_bundle(
                 time=self._get_time(),
@@ -3056,6 +3112,7 @@ class InjuryPage(tk.Frame):
                 sign_flags=sign_flags,
                 viewer=viewer,
                 criterion_key=self.nij_dummy_var.get(),
+                dummy_profile_label=self.multi_dummy_panel.profile_var(slot).get().strip(),
                 unit_getter=self._unit_text,
                 channel_desc_getter=lambda ch: viewer.get_channel_display_name(ch) if ch else '-',
                 resolve_series_for_calc=lambda source_channel, role, desired_cfc, sign: self._resolve_standard_series_for_calc(source_channel, 'neck_injury', role, desired_cfc, sign),
@@ -3064,15 +3121,16 @@ class InjuryPage(tk.Frame):
             st = self.slot_states[slot]
             st['dummy_name'] = self.multi_dummy_panel.name_var(slot).get().strip()
             st['dummy_profile'] = self.multi_dummy_panel.profile_var(slot).get().strip()
+            st['criterion_key'] = self.nij_dummy_var.get().strip()
             st['channels'] = dict(selected)
-            st['neg_flags'] = {}
+            st['neg_flags'] = {key: bool(value < 0) for key, value in sign_flags.items()}
             st['summary_text'] = result['summary_text']
             st['result_uid'] = st.get('result_uid') or self._injury_result_uid(slot)
             st['neck_metrics'] = metrics
             st['neck_saved_payload'] = {
                 'result_uid': st['result_uid'],
                 'summary_text': result['summary_text'],
-                'criterion_key': self.nij_dummy_var.get(),
+                'criterion_key': st['criterion_key'],
                 'overall_nij': float(metrics['overall_nij']) if metrics.get('overall_nij') is not None else None,
                 'dominant_mode': metrics.get('dominant_mode'),
                 'dummy_name': st['dummy_name'],
@@ -3156,7 +3214,6 @@ class InjuryPage(tk.Frame):
                 'units': self._merge_metadata_dicts(getattr(viewer, 'external_units', {}) or {}, added_units),
                 'descriptions': self._merge_metadata_dicts(getattr(viewer, 'external_descriptions', {}) or {}, added_descriptions),
                 'channel_filter_labels': self._merge_metadata_dicts(self.workbench.channel_filter_labels or {}, added_filter_labels),
-                'neck_injury_metrics': {slot: st['neck_saved_payload']},
                 'derived_channels': dict((self.workbench.dataset_metadata or {}).get('derived_channels') or {}),
             }
             metadata_override['derived_channels'].update(renamed_meta)
@@ -3177,6 +3234,8 @@ class InjuryPage(tk.Frame):
             self.show_neck_graph(preferred_graph_key, slot=slot)
         except Exception as exc:
             messagebox.showwarning('경고', str(exc))
+        finally:
+            self._stop_file_bar_busy('injury_calc')
 
     def show_neck_graph(self, mode, slot=None, silent=False):
         slot = slot or self._active_slot()
@@ -3320,6 +3379,7 @@ class InjuryPage(tk.Frame):
             return
         slot = self._active_slot()
         self._save_active_slot_state()
+        self._start_file_bar_busy('injury_calc')
         try:
             time = self._get_time()
             x_ch = self._selected_channel(self.chest_x_var)
@@ -3354,6 +3414,7 @@ class InjuryPage(tk.Frame):
                 accel_units={'x': self._unit_text(x_ch), 'y': self._unit_text(y_ch), 'z': self._unit_text(z_ch)},
                 disp_unit=self._unit_text(disp_ch),
                 criterion_key=self.chest_dummy_var.get(),
+                dummy_profile_label=self._chest_dummy_profile_label(slot),
                 raw_displacement=raw_disp_series,
                 raw_accel=raw_accel_series,
                 accel_filter_labels={
@@ -3362,6 +3423,7 @@ class InjuryPage(tk.Frame):
                     'z': self._channel_filter_label_for_calc(z_ch, used_z),
                 },
                 disp_filter_label=self._channel_filter_label_for_calc(disp_ch),
+                accel_display_names=self._chest_accel_display_names((x_ch, y_ch, z_ch)),
                 disp_prefiltered=disp_prefiltered,
                 vc_sign_pref=1.0,
                 use_high_res_cumulative_3ms=self._current_use_high_res_cumulative_3ms(),
@@ -3426,6 +3488,8 @@ class InjuryPage(tk.Frame):
             self.show_chest_graph(preferred_graph_key, slot=slot)
         except Exception as exc:
             messagebox.showwarning('경고', str(exc))
+        finally:
+            self._stop_file_bar_busy('injury_calc')
 
     def show_chest_graph(self, mode, slot=None, silent=False):
         slot = slot or self._active_slot()
@@ -3528,6 +3592,7 @@ class InjuryPage(tk.Frame):
             return
         left_sign = 1.0
         right_sign = 1.0
+        self._start_file_bar_busy('injury_calc')
         try:
             left_force, used_left = self._resolve_standard_series_for_calc(left_ch, 'femur_injury', 'left', 600, left_sign)
             right_force, used_right = self._resolve_standard_series_for_calc(right_ch, 'femur_injury', 'right', 600, right_sign)
@@ -3601,6 +3666,8 @@ class InjuryPage(tk.Frame):
             self.show_femur_graph(preferred_graph_key, slot=slot)
         except Exception as exc:
             messagebox.showwarning('寃쎄퀬', str(exc))
+        finally:
+            self._stop_file_bar_busy('injury_calc')
 
     def _legacy_calculate_femur(self):
         self.calculate_femur()
@@ -3683,15 +3750,6 @@ class InjuryPage(tk.Frame):
         self.pelvis_x_combo = self._combo_row(inputs, "Pelvis Acc X", self.pelvis_x_var)
         self.pelvis_y_combo = self._combo_row(inputs, "Pelvis Acc Y", self.pelvis_y_var)
         self.pelvis_z_combo = self._combo_row(inputs, "Pelvis Acc Z", self.pelvis_z_var)
-        tk.Label(
-            box,
-            textvariable=self.pelvis_guidance_var,
-            bg="#ffffff",
-            fg="#555555",
-            justify="left",
-            anchor="w",
-            wraplength=420,
-        ).pack(fill=tk.X, padx=10, pady=(0, 6))
         opt = tk.Frame(box, bg="#ffffff")
         opt.pack(fill=tk.X, padx=10, pady=(2, 4))
         tk.Checkbutton(
@@ -3721,15 +3779,6 @@ class InjuryPage(tk.Frame):
         inputs.pack(fill=tk.X, padx=10, pady=(0, 8))
         self.femur_left_combo = self._combo_row(inputs, "Left Femur *", self.femur_left_var)
         self.femur_right_combo = self._combo_row(inputs, "Right Femur *", self.femur_right_var)
-        tk.Label(
-            box,
-            textvariable=self.femur_guidance_var,
-            bg="#ffffff",
-            fg="#555555",
-            justify="left",
-            anchor="w",
-            wraplength=420,
-        ).pack(fill=tk.X, padx=10, pady=(0, 6))
         opt = tk.Frame(box, bg="#ffffff")
         opt.pack(fill=tk.X, padx=10, pady=(2, 4))
         tk.Button(opt, text="\uc804\uccb4 \uacc4\uc0b0", command=self.calculate_femur_all).pack(side=tk.RIGHT)
@@ -3856,6 +3905,8 @@ class InjuryPage(tk.Frame):
             return [('accel', 'Acceleration'), ('disp', 'Displacement'), ('vc', 'V*C')]
         if self.initial_mode == 'pelvis':
             return [('accel_resultant', 'ACC-RESULTANT')]
+        if self.initial_mode == 'femur':
+            return [('combined', 'Combined')]
         if self.initial_mode == 'knee':
             return [('combined', 'Knee Slider')]
         if self.initial_mode == 'iliac':
@@ -3946,9 +3997,11 @@ class InjuryPage(tk.Frame):
         state['dummy_name'] = self.multi_dummy_panel.name_var(slot).get().strip()
         state['dummy_profile'] = self.multi_dummy_panel.profile_var(slot).get().strip()
         if self.initial_mode == 'hic':
+            state['criterion_key'] = ''
             state['channels'] = {'x': self._selected_channel(self.hic_x_var), 'y': self._selected_channel(self.hic_y_var), 'z': self._selected_channel(self.hic_z_var)}
             state['neg_flags'] = {}
         elif self.initial_mode == 'nij':
+            state['criterion_key'] = self.nij_dummy_var.get().strip()
             state['channels'] = {
                 'Fx': self._selected_channel(self.nij_fx_var),
                 'Fy': self._selected_channel(self.nij_fy_var),
@@ -4024,15 +4077,22 @@ class InjuryPage(tk.Frame):
         self._last_ui_slot = slot
         state = self.slot_states[slot]
         profile_var = self._dummy_profile_var()
-        if state.get('dummy_profile'):
-            profile_var.set(state['dummy_profile'])
-        else:
-            inferred = self._infer_profile_for_slot(slot)
-            if inferred:
-                state['dummy_profile'] = inferred
-                profile_var.set(inferred)
+        if self.initial_mode == 'nij':
+            criterion_key = state.get('criterion_key') or ''
+            if criterion_key:
+                profile_var.set(criterion_key)
             elif not profile_var.get() and self._profile_options():
                 profile_var.set(self._profile_options()[0])
+        else:
+            if state.get('dummy_profile'):
+                profile_var.set(state['dummy_profile'])
+            else:
+                inferred = self._infer_profile_for_slot(slot)
+                if inferred:
+                    state['dummy_profile'] = inferred
+                    profile_var.set(inferred)
+                elif not profile_var.get() and self._profile_options():
+                    profile_var.set(self._profile_options()[0])
         self._apply_slot_meta_to_ui(slot)
         self._apply_slot_channels_to_ui(state.get('channels') or {})
         if self.initial_mode == 'nij':
@@ -4182,7 +4242,7 @@ class InjuryPage(tk.Frame):
         }
 
     def _restore_saved_injury_results(self):
-        saved = self._injury_metadata_bundle().get(self._section_key()) or {}
+        saved = get_section_payload(getattr(self.workbench, 'dataset_metadata', {}) or {}, self._section_key())
         if not saved:
             return
         count = int(saved.get('dummy_count') or 1)
@@ -4196,6 +4256,7 @@ class InjuryPage(tk.Frame):
             st['result_uid'] = payload.get('result_uid') or st.get('result_uid') or self._injury_result_uid(slot)
             st['dummy_name'] = payload.get('dummy_name') or st.get('dummy_name') or ''
             st['dummy_profile'] = payload.get('dummy_profile') or st.get('dummy_profile') or ''
+            st['criterion_key'] = payload.get('criterion_key') or st.get('criterion_key') or ''
             st['channels'] = dict(payload.get('channels') or {})
             st['neg_flags'] = dict(payload.get('neg_flags') or {})
             payload_version = int(payload.get('summary_format_version') or 0)
@@ -4824,6 +4885,24 @@ class InjuryPage(tk.Frame):
 
     def _ensure_slot_plot_data(self, slot):
         state = self.slot_states.get(slot) or {}
+        if not state.get('channels'):
+            payload = get_slot_payload(getattr(self.workbench, 'dataset_metadata', {}) or {}, self._section_key(), slot)
+            if payload:
+                state['result_uid'] = payload.get('result_uid') or state.get('result_uid') or self._injury_result_uid(slot)
+                state['dummy_name'] = payload.get('dummy_name') or state.get('dummy_name') or ''
+                state['dummy_profile'] = payload.get('dummy_profile') or state.get('dummy_profile') or ''
+                state['criterion_key'] = payload.get('criterion_key') or state.get('criterion_key') or ''
+                state['channels'] = dict(payload.get('channels') or {})
+                state['neg_flags'] = dict(payload.get('neg_flags') or {})
+                state['summary_text'] = payload.get('summary_text') or state.get('summary_text') or '-'
+                restored_graph_key = payload.get('graph_key')
+                if self.initial_mode == 'nij':
+                    restored_graph_key = self._normalize_neck_graph_key(restored_graph_key)
+                state['graph_key'] = restored_graph_key or state.get('graph_key')
+                state['graph_uid'] = payload.get('graph_uid') or state.get('graph_uid') or ''
+                payload_key = self._slot_saved_payload_key()
+                if payload_key:
+                    state[payload_key] = dict(payload)
         viewer = self.workbench.viewer
         if viewer.df is None or viewer.time_column is None:
             return False
@@ -4849,6 +4928,7 @@ class InjuryPage(tk.Frame):
                     z_plot=self._convert_channel_to_head_plot_unit(z, z_ch),
                     plot_unit=self._head_plot_unit((x_ch, y_ch, z_ch)),
                     channels=(x_ch, y_ch, z_ch),
+                    slot_label=slot,
                     resultant_channel=resultant_channel,
                     resultant_filter_label='CFC 1000',
                     use_high_res_cumulative_3ms=self._slot_use_high_res_cumulative_3ms(slot),
@@ -4877,7 +4957,8 @@ class InjuryPage(tk.Frame):
                     selected=selected,
                     sign_flags=sign_flags,
                     viewer=viewer,
-                    criterion_key=state.get('dummy_profile') or self.nij_dummy_var.get(),
+                    criterion_key=state.get('criterion_key') or self.nij_dummy_var.get(),
+                    dummy_profile_label=state.get('dummy_profile') or self.multi_dummy_panel.profile_var(slot).get().strip(),
                     unit_getter=self._unit_text,
                     channel_desc_getter=lambda ch: viewer.get_channel_display_name(ch) if ch else '-',
                     resolve_series_for_calc=lambda source_channel, role, desired_cfc, sign: self._resolve_standard_series_for_calc(source_channel, 'neck_injury', role, desired_cfc, sign),
@@ -4887,7 +4968,7 @@ class InjuryPage(tk.Frame):
                     state['neck_saved_payload'] = {
                         'result_uid': state.get('result_uid') or self._injury_result_uid(slot),
                         'summary_text': result['summary_text'],
-                        'criterion_key': state.get('dummy_profile') or self.nij_dummy_var.get(),
+                        'criterion_key': state.get('criterion_key') or self.nij_dummy_var.get(),
                         'dummy_name': state.get('dummy_name') or '',
                         'dummy_profile': state.get('dummy_profile') or '',
                         'channels': dict(selected),
@@ -4923,6 +5004,7 @@ class InjuryPage(tk.Frame):
                     accel_units={'x': self._unit_text(x_ch), 'y': self._unit_text(y_ch), 'z': self._unit_text(z_ch)},
                     disp_unit=self._unit_text(disp_ch),
                     criterion_key=state.get('dummy_profile') or self.chest_dummy_var.get(),
+                    dummy_profile_label=self._chest_dummy_profile_label(slot),
                     raw_displacement=raw_disp_series,
                     raw_accel=raw_accel_series,
                     accel_filter_labels={
@@ -4931,6 +5013,7 @@ class InjuryPage(tk.Frame):
                         'z': self._channel_filter_label_for_calc(z_ch, used_z),
                     },
                     disp_filter_label=self._channel_filter_label_for_calc(disp_ch),
+                    accel_display_names=self._chest_accel_display_names((x_ch, y_ch, z_ch)),
                     disp_prefiltered=disp_prefiltered,
                     vc_sign_pref=1.0,
                     use_high_res_cumulative_3ms=self._slot_use_high_res_cumulative_3ms(slot),
@@ -4972,6 +5055,7 @@ class InjuryPage(tk.Frame):
                     y_values=self._convert_channel_to_head_plot_unit(y_values, y_ch),
                     z_values=self._convert_channel_to_head_plot_unit(z_values, z_ch),
                     plot_unit=plot_unit,
+                    axis_display_names=self._pelvis_accel_display_names((x_ch, y_ch, z_ch)),
                     use_high_res_cumulative_3ms=self._slot_use_high_res_cumulative_3ms(slot),
                 )
                 state['pelvis_metrics'] = result['metrics']
@@ -5164,6 +5248,7 @@ class InjuryPage(tk.Frame):
             return
         slot = self._active_slot()
         self._save_active_slot_state()
+        self._start_file_bar_busy('injury_calc')
         try:
             x_ch = self._selected_channel(self.pelvis_x_var)
             y_ch = self._selected_channel(self.pelvis_y_var)
@@ -5180,6 +5265,7 @@ class InjuryPage(tk.Frame):
                 y_values=self._convert_channel_to_head_plot_unit(y_values, y_ch),
                 z_values=self._convert_channel_to_head_plot_unit(z_values, z_ch),
                 plot_unit=self._head_plot_unit((x_ch, y_ch, z_ch)),
+                axis_display_names=self._pelvis_accel_display_names((x_ch, y_ch, z_ch)),
                 use_high_res_cumulative_3ms=self._current_use_high_res_cumulative_3ms(),
             )
             metrics = result['metrics']
@@ -5224,6 +5310,8 @@ class InjuryPage(tk.Frame):
             self.show_pelvis_graph(preferred_graph_key, slot=slot)
         except Exception as exc:
             messagebox.showwarning('\uacbd\uace0', str(exc))
+        finally:
+            self._stop_file_bar_busy('injury_calc')
 
     def show_pelvis_graph(self, mode, slot=None, silent=False):
         slot = slot or self._active_slot()
@@ -5294,6 +5382,7 @@ class InjuryPage(tk.Frame):
         if not (left_ch and right_ch):
             messagebox.showwarning('경고', 'KNEE 계산에는 Left/Right knee slider 채널이 모두 필요합니다.')
             return
+        self._start_file_bar_busy('injury_calc')
         try:
             result = calculate_knee_injury_bundle(
                 time=self._get_time(),
@@ -5341,6 +5430,8 @@ class InjuryPage(tk.Frame):
             self.show_knee_graph(preferred_graph_key, slot=slot)
         except Exception as exc:
             messagebox.showwarning('경고', str(exc))
+        finally:
+            self._stop_file_bar_busy('injury_calc')
 
     def calculate_iliac(self):
         viewer = self.workbench.viewer
@@ -5358,6 +5449,7 @@ class InjuryPage(tk.Frame):
         if not all((left_fx_ch, left_my_ch, right_fx_ch, right_my_ch)):
             messagebox.showwarning('경고', 'ILIAC 계산에는 Left/Right Fx/My 채널이 모두 필요합니다.')
             return
+        self._start_file_bar_busy('injury_calc')
         try:
             st = self.slot_states[slot]
             criterion_key = (self.multi_dummy_panel.profile_var(slot).get().strip() or self.iliac_dummy_var.get().strip() or 'THOR_50M_ASIS')
@@ -5412,6 +5504,8 @@ class InjuryPage(tk.Frame):
             self.show_iliac_graph(preferred_graph_key, slot=slot)
         except Exception as exc:
             messagebox.showwarning('경고', str(exc))
+        finally:
+            self._stop_file_bar_busy('injury_calc')
 
     def calculate_tibia(self):
         viewer = self.workbench.viewer
@@ -5453,6 +5547,7 @@ class InjuryPage(tk.Frame):
         if not all(channel_map[key] for key in required_keys):
             messagebox.showwarning('경고', 'TIBIA 계산에는 좌/우 upper/lower Fz, Mx, My 채널이 모두 필요합니다.')
             return
+        self._start_file_bar_busy('injury_calc')
         try:
             criterion_key = (self.multi_dummy_panel.profile_var(slot).get().strip() or self.tibia_dummy_var.get().strip() or 'H3_50M_EURO_NCAP')
             units = {key: self._unit_text(channel_map[key]) for key in channel_map}
@@ -5513,6 +5608,8 @@ class InjuryPage(tk.Frame):
             self.show_tibia_graph(preferred_graph_key, slot=slot)
         except Exception as exc:
             messagebox.showwarning('경고', str(exc))
+        finally:
+            self._stop_file_bar_busy('injury_calc')
 
     def show_knee_graph(self, mode, slot=None, silent=False):
         slot = slot or self._active_slot()
@@ -5550,12 +5647,9 @@ class InjuryPage(tk.Frame):
             if not silent:
                 messagebox.showwarning('\uacbd\uace0', '\uba3c\uc800 FEMUR \uacc4\uc0b0\uc744 \uc2e4\ud589\ud574\uc8fc\uc138\uc694.')
             return
-        if mode == 'left':
-            self._plot_femur_side(metrics, slot, 'left')
-        elif mode == 'right':
-            self._plot_femur_side(metrics, slot, 'right')
-        else:
-            self._plot_femur_combined(metrics, slot)
+        if mode != 'combined':
+            mode = 'combined'
+        self._plot_femur_combined(metrics, slot)
         self.slot_states[slot]['graph_key'] = mode
         self.slot_states[slot]['graph_uid'] = self._injury_graph_uid(slot, mode)
         self._select_graph_tab(mode)

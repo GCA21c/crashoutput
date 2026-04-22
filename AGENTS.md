@@ -25,6 +25,8 @@
 ## 문서 읽기 경로
 - 규칙: `_codex/02_rules/dev_rules.md`
 - 절차: `_codex/03_workflows/codex_workflow.md`
+- 현재 상태: `_codex/03_workflows/current_program_state.md`
 - 아키텍처: `_codex/01_architecture/system_map.md`
 - 모듈 정책: `_codex/04_modules/`
 - 파일 책임: `_codex/05_reference/file_to_responsibility_map.md`
+- payload 역할 기준: `_codex/05_reference/injury_payload_field_roles.md`

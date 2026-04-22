@@ -226,6 +226,12 @@ def _result_source_row(regulation_name, slot_rows, region, template_label, defau
     return default_row
 
 
+def _result_field_name(regulation_name, region, template_label, template_spec):
+    rule = template_spec.get("result_field_overrides", {}).get(str(regulation_name or "").strip(), {})
+    field_name = rule.get((str(region or "").strip().upper(), str(template_label or "").strip()))
+    return str(field_name or "value").strip() or "value"
+
+
 def _target_coordinate(ws, target_cell):
     if target_cell is None:
         return None
@@ -300,8 +306,13 @@ def export_summary_report_to_excel(snapshot, report_fields, output_path, templat
             else:
                 safe_set_cell_value(worksheet, iarv_cell, None)
             result_source = _result_source_row(regulation_name, slot_rows, region, template_label, matched, spec)
-            result_value = transform_excel_export_value(regulation_name, region, matched.get("label"), result_source.get("value"), "result", spec)
-            safe_set_cell_value(worksheet, result_cell, round_for_excel_export(result_value))
+            result_field = _result_field_name(regulation_name, region, template_label, spec)
+            raw_result_value = result_source.get(result_field)
+            result_value = transform_excel_export_value(regulation_name, region, matched.get("label"), raw_result_value, "result", spec)
+            if result_field == "status":
+                safe_set_cell_value(worksheet, result_cell, str(result_value or ""))
+            else:
+                safe_set_cell_value(worksheet, result_cell, round_for_excel_export(result_value))
             written_results += 1
 
     workbook.save(output)

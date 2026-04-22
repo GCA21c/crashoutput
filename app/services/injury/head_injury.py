@@ -56,6 +56,29 @@ def _format_axis_peak_lines(axis_label, unit, time, values):
     ]
 
 
+def _format_head_axis_block(display_name, unit, time, values):
+    mask, arr_t, arr_v = _time_value_valid_mask(time, values)
+    if mask.size == 0 or not np.any(mask):
+        return '\n'.join([str(display_name or '-'), 'Max : -', 'Min : -'])
+
+    valid_t = arr_t[mask]
+    valid_v = arr_v[mask]
+    max_idx = _global_peak_index(valid_v, 'max')
+    min_idx = _global_peak_index(valid_v, 'min')
+    if max_idx is None or min_idx is None:
+        return '\n'.join([str(display_name or '-'), 'Max : -', 'Min : -'])
+
+    max_time = float(valid_t[max_idx])
+    min_time = float(valid_t[min_idx])
+    max_value = float(valid_v[max_idx])
+    min_value = float(valid_v[min_idx])
+    return '\n'.join([
+        str(display_name or '-'),
+        f"Max : {fmt_value(max_value, unit, unit_style='suffix')} at {fmt_time_ms(max_time)}",
+        f"Min : {fmt_value(min_value, unit, unit_style='suffix')} at {fmt_time_ms(min_time)}",
+    ])
+
+
 def _interval_metric_line(label, unit, detail, decimals=4):
     if not detail or detail.get('value') is None:
         return f'{label}: -'
@@ -87,6 +110,66 @@ def _peak_metric_line(label, unit, detail, decimals=4):
     return fmt_metric_at(label, detail["value"], unit=unit, time_s=detail.get("time_s"), value_decimals=decimals)
 
 
+def _interp_crossing_time(t0, v0, t1, v1, threshold):
+    dv = float(v1) - float(v0)
+    if abs(dv) <= 1e-12:
+        return float(t0)
+    ratio = (float(threshold) - float(v0)) / dv
+    ratio = max(0.0, min(1.0, ratio))
+    return float(t0) + (float(t1) - float(t0)) * ratio
+
+
+def _exceedance_duration_detail(time_arr, values, threshold):
+    t = np.asarray(time_arr, dtype=float)
+    v = np.asarray(values, dtype=float)
+    n = min(len(t), len(v))
+    if n < 2:
+        return {
+            'threshold': float(threshold),
+            'duration_s': 0.0,
+            'duration_ms': 0.0,
+            'status': 'PASS',
+        }
+    total_s = 0.0
+    for idx in range(n - 1):
+        t0 = float(t[idx])
+        t1 = float(t[idx + 1])
+        v0 = float(v[idx])
+        v1 = float(v[idx + 1])
+        if not (np.isfinite(t0) and np.isfinite(t1) and np.isfinite(v0) and np.isfinite(v1)):
+            continue
+        if t1 <= t0:
+            continue
+        above0 = v0 > float(threshold)
+        above1 = v1 > float(threshold)
+        if above0 and above1:
+            total_s += (t1 - t0)
+            continue
+        if (not above0) and (not above1):
+            continue
+        crossing = _interp_crossing_time(t0, v0, t1, v1, threshold)
+        if above0 and not above1:
+            total_s += max(0.0, crossing - t0)
+        elif (not above0) and above1:
+            total_s += max(0.0, t1 - crossing)
+    duration_ms = total_s * 1000.0
+    return {
+        'threshold': float(threshold),
+        'duration_s': float(total_s),
+        'duration_ms': float(duration_ms),
+        'status': 'PASS' if duration_ms <= 3.0 + 1e-12 else 'FAIL',
+    }
+
+
+def _duration_ms_text(duration_ms):
+    if duration_ms is None or not np.isfinite(duration_ms):
+        return '-'
+    text = f'{float(duration_ms):.4f}'.rstrip('0').rstrip('.')
+    if '.' not in text:
+        text = f'{text}.0'
+    return f'{text}ms'
+
+
 
 def build_head_injury_bundle(
     time,
@@ -96,6 +179,8 @@ def build_head_injury_bundle(
     z_plot,
     plot_unit,
     channels,
+    axis_display_names=None,
+    slot_label=None,
     resultant_channel=None,
     resultant_filter_label=None,
     use_high_res_cumulative_3ms=True,
@@ -118,6 +203,7 @@ def build_head_injury_bundle(
     one_peak_3ms = peak_3ms_bundle.get('one_peak_3ms', {})
     multiple_peak_3ms = peak_3ms_bundle.get('multiple_peak_3ms', {})
     resultant_peak = peak_3ms_bundle.get('res_peak', {})
+    fmvss_head_acc_limit = _exceedance_duration_detail(time_arr, resultant_arr, 80.0)
 
     if all(item is None for item in (hic15, hic36)) and not one_peak_3ms.get('value') and not multiple_peak_3ms.get('value'):
         raise ValueError('계산 가능한 구간이 없습니다.')
@@ -138,6 +224,7 @@ def build_head_injury_bundle(
         'multiple_peak_3ms': multiple_peak_3ms,
         'peak_3ms_bundle': peak_3ms_bundle,
         'resultant_peak': resultant_peak,
+        'fmvss_head_acc_80g_3ms_limit': fmvss_head_acc_limit,
         'clip3': one_peak_3ms.get('value'),
     }
 
@@ -145,16 +232,34 @@ def build_head_injury_bundle(
     hic36_text = _hic_metric_line('HIC36', hic36)
     clip3_text = _interval_metric_line('One Peak 3ms_Clip', plot_unit, one_peak_3ms)
 
+    axis_display_names = dict(axis_display_names or {})
     summary_lines = []
-    for axis_label, arr in (('HEAD X', x_arr), ('HEAD Y', y_arr), ('HEAD Z', z_arr), ('HEAD Resultant', resultant_arr)):
-        summary_lines.extend(_format_axis_peak_lines(axis_label, plot_unit, time_arr, arr))
+    for axis_key, fallback_label, arr in (
+        ('x', 'ACC X', x_arr),
+        ('y', 'ACC Y', y_arr),
+        ('z', 'ACC Z', z_arr),
+    ):
+        summary_lines.append(
+            _format_head_axis_block(
+                axis_display_names.get(axis_key) or fallback_label,
+                plot_unit,
+                time_arr,
+                arr,
+            )
+        )
+        summary_lines.append('')
+    summary_lines.extend(_format_axis_peak_lines('HEAD Resultant', plot_unit, time_arr, resultant_arr))
     summary_lines.append('')
     summary_lines.append('- Injuries -')
     summary_lines.append(_hic_metric_line('HIC15', hic15))
     summary_lines.append(_hic_metric_line('HIC36', hic36))
     summary_lines.append(_interval_metric_line('One Peak 3ms_Clip', plot_unit, one_peak_3ms))
     summary_lines.append(_interval_metric_line('Multiple Peak 3ms_Clip', plot_unit, multiple_peak_3ms))
-    summary_lines.append(_peak_metric_line('Res-Peak', plot_unit, resultant_peak))
+    summary_lines.append(_peak_metric_line('Resultant Acc. Peak', plot_unit, resultant_peak))
+    summary_lines.append(f'[{str(slot_label or "-")} - FMVSS Head Acceleration 80g / 3ms Limit]')
+    summary_lines.append(
+        f"  - Result : {fmvss_head_acc_limit['status']} ({_duration_ms_text(fmvss_head_acc_limit['duration_ms'])})"
+    )
     summary_text = '\n'.join(summary_lines) if summary_lines else '-'
 
     metadata = {
@@ -180,6 +285,8 @@ def build_head_injury_bundle(
         'multiple_peak_3ms_end_time_s': float(multiple_peak_3ms['end_time_s']) if multiple_peak_3ms.get('end_time_s') is not None else None,
         'resultant_peak_value': float(resultant_peak['value']) if resultant_peak.get('value') is not None else None,
         'resultant_peak_time_s': float(resultant_peak['time_s']) if resultant_peak.get('time_s') is not None else None,
+        'fmvss_head_acc_80g_3ms_duration_ms': float(fmvss_head_acc_limit['duration_ms']),
+        'fmvss_head_acc_80g_3ms_status': str(fmvss_head_acc_limit['status']),
         'clip3_value': float(one_peak_3ms['value']) if one_peak_3ms.get('value') is not None else None,
     }
 

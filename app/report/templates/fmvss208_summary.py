@@ -57,7 +57,7 @@ EXCEL_IARV_EXPORT_RULES = {
     "FMVSS 208": {
         "exclude": {
             ("HEAD", "HIC36ms"),
-            ("HEAD", "Resultant Acc. 3ms Clip"),
+            ("HEAD", "Resultant Acc. Peak"),
             ("NECK", "Peak Extension MOCy"),
             ("NECK", "Peak Flexion MOCy"),
         },
@@ -80,11 +80,18 @@ EXCEL_RESULT_SOURCE_OVERRIDES = {
 }
 
 
+EXCEL_RESULT_FIELD_OVERRIDES = {
+    "FMVSS 208": {
+        ("HEAD", "80g / 3ms Limit"): "status",
+    },
+}
+
+
 SUMMARY_CRITERIA_ALIASES = {
     "CHEST": {
         "One Peak 3ms": ("One Peak 3ms",),
         "Multiple Peak 3ms": ("Multiple Peak 3ms",),
-        "Chest Acc. 3ms Clip": ("Chest Acc. 3ms Clip",),
+        "Chest Acc. 3ms Clip": ("Resultant Acc. Peak", "Chest Acc. 3ms Clip"),
         "Chest Def.": ("Chest Deflection Peak",),
         "Chest V*C - ECE 94": ("V*C ECE94_CFC180",),
         "Chest V*C - SAE J1727": ("V*C SAE J1727_CFC600",),
@@ -98,7 +105,8 @@ SUMMARY_CRITERIA_ALIASES = {
         "HIC 36ms": ("HIC36ms",),
         "One Peak 3ms": ("One Peak 3ms",),
         "Multiple Peak 3ms": ("Multiple Peak 3ms",),
-        "Resultant Acc. 3ms Clip": ("Resultant Acc. 3ms Clip",),
+        "Resultant Acc. 3ms Clip": ("Resultant Acc. Peak", "Resultant Acc. 3ms Clip"),
+        "80g / 3ms Limit": ("Head Acceleration 80g / 3ms Limit", "80g / 3ms Limit"),
     },
     "KNEE": {
         "Left Knee Disp.": ("Left KNEE Displacement Peak",),
@@ -129,5 +137,6 @@ FMVSS208_SUMMARY_TEMPLATE = {
     "iarv_export_rules": EXCEL_IARV_EXPORT_RULES,
     "value_export_rules": EXCEL_VALUE_EXPORT_RULES,
     "result_source_overrides": EXCEL_RESULT_SOURCE_OVERRIDES,
+    "result_field_overrides": EXCEL_RESULT_FIELD_OVERRIDES,
     "criteria_aliases": SUMMARY_CRITERIA_ALIASES,
 }

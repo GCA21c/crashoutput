@@ -1,6 +1,6 @@
 import numpy as np
 
-from app.core.utils.formatting import SUMMARY_FORMAT_VERSION, fmt_metric_at, fmt_metric_range
+from app.core.utils.formatting import SUMMARY_FORMAT_VERSION, fmt_metric_at, fmt_metric_range, fmt_time_ms, fmt_value
 from app.services.injury.common_engines import compute_3ms_bundle
 from app.services.preprocessing.service import compute_resultant_xyz
 
@@ -43,6 +43,23 @@ def _format_axis_peak_lines(axis_label, unit, time, values):
     ]
 
 
+def _format_pelvis_axis_block(display_name, unit, time, values):
+    mask, arr_t, arr_v = _time_value_valid_mask(time, values)
+    if mask.size == 0 or not np.any(mask):
+        return '\n'.join([str(display_name or '-'), 'Max : -', 'Min : -'])
+    valid_t = arr_t[mask]
+    valid_v = arr_v[mask]
+    max_idx = _global_peak_index(valid_v, 'max')
+    min_idx = _global_peak_index(valid_v, 'min')
+    if max_idx is None or min_idx is None:
+        return '\n'.join([str(display_name or '-'), 'Max : -', 'Min : -'])
+    return '\n'.join([
+        str(display_name or '-'),
+        f"Max : {fmt_value(float(valid_v[max_idx]), unit, unit_style='suffix')} at {fmt_time_ms(float(valid_t[max_idx]))}",
+        f"Min : {fmt_value(float(valid_v[min_idx]), unit, unit_style='suffix')} at {fmt_time_ms(float(valid_t[min_idx]))}",
+    ])
+
+
 def _detail_line(label, unit, detail):
     if not detail or detail.get('value') is None:
         return f'{label}: -'
@@ -59,7 +76,7 @@ def _interval_detail_line(label, unit, detail):
     return fmt_metric_at(label, detail.get('value'), unit=unit, time_s=detail.get('time_s'))
 
 
-def calculate_pelvis_injury_bundle(time, x_values, y_values, z_values, plot_unit, use_high_res_cumulative_3ms=True):
+def calculate_pelvis_injury_bundle(time, x_values, y_values, z_values, plot_unit, axis_display_names=None, use_high_res_cumulative_3ms=True):
     time_arr = np.asarray(time, dtype=float)
     x_arr = np.asarray(x_values, dtype=float)
     y_arr = np.asarray(y_values, dtype=float)
@@ -76,14 +93,15 @@ def calculate_pelvis_injury_bundle(time, x_values, y_values, z_values, plot_unit
     multiple_peak_3ms = dict(peak_3ms_bundle.get('multiple_peak_3ms', {}))
     resultant_peak = dict(peak_3ms_bundle.get('res_peak', {}))
 
+    axis_display_names = dict(axis_display_names or {})
     summary_lines = []
-    for axis_label, arr in (('PELVIS X', x_arr), ('PELVIS Y', y_arr), ('PELVIS Z', z_arr)):
-        summary_lines.extend(_format_axis_peak_lines(axis_label, plot_unit, time_arr, arr))
-    summary_lines.append('')
+    for axis_key, fallback_label, arr in (('x', 'ACC X', x_arr), ('y', 'ACC Y', y_arr), ('z', 'ACC Z', z_arr)):
+        summary_lines.append(_format_pelvis_axis_block(axis_display_names.get(axis_key) or fallback_label, plot_unit, time_arr, arr))
+        summary_lines.append('')
     summary_lines.append('- Injuries -')
     summary_lines.append(_interval_detail_line('One Peak 3ms_Clip', plot_unit, one_peak_3ms))
     summary_lines.append(_interval_detail_line('Multiple Peak 3ms_Clip', plot_unit, multiple_peak_3ms))
-    summary_lines.append(_detail_line('Res-Peak', plot_unit, resultant_peak))
+    summary_lines.append(_detail_line('Resultant Acc. Peak', plot_unit, resultant_peak))
 
     return {
         'metrics': {

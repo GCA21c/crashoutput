@@ -69,13 +69,31 @@ Acceleration-based 3ms rows should keep this order when all values are available
 2. `Multiple Peak 3ms`
 3. existing resultant/acceleration 3ms criteria, such as `Resultant Acc. 3ms Clip`
    or `Chest Acc. 3ms Clip`
+4. extra duration-based criteria that reuse the same resultant signal, such as
+   `Head Acceleration 80g / 3ms Limit`
 
 ## Payload key mapping
 SUMMARY REPORT reads values through `app/report/engine.py` `_extract_metric_value()`.
-The lookup order is:
-1. `report_values`
-2. `structured_metrics`
-3. top-level slot payload
+
+Current transition order is:
+1. regulation row `canonical_aliases` / `context_aliases`
+2. `report_values`
+3. `structured_metrics`
+4. top-level slot payload
+
+Canonical payload layers are:
+- `canonical_metrics`: section + metric + axis/component 기준 결과 본문
+- `canonical_graphs`: graph key가 참조하는 metric composition
+- `calculation_context`: 입력채널, criterion/dummy, flags, 주요 계산 파라미터
+
+Legacy/cache layers still kept for compatibility:
+- `report_values`
+- `metric_extrema`
+- `summary_text`
+- top-level flattened scalar fields
+
+Detailed role classification and cleanup baseline:
+- `_codex/05_reference/injury_payload_field_roles.md`
 
 For new injury values, prefer adding a stable scalar in `injury_page.py`
 `_build_report_values()` and then use that scalar as the regulation item's `value_key`.
@@ -89,6 +107,9 @@ Examples:
 - PELVIS `Multiple Peak 3ms_Clip`
   - `value_key`: `pelvis_multiple_3ms_clip`
   - fallback: `multiple_peak_3ms.value`
+- HEAD `Head Acceleration 80g / 3ms Limit`
+  - `value_key`: `head_accel_80g_3ms_duration_ms`
+  - fallback: `fmvss_head_acc_80g_3ms_duration_ms`
 
 Existing payload keys are compatibility contract. Do not rename saved keys in place.
 For cleanup, add a new canonical key only after the old key is still read through
