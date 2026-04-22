@@ -1,5 +1,6 @@
 from app.core.dummy.engine import get_dummy_module_factors
 from app.core.utils.formatting import fmt_range_ms, fmt_time_ms
+from app.services.state.injury_result_store import get_payload_store, get_slot_payload
 
 from .registry import get_regulation_definition
 
@@ -209,8 +210,7 @@ def _resolve_slots(metadata, injury_saved):
 
 
 def _slot_payload(injury_saved, section_key, slot):
-    section_payload = dict((injury_saved.get(section_key) or {}) if isinstance(injury_saved, dict) else {})
-    return dict((section_payload.get("slots") or {}).get(slot) or {})
+    return get_slot_payload({ "injury_saved_results": injury_saved }, section_key, slot)
 
 
 def _slot_identity(slot, slot_payload, slot_meta):
@@ -239,7 +239,7 @@ def build_report_snapshot(metadata, regulation_name):
             "value_count": 0,
         }
 
-    injury_saved = dict(metadata.get("injury_saved_results") or {})
+    injury_saved = get_payload_store(metadata)
     slot_meta_map = _shared_slot_meta(metadata)
     test_mode = str((metadata.get("shared_dummy_config") or {}).get("injury_test_mode") or "FRONTAL").strip().upper() or "FRONTAL"
     slots = _resolve_slots(metadata, injury_saved)

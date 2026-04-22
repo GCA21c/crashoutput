@@ -14,6 +14,7 @@ from app.report.plotting_config import (
     PLOTTING_SAVE_SUFFIX,
     PLOTTING_TEMPLATE_PATH,
 )
+from app.services.state.injury_result_store import get_section_payload, get_slot_payload
 
 
 PLOTTING_MODULE_ORDER = (
@@ -436,14 +437,13 @@ def _collect_page_plot_items(workbench, page_key, section_key):
         except Exception:
             pass
     metadata = dict(getattr(workbench, "dataset_metadata", {}) or {})
-    injury_saved = dict(metadata.get("injury_saved_results") or {})
-    section_payload = dict(injury_saved.get(section_key) or {})
+    section_payload = get_section_payload(metadata, section_key)
     slots_payload = dict(section_payload.get("slots") or {})
     if not slots_payload:
         return []
     items = []
     for slot in [slot for slot in ("B1", "B2", "B3", "B4", "B5", "B6") if slot in slots_payload]:
-        slot_payload = dict(slots_payload.get(slot) or {})
+        slot_payload = get_slot_payload(metadata, section_key, slot)
         can_render = bool(getattr(page, "_ensure_slot_plot_data")(slot))
         summary_text = str(slot_payload.get("summary_text") or "-").strip() or "-"
         graph_specs = list(getattr(page, "_graph_tab_specs")() or [])
