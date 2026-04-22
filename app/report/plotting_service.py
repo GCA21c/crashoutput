@@ -124,10 +124,35 @@ def _axis_display_name(axis_key, channel_name):
     return f"ACC {axis} - {channel_text}" if channel_text else f"ACC {axis} - -"
 
 
+def _canonical_metrics_root(context):
+    return dict((context or {}).get("canonical_metrics") or {})
+
+
+def _canonical_metric_detail(context, *path):
+    current = _canonical_metrics_root(context)
+    for key in path:
+        if not isinstance(current, dict):
+            return {}
+        current = current.get(key)
+    return dict(current or {}) if isinstance(current, dict) else {}
+
+
 def _axis_extrema_lines(axis_key, unit, context):
     channels = dict(context.get("channels") or {})
     metric_extrema = dict(context.get("metric_extrema") or {})
     channel_name = channels.get(axis_key) or ""
+    canonical_detail = _canonical_metric_detail(context, "acc", str(axis_key or "").lower())
+    if canonical_detail:
+        channel_name = canonical_detail.get("channel") or channel_name
+        display_name = canonical_detail.get("display_name") or f"ACC {str(axis_key or '').upper()}"
+        max_detail = dict(canonical_detail.get("max") or {})
+        min_detail = dict(canonical_detail.get("min") or {})
+        unit = canonical_detail.get("unit") or unit
+        return [
+            _axis_display_name(str(display_name).split()[-1] if display_name.startswith("ACC ") else axis_key, channel_name),
+            f"Max : {fmt_value(max_detail.get('value'), unit, unit_style='suffix')} at {fmt_time_ms(max_detail.get('time_s'))}",
+            f"Min : {fmt_value(min_detail.get('value'), unit, unit_style='suffix')} at {fmt_time_ms(min_detail.get('time_s'))}",
+        ]
     lookup_key = {
         "x": ("head_x", "x_g", "x_plot"),
         "y": ("head_y", "y_g", "y_plot"),
@@ -150,6 +175,17 @@ def _resultant_extrema_lines(resultant_label, resultant_key, unit, context, rule
     report_values = dict(context.get("report_values") or {})
     payload = dict(context.get("payload") or {})
     rule = dict(rule or {})
+    canonical_detail = _canonical_metric_detail(context, "acc", "resultant")
+    if canonical_detail:
+        max_detail = dict(canonical_detail.get("max") or {})
+        min_detail = dict(canonical_detail.get("min") or {})
+        unit = canonical_detail.get("unit") or unit
+        return [
+            f"{resultant_label} MAX: ",
+            f"{fmt_value(max_detail.get('value'), unit, unit_style='suffix')} at {fmt_time_ms(max_detail.get('time_s'))}",
+            f"{resultant_label} MIN: ",
+            f"{fmt_value(min_detail.get('value'), unit, unit_style='suffix')} at {fmt_time_ms(min_detail.get('time_s'))}",
+        ]
     detail = dict(metric_extrema.get(resultant_key) or {})
     if not detail:
         detail = {
@@ -175,20 +211,39 @@ def _resultant_extrema_lines(resultant_label, resultant_key, unit, context, rule
 
 
 def _neck_axis_display_name(axis_key, context):
+    canonical_group = "force" if str(axis_key).startswith("F") else "moment"
+    canonical_detail = _canonical_metric_detail(context, canonical_group, axis_key[-1].lower())
+    if canonical_detail:
+        channel = str(canonical_detail.get("channel") or "").strip() or "-"
+        return f"{axis_key} - {channel}"
     structured = dict(context.get("structured_metrics") or {})
     display_names = dict(structured.get("display_channel_names") or {})
     return str(display_names.get(axis_key) or f"{axis_key} - -")
 
 
 def _neck_axis_unit(axis_key, context):
+    canonical_group = "force" if str(axis_key).startswith("F") else "moment"
+    canonical_detail = _canonical_metric_detail(context, canonical_group, axis_key[-1].lower())
+    if canonical_detail:
+        return str(canonical_detail.get("unit") or ("N" if str(axis_key).startswith("F") else "Nm"))
     structured = dict(context.get("structured_metrics") or {})
     display_units = dict(structured.get("display_units") or {})
     return str(display_units.get(axis_key) or ("N" if str(axis_key).startswith("F") else "Nm"))
 
 
 def _neck_force_extrema_lines(axis_key, context):
-    metric_extrema = dict(context.get("metric_extrema") or {})
-    detail = dict(metric_extrema.get(f"display_series.{axis_key}") or {})
+    canonical_detail = _canonical_metric_detail(context, "force", axis_key[-1].lower())
+    detail = {}
+    if canonical_detail:
+        detail = {
+            "max_value": dict(canonical_detail.get("max") or {}).get("value"),
+            "max_time_s": dict(canonical_detail.get("max") or {}).get("time_s"),
+            "min_value": dict(canonical_detail.get("min") or {}).get("value"),
+            "min_time_s": dict(canonical_detail.get("min") or {}).get("time_s"),
+        }
+    else:
+        metric_extrema = dict(context.get("metric_extrema") or {})
+        detail = dict(metric_extrema.get(f"display_series.{axis_key}") or {})
     label = _neck_axis_display_name(axis_key, context)
     unit = _neck_axis_unit(axis_key, context)
     max_label = "Max"
@@ -207,8 +262,18 @@ def _neck_force_extrema_lines(axis_key, context):
 
 
 def _neck_moment_extrema_lines(axis_key, context):
-    metric_extrema = dict(context.get("metric_extrema") or {})
-    detail = dict(metric_extrema.get(f"display_series.{axis_key}") or {})
+    canonical_detail = _canonical_metric_detail(context, "moment", axis_key[-1].lower())
+    detail = {}
+    if canonical_detail:
+        detail = {
+            "max_value": dict(canonical_detail.get("max") or {}).get("value"),
+            "max_time_s": dict(canonical_detail.get("max") or {}).get("time_s"),
+            "min_value": dict(canonical_detail.get("min") or {}).get("value"),
+            "min_time_s": dict(canonical_detail.get("min") or {}).get("time_s"),
+        }
+    else:
+        metric_extrema = dict(context.get("metric_extrema") or {})
+        detail = dict(metric_extrema.get(f"display_series.{axis_key}") or {})
     label = _neck_axis_display_name(axis_key, context)
     unit = _neck_axis_unit(axis_key, context)
     max_label = "Max"
@@ -226,18 +291,26 @@ def _neck_moment_extrema_lines(axis_key, context):
 def _neck_mocy_summary_lines(context):
     structured = dict(context.get("structured_metrics") or {})
     criteria = dict(structured.get("criteria") or {})
-    dummy_family = str(criteria.get("dummy_family") or criteria.get("criterion_key") or "-")
-    input_moment = str(criteria.get("input_moment") or "My")
-    moc_d = criteria.get("moc_d", 0.0)
-    moc_applied = "Yes" if criteria.get("moc_applied") else "No"
-    peak_flexion = structured.get("peak_flexion_my")
-    peak_flexion_time = structured.get("peak_flexion_time")
-    peak_extension = structured.get("peak_extension_my")
-    peak_extension_time = structured.get("peak_extension_time")
+    payload = dict(context.get("payload") or {})
+    canonical_mocy = _canonical_metric_detail(context, "moment", "mocy")
+    dummy_family = str(payload.get("dummy_profile") or criteria.get("dummy_family") or criteria.get("criterion_key") or "-")
+    input_moment = str(canonical_mocy.get("input") or criteria.get("input_moment") or "My")
+    moc_d = canonical_mocy.get("lever_arm_m", criteria.get("moc_d", 0.0))
+    try:
+        moc_d_value = float(moc_d)
+    except Exception:
+        moc_d_value = 0.0
+    moc_applied = "Yes" if canonical_mocy.get("applied", criteria.get("moc_applied")) else "No"
+    peak_flexion_detail = dict(canonical_mocy.get("peak_flexion") or {})
+    peak_extension_detail = dict(canonical_mocy.get("peak_extension") or {})
+    peak_flexion = peak_flexion_detail.get("value", structured.get("peak_flexion_my"))
+    peak_flexion_time = peak_flexion_detail.get("time_s", structured.get("peak_flexion_time"))
+    peak_extension = peak_extension_detail.get("value", structured.get("peak_extension_my"))
+    peak_extension_time = peak_extension_detail.get("time_s", structured.get("peak_extension_time"))
     return [
         f"Dummy Family: {dummy_family}",
         f"Moment Input: {input_moment}",
-        f"Lever arm D: {float(moc_d):.6f} m | MOC 적용: {moc_applied}",
+        f"Lever arm D: {moc_d_value:.6f} m | MOC 적용: {moc_applied}",
         "",
         "- Injuries -",
         fmt_metric_at("Peak Flexion MOCy", peak_flexion, unit="Nm", time_s=peak_flexion_time),
@@ -247,33 +320,53 @@ def _neck_mocy_summary_lines(context):
 
 def _neck_nij_components_summary_lines(context):
     structured = dict(context.get("structured_metrics") or {})
+    canonical_injury = _canonical_metric_detail(context, "injury")
+    nte = dict(canonical_injury.get("nte") or {})
+    ntf = dict(canonical_injury.get("ntf") or {})
+    nce = dict(canonical_injury.get("nce") or {})
+    ncf = dict(canonical_injury.get("ncf") or {})
+    nij = dict(canonical_injury.get("nij") or {})
+    overall = dict(nij.get("overall") or {})
     return [
         "- Injuries -",
         "",
-        fmt_metric_at("NTE", structured.get("peak_nte"), time_s=structured.get("peak_nte_time")),
-        fmt_metric_at("NTF", structured.get("peak_ntf"), time_s=structured.get("peak_ntf_time")),
-        fmt_metric_at("NCE", structured.get("peak_nce"), time_s=structured.get("peak_nce_time")),
-        fmt_metric_at("NCF", structured.get("peak_ncf"), time_s=structured.get("peak_ncf_time")),
+        fmt_metric_at("NTE", nte.get("value", structured.get("peak_nte")), time_s=nte.get("time_s", structured.get("peak_nte_time"))),
+        fmt_metric_at("NTF", ntf.get("value", structured.get("peak_ntf")), time_s=ntf.get("time_s", structured.get("peak_ntf_time"))),
+        fmt_metric_at("NCE", nce.get("value", structured.get("peak_nce")), time_s=nce.get("time_s", structured.get("peak_nce_time"))),
+        fmt_metric_at("NCF", ncf.get("value", structured.get("peak_ncf")), time_s=ncf.get("time_s", structured.get("peak_ncf_time"))),
         "",
-        fmt_metric_at("Overall Nij", structured.get("overall_nij"), time_s=structured.get("overall_nij_time")),
-        f"Dominant Mode: {structured.get('dominant_mode') or '-'}",
+        fmt_metric_at("Overall Nij", overall.get("value", structured.get("overall_nij")), time_s=overall.get("time_s", structured.get("overall_nij_time"))),
+        f"Dominant Mode: {nij.get('dominant_mode') or structured.get('dominant_mode') or '-'}",
     ]
 
 
 def _neck_nij_overall_summary_lines(context):
     structured = dict(context.get("structured_metrics") or {})
+    canonical_injury = _canonical_metric_detail(context, "injury")
+    nij = dict(canonical_injury.get("nij") or {})
+    overall = dict(nij.get("overall") or {})
     return [
         "- Injuries -",
         "",
-        fmt_metric_at("Overall Nij", structured.get("overall_nij"), time_s=structured.get("overall_nij_time")),
-        f"Dominant Mode: {structured.get('dominant_mode') or '-'}",
+        fmt_metric_at("Overall Nij", overall.get("value", structured.get("overall_nij")), time_s=overall.get("time_s", structured.get("overall_nij_time"))),
+        f"Dominant Mode: {nij.get('dominant_mode') or structured.get('dominant_mode') or '-'}",
     ]
 
 
 def _chest_displacement_summary_lines(context):
-    metric_extrema = dict(context.get("metric_extrema") or {})
-    detail = dict(metric_extrema.get("displacement_mm") or {})
-    peak_detail = dict((context.get("details") or {}).get("displacement_peak") or {})
+    canonical_disp = _canonical_metric_detail(context, "displacement")
+    if canonical_disp:
+        detail = {
+            "max_value": dict(canonical_disp.get("max") or {}).get("value"),
+            "max_time_s": dict(canonical_disp.get("max") or {}).get("time_s"),
+            "min_value": dict(canonical_disp.get("min") or {}).get("value"),
+            "min_time_s": dict(canonical_disp.get("min") or {}).get("time_s"),
+        }
+        peak_detail = dict(canonical_disp.get("peak") or {})
+    else:
+        metric_extrema = dict(context.get("metric_extrema") or {})
+        detail = dict(metric_extrema.get("displacement_mm") or {})
+        peak_detail = dict((context.get("details") or {}).get("displacement_peak") or {})
     return [
         "- Injuries -",
         f"Displacement MAX: {fmt_value(detail.get('max_value'), 'mm', unit_style='suffix')} at {fmt_time_ms(detail.get('max_time_s'))}",
@@ -284,9 +377,24 @@ def _chest_displacement_summary_lines(context):
 
 
 def _chest_vc_summary_lines(context):
-    metric_extrema = dict(context.get("metric_extrema") or {})
-    sae = dict(metric_extrema.get("vc_sae") or {})
-    ece = dict(metric_extrema.get("vc_ece") or {})
+    canonical_vc = _canonical_metric_detail(context, "vc")
+    if canonical_vc:
+        sae = {
+            "max_value": dict((canonical_vc.get("sae_j1727_cfc600") or {}).get("max") or {}).get("value"),
+            "max_time_s": dict((canonical_vc.get("sae_j1727_cfc600") or {}).get("max") or {}).get("time_s"),
+            "min_value": dict((canonical_vc.get("sae_j1727_cfc600") or {}).get("min") or {}).get("value"),
+            "min_time_s": dict((canonical_vc.get("sae_j1727_cfc600") or {}).get("min") or {}).get("time_s"),
+        }
+        ece = {
+            "max_value": dict((canonical_vc.get("ece94_cfc180") or {}).get("max") or {}).get("value"),
+            "max_time_s": dict((canonical_vc.get("ece94_cfc180") or {}).get("max") or {}).get("time_s"),
+            "min_value": dict((canonical_vc.get("ece94_cfc180") or {}).get("min") or {}).get("value"),
+            "min_time_s": dict((canonical_vc.get("ece94_cfc180") or {}).get("min") or {}).get("time_s"),
+        }
+    else:
+        metric_extrema = dict(context.get("metric_extrema") or {})
+        sae = dict(metric_extrema.get("vc_sae") or {})
+        ece = dict(metric_extrema.get("vc_ece") or {})
     return [
         "- Injuries -",
         "V*C SAE J1727_CFC600",

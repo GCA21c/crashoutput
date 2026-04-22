@@ -8,6 +8,7 @@
 - switched report snapshot and plotting collection to read payloads through the common store helper
 - added canonical metric payload blocks for `HEAD`, `NECK`, and `CHEST` under `canonical_metrics`
 - added canonical graph composition blocks for `HEAD`, `NECK`, and `CHEST` under `canonical_graphs`
+- switched plotting text helpers to read canonical payload blocks first for `HEAD`, `NECK`, and `CHEST`, with legacy payload fields left as fallback
 
 ## Why
 - result storage and lookup had drifted across `slot_states`, per-section saved payload caches, metadata payloads, and registry dicts
