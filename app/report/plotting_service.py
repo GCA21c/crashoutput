@@ -129,6 +129,10 @@ def _canonical_metrics_root(context):
     return dict((context or {}).get("canonical_metrics") or {})
 
 
+def _calculation_context_root(context):
+    return dict((context or {}).get("calculation_context") or {})
+
+
 def _canonical_metric_detail(context, *path):
     current = _canonical_metrics_root(context)
     for key in path:
@@ -147,10 +151,31 @@ def _canonical_injury_detail(context, detail_key):
     return _canonical_metric_detail(context, "injury", key)
 
 
+def _context_input_channel(context, *path):
+    current = _calculation_context_root(context)
+    for key in ("inputs", "channels", *path):
+        if not isinstance(current, dict):
+            return ""
+        current = current.get(key)
+    if isinstance(current, dict):
+        return str(current.get("channel") or "").strip()
+    return ""
+
+
+def _context_parameter(context, key_name, default=None):
+    parameters = dict(_calculation_context_root(context).get("parameters") or {})
+    return parameters.get(key_name, default)
+
+
+def _context_dummy_profile(context, default="-"):
+    value = _calculation_context_root(context).get("dummy_profile")
+    return str(value or default)
+
+
 def _axis_extrema_lines(axis_key, unit, context):
     channels = dict(context.get("channels") or {})
     metric_extrema = dict(context.get("metric_extrema") or {})
-    channel_name = channels.get(axis_key) or ""
+    channel_name = _context_input_channel(context, str(axis_key or "").lower()) or channels.get(axis_key) or ""
     canonical_detail = _canonical_metric_detail(context, "acc", str(axis_key or "").lower())
     if canonical_detail:
         channel_name = canonical_detail.get("channel") or channel_name
@@ -224,7 +249,7 @@ def _neck_axis_display_name(axis_key, context):
     canonical_group = "force" if str(axis_key).startswith("F") else "moment"
     canonical_detail = _canonical_metric_detail(context, canonical_group, axis_key[-1].lower())
     if canonical_detail:
-        channel = str(canonical_detail.get("channel") or "").strip() or "-"
+        channel = _context_input_channel(context, axis_key) or str(canonical_detail.get("channel") or "").strip() or "-"
         return f"{axis_key} - {channel}"
     structured = dict(context.get("structured_metrics") or {})
     display_names = dict(structured.get("display_channel_names") or {})
@@ -301,16 +326,16 @@ def _neck_moment_extrema_lines(axis_key, context):
 def _neck_mocy_summary_lines(context):
     structured = dict(context.get("structured_metrics") or {})
     criteria = dict(structured.get("criteria") or {})
-    payload = dict(context.get("payload") or {})
     canonical_mocy = _canonical_metric_detail(context, "moment", "mocy")
-    dummy_family = str(payload.get("dummy_profile") or criteria.get("dummy_family") or criteria.get("criterion_key") or "-")
-    input_moment = str(canonical_mocy.get("input") or criteria.get("input_moment") or "My")
-    moc_d = canonical_mocy.get("lever_arm_m", criteria.get("moc_d", 0.0))
+    dummy_family = _context_dummy_profile(context, criteria.get("dummy_family") or criteria.get("criterion_key") or "-")
+    input_moment = str(_context_parameter(context, "input_moment", canonical_mocy.get("input") or criteria.get("input_moment") or "My") or "My")
+    moc_d = _context_parameter(context, "moc_d_m", canonical_mocy.get("lever_arm_m", criteria.get("moc_d", 0.0)))
     try:
         moc_d_value = float(moc_d)
     except Exception:
         moc_d_value = 0.0
-    moc_applied = "Yes" if canonical_mocy.get("applied", criteria.get("moc_applied")) else "No"
+    moc_applied_flag = _context_parameter(context, "moc_applied", canonical_mocy.get("applied", criteria.get("moc_applied")))
+    moc_applied = "Yes" if moc_applied_flag else "No"
     peak_flexion_detail = dict(canonical_mocy.get("peak_flexion") or {})
     peak_extension_detail = dict(canonical_mocy.get("peak_extension") or {})
     peak_flexion = peak_flexion_detail.get("value", structured.get("peak_flexion_my"))
