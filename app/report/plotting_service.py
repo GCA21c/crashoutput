@@ -86,6 +86,7 @@ def _build_auto_text_context(section_key, slot_payload):
     slot_payload = dict(slot_payload or {})
     structured = dict(slot_payload.get("structured_metrics") or {})
     context = {
+        "payload": slot_payload,
         "channels": dict(slot_payload.get("channels") or {}),
         "report_values": dict(slot_payload.get("report_values") or {}),
         "metric_extrema": dict(slot_payload.get("metric_extrema") or {}),
@@ -145,6 +146,7 @@ def _axis_extrema_lines(axis_key, unit, context):
 def _resultant_extrema_lines(resultant_label, resultant_key, unit, context, rule=None):
     metric_extrema = dict(context.get("metric_extrema") or {})
     report_values = dict(context.get("report_values") or {})
+    payload = dict(context.get("payload") or {})
     rule = dict(rule or {})
     detail = dict(metric_extrema.get(resultant_key) or {})
     if not detail:
@@ -154,6 +156,14 @@ def _resultant_extrema_lines(resultant_label, resultant_key, unit, context, rule
             "min_value": report_values.get(rule.get("resultant_min_value_key")),
             "min_time_s": report_values.get(rule.get("resultant_min_time_key")),
         }
+    if detail.get("max_time_s") is None:
+        detail["max_time_s"] = payload.get(rule.get("resultant_max_time_key"))
+    if detail.get("min_time_s") is None:
+        detail["min_time_s"] = payload.get(rule.get("resultant_min_time_key"))
+    if detail.get("max_value") is None:
+        detail["max_value"] = payload.get(rule.get("resultant_max_value_key"))
+    if detail.get("min_value") is None:
+        detail["min_value"] = payload.get(rule.get("resultant_min_value_key"))
     return [
         f"{resultant_label} MAX: ",
         f"{fmt_value(detail.get('max_value'), unit, unit_style='suffix')} at {fmt_time_ms(detail.get('max_time_s'))}",
