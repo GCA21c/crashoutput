@@ -91,6 +91,7 @@ def _build_auto_text_context(section_key, slot_payload):
         "report_values": dict(slot_payload.get("report_values") or {}),
         "metric_extrema": dict(slot_payload.get("metric_extrema") or {}),
         "structured_metrics": structured,
+        "canonical_metrics": dict(slot_payload.get("canonical_metrics") or {}),
         "slot": str(slot_payload.get("slot") or ""),
     }
     if section_key == "head":

@@ -6,6 +6,7 @@
 - synchronized `injury_result_registry`, `injury_graph_registry`, and new `injury_slot_registry`
 - switched injury save / graph selection / reload hydration to the common store helper path
 - switched report snapshot and plotting collection to read payloads through the common store helper
+- added canonical metric payload blocks for `HEAD`, `NECK`, and `CHEST` under `canonical_metrics`
 
 ## Why
 - result storage and lookup had drifted across `slot_states`, per-section saved payload caches, metadata payloads, and registry dicts
@@ -16,6 +17,7 @@
 - `app/ui/pages/injury_page.py`
 - `app/report/engine.py`
 - `app/report/plotting_service.py`
+- `app/services/state/injury_metric_canonical.py`
 
 ## Risk
 - `slot_states` still remains as UI/runtime cache, so this is a pilot unification rather than full legacy removal
