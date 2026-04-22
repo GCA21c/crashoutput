@@ -6,6 +6,15 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from app.core.utils.formatting import fmt_metric_at, fmt_metric_range, fmt_time_ms, fmt_value
+from app.report.formatters import (
+    calculation_context_root,
+    canonical_graphs_root,
+    canonical_metric_detail,
+    canonical_metrics_root,
+    context_dummy_profile,
+    context_input_channel,
+    context_parameter,
+)
 from app.report.plotting_config import (
     COMMON_REPORT_FIELD_ORDER,
     PLOTTING_CACHE_KEY,
@@ -125,21 +134,8 @@ def _axis_display_name(axis_key, channel_name):
     return f"ACC {axis} - {channel_text}" if channel_text else f"ACC {axis} - -"
 
 
-def _canonical_metrics_root(context):
-    return dict((context or {}).get("canonical_metrics") or {})
-
-
-def _calculation_context_root(context):
-    return dict((context or {}).get("calculation_context") or {})
-
-
 def _canonical_metric_detail(context, *path):
-    current = _canonical_metrics_root(context)
-    for key in path:
-        if not isinstance(current, dict):
-            return {}
-        current = current.get(key)
-    return dict(current or {}) if isinstance(current, dict) else {}
+    return canonical_metric_detail(context, *path)
 
 
 def _canonical_injury_detail(context, detail_key):
@@ -152,24 +148,15 @@ def _canonical_injury_detail(context, detail_key):
 
 
 def _context_input_channel(context, *path):
-    current = _calculation_context_root(context)
-    for key in ("inputs", "channels", *path):
-        if not isinstance(current, dict):
-            return ""
-        current = current.get(key)
-    if isinstance(current, dict):
-        return str(current.get("channel") or "").strip()
-    return ""
+    return context_input_channel(context, *path)
 
 
 def _context_parameter(context, key_name, default=None):
-    parameters = dict(_calculation_context_root(context).get("parameters") or {})
-    return parameters.get(key_name, default)
+    return context_parameter(context, key_name, default)
 
 
 def _context_dummy_profile(context, default="-"):
-    value = _calculation_context_root(context).get("dummy_profile")
-    return str(value or default)
+    return context_dummy_profile(context, default)
 
 
 def _axis_extrema_lines(axis_key, unit, context):

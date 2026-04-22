@@ -1,5 +1,6 @@
 from app.core.dummy.engine import get_dummy_module_factors
 from app.core.utils.formatting import fmt_range_ms, fmt_time_ms
+from app.report.formatters import read_path
 from app.services.state.injury_result_store import get_payload_store, get_slot_payload
 
 from .registry import get_regulation_definition
@@ -51,41 +52,10 @@ def _apply_transform(value, transform_name):
     return numeric
 
 
-def _read_path(container, path):
-    current = container
-    parts = [part for part in str(path or "").split(".") if part]
-    if isinstance(current, dict):
-        flat_key = ".".join(parts)
-        if flat_key in current:
-            return current.get(flat_key)
-    index = 0
-    while index < len(parts):
-        if not isinstance(current, dict):
-            return None
-        remaining = ".".join(parts[index:])
-        if remaining in current:
-            return current.get(remaining)
-        matched = False
-        for end in range(len(parts), index, -1):
-            candidate = ".".join(parts[index:end])
-            if candidate in current:
-                current = current.get(candidate)
-                index = end
-                matched = True
-                break
-        if matched:
-            continue
-        current = current.get(parts[index])
-        if current is None:
-            return None
-        index += 1
-    return current
-
-
 def _extract_from_container(container, paths, source_name):
     container = dict(container or {})
     for path in paths:
-        value = _as_float(_read_path(container, path))
+        value = _as_float(read_path(container, path))
         if value is not None:
             return value, source_name, path
     return None

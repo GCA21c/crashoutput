@@ -15,6 +15,7 @@
 - added canonical graph composition blocks for `PELVIS`, `FEMUR`, `KNEE`, `ILIAC`, and `TIBIA`
 - added `calculation_context` payload blocks for `PELVIS`, `FEMUR`, `KNEE`, `ILIAC`, and `TIBIA`
 - switched `SUMMARY REPORT` extraction for pelvis/femur/knee FMVSS rows to read canonical aliases first, with legacy aliases left as fallback
+- added shared formatter payload access helpers so plotting/report can converge on one canonical/context read path instead of maintaining separate traversal logic
 
 ## Why
 - result storage and lookup had drifted across `slot_states`, per-section saved payload caches, metadata payloads, and registry dicts
@@ -25,6 +26,7 @@
 - `app/ui/pages/injury_page.py`
 - `app/report/engine.py`
 - `app/report/plotting_service.py`
+- `app/report/formatters/payload_access.py`
 - `app/services/state/injury_metric_canonical.py`
 - `app/report/rules/fmvss208.py`
 
