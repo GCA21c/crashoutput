@@ -21,6 +21,23 @@
 - report/export contract는 존재하지만 payload key 의존성이 강함
 - ISO parsing은 중앙화되어 있으나 page fallback string matching과 일부 중복됨
 
+## Current status after payload strengthening
+- 기존 Phase 1~5 code optimization은 종료 상태다.
+- 그 후속으로 canonical payload store / registry / formatter 정리가 진행됐다.
+- 현재 canonical persisted result owner:
+  - `metadata["injury_saved_results"]`
+- 현재 canonical layers:
+  - `canonical_metrics`
+  - `canonical_graphs`
+  - `calculation_context`
+- 아직 compatibility/cache로 남아 있는 층:
+  - `structured_metrics`
+  - `report_values`
+  - `metric_extrema`
+  - `summary_text`
+  - top-level flatten payload keys
+- 현재 다음 큰 방향은 기능 확장보다 `샘플데이터 기반 자동 회귀 체계 구축`이다.
+
 ## Phase 1 - Naming / Contract
 목표:
 - naming rule과 compatibility contract를 먼저 고정한다.

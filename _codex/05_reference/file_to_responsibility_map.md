@@ -45,6 +45,7 @@
 | `app/ui/pages/dummy_set_page.py` | compatibility import shim for old DummySetPage references |
 | `app/ui/pages/injury_page.py` | injury workflow page |
 | `app/ui/pages/report_summary_page.py` | summary report UI / save-restore table |
+| `app/ui/pages/report_ploting_page.py` | plotting list UI / plotting save / PPT export UI |
 | `app/ui/pages/report_summary_constants.py` | summary report UI labels, table headings, and presentation status strings |
 | `app/ui/pages/offset_page.py` | offset page |
 | `app/ui/pages/trimming_page.py` | trimming page |
@@ -62,6 +63,7 @@
 | `app/report/exporters/*.py` | report export writers |
 | `app/report/exporters/runtime.py` | Excel export filename, output folder, and OS open helpers |
 | `_codex/04_modules/report.md` | report module maintenance workflow |
+| `_codex/04_modules/report_plotting.md` | report plotting module status / formatter / PPT template workflow |
 | `_codex/04_modules/preprocessing.md` | preprocessing service split plan and risk map |
 | `_codex/05_reference/excel_export_mapping.md` | Excel export mapping reference |
 | `_codex/05_reference/injury_payload_field_roles.md` | payload field role classification and legacy cleanup baseline |

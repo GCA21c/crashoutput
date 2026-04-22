@@ -514,7 +514,7 @@ def _iliac_force_summary_lines(context):
     left_fx = _canonical_metric_detail(context, "force", "left_fx")
     right_fx = _canonical_metric_detail(context, "force", "right_fx")
 
-    def _extrema_block(title, channel_name, detail, unit):
+    def _extrema_block(title, detail, unit):
         detail = dict(detail or {})
         max_detail = dict(detail.get("max") or {})
         min_detail = dict(detail.get("min") or {})
@@ -525,10 +525,10 @@ def _iliac_force_summary_lines(context):
         ]
 
     lines = ["ILIAC - LEFT"]
-    lines.extend(_extrema_block(f"Fx - {str(left_fx.get('channel') or '-').strip() or '-'}", left_fx.get("channel"), left_fx, "N"))
+    lines.extend(_extrema_block(f"Fx - {str(left_fx.get('channel') or '-').strip() or '-'}", left_fx, "N"))
     lines.append("")
     lines.append("ILIAC - RIGHT")
-    lines.extend(_extrema_block(f"Fx - {str(right_fx.get('channel') or '-').strip() or '-'}", right_fx.get("channel"), right_fx, "N"))
+    lines.extend(_extrema_block(f"Fx - {str(right_fx.get('channel') or '-').strip() or '-'}", right_fx, "N"))
     return lines
 
 

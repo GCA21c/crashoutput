@@ -4,7 +4,7 @@
 다음 작업을 시작하기 전 항상 이 문서를 확인한다.
 
 ## Current branch
-- `코드최적회p5-2`
+- `v095`
 
 ## Global guard
 - 계산 로직 변경 금지
@@ -90,9 +90,29 @@
 
 ## Current next action
 Phase 5 code-optimization runtime work is closed.
+Payload 강화 1차와 REPORT-PLOTTING 초기 구축도 사용자 확인 기준으로 안정화된 상태다.
 
-Next non-refactor follow-up candidates:
-1. optional final user verification before branch merge
+Next non-refactor follow-up:
+1. 샘플데이터 수집 및 DAT 기반 테스트 자동화 구축
+2. 대표 `.dat` 세트별 검증 목적 문서화
+3. load -> preprocessing -> injury -> payload -> summary report -> plotting text 회귀 자동화
+4. PPT export는 최종 수동 확인 단계로 유지
+
+Current state notes:
+- canonical payload store: `injury_saved_results`
+- canonical payload layers:
+  - `canonical_metrics`
+  - `canonical_graphs`
+  - `calculation_context`
+- plotting graph text formatter 정리 완료 범위:
+  - `HEAD`
+  - `NECK`
+  - `CHEST`
+  - `PELVIS`
+  - `FEMUR`
+  - `KNEE`
+  - `ILIAC`
+- `TIBIA` formatter는 후속 범위로 남겨둔다
 
 Deferred by user:
 - viewer keyboard navigation numpy truth-value warning fix
