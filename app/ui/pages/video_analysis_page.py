@@ -39,6 +39,7 @@ class VideoAnalysisPage(tk.Frame):
         self.captures = []
         self.video_infos = []
         self.channel_data = []
+        self.channel_select_var = tk.StringVar()
         self._play_after_id = None
         self._refresh_after_id = None
         self._frame_cache = {}
@@ -60,11 +61,13 @@ class VideoAnalysisPage(tk.Frame):
         toolbar.pack(fill=tk.X, pady=(0, 10))
 
         tk.Button(toolbar, text="Video Load", command=self.load_video, width=13).pack(side=tk.LEFT)
-        tk.Button(toolbar, text="Add channel", command=self.add_channel, width=13).pack(side=tk.LEFT, padx=(8, 0))
         tk.Button(toolbar, text="Sync adjust", command=self.adjust_sync, width=13).pack(side=tk.LEFT, padx=(8, 0))
         tk.Button(toolbar, text="Reset", command=self.reset_session_state, width=10).pack(side=tk.LEFT, padx=(8, 0))
         tk.Button(toolbar, text="Clear V1", command=lambda: self.clear_video(0), width=10).pack(side=tk.LEFT, padx=(8, 0))
         tk.Button(toolbar, text="Clear V2", command=lambda: self.clear_video(1), width=10).pack(side=tk.LEFT, padx=(8, 0))
+        self.channel_combo = ttk.Combobox(toolbar, textvariable=self.channel_select_var, state="readonly", width=34)
+        self.channel_combo.pack(side=tk.LEFT, padx=(8, 0))
+        tk.Button(toolbar, text="Add channel", command=self.add_channel, width=13).pack(side=tk.LEFT, padx=(8, 0))
 
         controls = tk.Frame(toolbar, bg=PAGE_BG)
         controls.pack(side=tk.LEFT, expand=True)
@@ -87,14 +90,7 @@ class VideoAnalysisPage(tk.Frame):
         self.video_right = VideoSlotViewer(video_box, "VIDEO 2")
         self.video_right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(4, 8), pady=8)
 
-        pulse_box = tk.LabelFrame(outer, text="Pulse Overlay", bg=PAGE_BG)
-        pulse_box.pack(fill=tk.X, pady=(0, 8))
-        pulse_header = tk.Frame(pulse_box, bg=PAGE_BG)
-        pulse_header.pack(fill=tk.X, padx=8, pady=(6, 0))
-        self.channel_label_var = tk.StringVar(value="Selected channels: -")
-        tk.Label(pulse_header, textvariable=self.channel_label_var, bg=PAGE_BG, fg=MUTED_FG, anchor="w").pack(side=tk.LEFT, fill=tk.X, expand=True)
-        tk.Button(pulse_header, text="Clear channels", command=self.clear_channels, width=14).pack(side=tk.RIGHT)
-        self.pulse_timeline = PulseTimeline(pulse_box)
+        self.pulse_timeline = PulseTimeline(outer)
 
         keyframe_box = tk.LabelFrame(outer, text="Key frame", bg=PAGE_BG)
         keyframe_box.pack(fill=tk.X)
@@ -120,6 +116,8 @@ class VideoAnalysisPage(tk.Frame):
             root.bind_all("<KeyRelease-Right>", self._on_right_release)
             self._key_bindings_ready = True
         self.focus_set()
+        self._refresh_channel_options()
+        self._refresh_video_layout()
         self._refresh_all()
 
     def load_video(self):
@@ -178,6 +176,7 @@ class VideoAnalysisPage(tk.Frame):
             )
         frame_count = min(int(info["frame_count"]) for info in self.video_infos)
         self.state.set_video_master([info["path"] for info in self.video_infos], master_fps, frame_count)
+        self._refresh_video_layout()
         self._refresh_all()
 
     def clear_video(self, index):
@@ -197,6 +196,7 @@ class VideoAnalysisPage(tk.Frame):
             self.state.set_video_master([info["path"] for info in self.video_infos], master_fps, frame_count)
         else:
             self.state.reset_videos()
+        self._refresh_video_layout()
         self._refresh_all()
 
     def add_channel(self):
@@ -207,27 +207,37 @@ class VideoAnalysisPage(tk.Frame):
         if len(self.channel_data) >= MAX_CHANNELS:
             messagebox.showinfo("VIDEO ANALYSIS", "채널은 최대 3개까지 추가할 수 있습니다.")
             return
-        columns = [str(col) for col in list(viewer.df.columns) if str(col) != str(viewer.time_column)]
+        columns = self._available_channel_names()
         if not columns:
             messagebox.showwarning("VIDEO ANALYSIS", "추가할 데이터 채널이 없습니다.")
             return
-        selected = self._select_channel(columns)
+        selected = str(self.channel_select_var.get() or "").strip()
         if not selected:
+            messagebox.showwarning("VIDEO ANALYSIS", "추가할 채널을 선택하세요.")
             return
         if selected in self.state.selected_channels:
             messagebox.showinfo("VIDEO ANALYSIS", "이미 추가된 채널입니다.")
             return
         time_s = viewer.get_numeric_column(viewer.time_column)
         values = viewer.get_numeric_column(selected)
+        unit = str((getattr(viewer, "external_units", {}) or {}).get(selected) or "").strip()
         self.state.selected_channels.append(selected)
-        self.channel_data.append({"name": selected, "time_ms": np.asarray(time_s, dtype=float) * 1000.0, "values": np.asarray(values, dtype=float)})
+        self.channel_data.append({
+            "name": selected,
+            "isocode": selected,
+            "unit": unit,
+            "time_ms": np.asarray(time_s, dtype=float) * 1000.0,
+            "values": np.asarray(values, dtype=float),
+        })
         self.pulse_timeline.set_channels(self.channel_data)
+        self._refresh_channel_options()
         self._refresh_pulse()
 
     def clear_channels(self):
         self.state.selected_channels.clear()
         self.channel_data.clear()
         self.pulse_timeline.set_channels([])
+        self._refresh_channel_options()
         self._refresh_pulse()
 
     def adjust_sync(self):
@@ -369,32 +379,28 @@ class VideoAnalysisPage(tk.Frame):
     def _is_active_page(self):
         return getattr(self.workbench, "current_page_key", None) == "video_analysis"
 
-    def _select_channel(self, columns):
-        dialog = tk.Toplevel(self)
-        dialog.title("Add channel")
-        dialog.transient(self.winfo_toplevel())
-        dialog.grab_set()
-        dialog.configure(bg=PAGE_BG)
-        selected_var = tk.StringVar(value=columns[0])
-        result = {"value": None}
-        tk.Label(dialog, text="Pulse channel", bg=PAGE_BG, fg=TEXT_FG).pack(anchor="w", padx=12, pady=(12, 4))
-        combo = ttk.Combobox(dialog, textvariable=selected_var, values=columns, state="readonly", width=72)
-        combo.pack(fill=tk.X, padx=12, pady=(0, 10))
-        buttons = tk.Frame(dialog, bg=PAGE_BG)
-        buttons.pack(fill=tk.X, padx=12, pady=(0, 12))
+    def _available_channel_names(self):
+        viewer = self.workbench.viewer
+        if getattr(viewer, "df", None) is None or getattr(viewer, "time_column", None) is None:
+            return []
+        selected = set(self.state.selected_channels)
+        return [str(col) for col in list(viewer.df.columns) if str(col) != str(viewer.time_column) and str(col) not in selected]
 
-        def accept():
-            result["value"] = selected_var.get()
-            dialog.destroy()
+    def _refresh_channel_options(self):
+        values = self._available_channel_names()
+        self.channel_combo.configure(values=values)
+        current = str(self.channel_select_var.get() or "")
+        if current not in values:
+            self.channel_select_var.set(values[0] if values else "")
 
-        def cancel():
-            dialog.destroy()
-
-        tk.Button(buttons, text="Add", command=accept, width=10).pack(side=tk.RIGHT)
-        tk.Button(buttons, text="Cancel", command=cancel, width=10).pack(side=tk.RIGHT, padx=(0, 8))
-        combo.focus_set()
-        dialog.wait_window()
-        return result["value"]
+    def _refresh_video_layout(self):
+        self.video_left.pack_forget()
+        self.video_right.pack_forget()
+        if len(self.captures) <= 1:
+            self.video_left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=8, pady=8)
+            return
+        self.video_left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(8, 4), pady=8)
+        self.video_right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(4, 8), pady=8)
 
     def _refresh_all(self):
         self._refresh_status()
@@ -407,11 +413,33 @@ class VideoAnalysisPage(tk.Frame):
         self.frame_var.set(f"Frame : {self.state.synced_frame:04d}")
 
     def _refresh_pulse(self):
-        self.channel_label_var.set("Selected channels: " + (", ".join(self.state.selected_channels) if self.state.selected_channels else "-"))
         start_ms, end_ms = self._timeline_range_ms()
         self.pulse_timeline.set_cursor(self.state.synced_time_ms, start_ms=start_ms, end_ms=end_ms)
+        overlay_channels = self._overlay_channel_snapshot()
         for viewer in (self.video_left, self.video_right):
-            viewer.set_pulse_overlay(self.channel_data, start_ms, end_ms, self.state.synced_time_ms)
+            viewer.set_pulse_overlay(overlay_channels, start_ms, end_ms, self.state.synced_time_ms)
+
+    def _overlay_channel_snapshot(self):
+        current_ms = float(self.state.synced_time_ms)
+        out = []
+        for item in self.channel_data:
+            data = dict(item)
+            time_values = np.asarray(data.get("time_ms") if data.get("time_ms") is not None else [], dtype=float)
+            signal_values = np.asarray(data.get("values") if data.get("values") is not None else [], dtype=float)
+            n = min(len(time_values), len(signal_values))
+            if n > 0:
+                distance = np.abs(time_values[:n] - current_ms)
+                finite = np.isfinite(distance) & np.isfinite(signal_values[:n])
+                if np.any(finite):
+                    candidate_indexes = np.flatnonzero(finite)
+                    idx = int(candidate_indexes[int(np.argmin(distance[finite]))])
+                    data["current_value"] = float(signal_values[idx])
+                else:
+                    data["current_value"] = None
+            else:
+                data["current_value"] = None
+            out.append(data)
+        return out
 
     def _refresh_keyframe(self):
         start_ms, end_ms = self._timeline_range_ms()
@@ -524,4 +552,6 @@ class VideoAnalysisPage(tk.Frame):
         self.pulse_timeline.set_channels([])
         for viewer in (self.video_left, self.video_right):
             viewer.set_pulse_overlay([], 0.0, 1.0, 0.0)
+        self._refresh_channel_options()
+        self._refresh_video_layout()
         self._refresh_all()

@@ -31,6 +31,11 @@
 - Pulse graph legend는 움직이지 않도록 우측 상단에 고정한다.
 - Pulse curve는 별도 큰 graph 영역 대신 video canvas 하단에 semi-transparent overlay로 표시한다.
 - `Clear V1`, `Clear V2`로 각 video slot을 개별 제거할 수 있다.
+- video가 1개만 로드된 경우 V2 영역을 숨기고 V1이 전체 video 영역을 사용한다.
+- channel add는 toolbar의 상시 combobox에서 channel을 선택한 뒤 `Add channel` 버튼으로 추가한다.
+- overlay 우측 상단에 pulse channel ISO code legend를 curve 색상과 같은 색으로 표시한다.
+- overlay legend는 현재 cursor 지점의 channel value와 unit을 `ISOCODE value [unit]` 형식으로 표시한다.
+- 별도 Pulse Overlay 목록 영역은 제거했고, pulse는 video overlay에만 표시한다.
 
 ## Placeholder / extension points
 - Pulse overlay-on-video는 아직 분리 Pulse 영역으로만 구현되어 있다.

@@ -120,10 +120,39 @@ class VideoSlotViewer(tk.Frame):
                 y = bottom - 6 - y_ratio * max(1, (bottom - top - 12))
                 points.extend((x, y))
             if len(points) >= 4:
-                canvas.create_line(*points, fill=colors[channel_index % len(colors)], width=2.2, smooth=True)
+                canvas.create_line(*points, fill=colors[channel_index % len(colors)], width=1.35, smooth=True)
 
         cursor_x = x_for_time(self.overlay_cursor_ms)
         canvas.create_line(cursor_x, top - 5, cursor_x, bottom + 5, fill="#f8fafc", width=2)
+        self._draw_overlay_legend(width, colors)
+
+    def _draw_overlay_legend(self, width, colors):
+        if not self.overlay_channels:
+            return
+        canvas = self.canvas
+        labels = [self._legend_label(item) for item in self.overlay_channels]
+        legend_width = min(max(150, max(len(label) for label in labels) * 7 + 34), max(150, width - 36))
+        line_height = 18
+        legend_height = 10 + line_height * len(labels)
+        left = max(18, width - legend_width - 18)
+        top = 18
+        canvas.create_rectangle(left, top, left + legend_width, top + legend_height, fill="#020617", outline="#334155", stipple="gray25")
+        for index, label in enumerate(labels):
+            y = top + 9 + index * line_height
+            color = colors[index % len(colors)]
+            canvas.create_line(left + 10, y, left + 24, y, fill=color, width=3)
+            canvas.create_text(left + 30, y, text=label, anchor="w", fill=color, font=("Arial", 8, "bold"))
+
+    def _legend_label(self, item):
+        item = dict(item or {})
+        label = str(item.get("isocode") or item.get("name") or "-")
+        value = item.get("current_value")
+        unit = str(item.get("unit") or "").strip()
+        try:
+            value_text = f"{float(value):.4g}"
+        except (TypeError, ValueError):
+            value_text = "-"
+        return f"{label} {value_text} [{unit or '-'}]"
 
 
 class KeyframeTimeline(tk.Frame):

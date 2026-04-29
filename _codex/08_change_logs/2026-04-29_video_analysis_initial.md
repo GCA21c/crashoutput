@@ -12,6 +12,10 @@
 - 데이터 pulse 앞에 음수 video offset 구간을 열어 표시하고, pulse legend를 우측 상단으로 고정했다.
 - Key frame timeline을 dark editor-style track, progress fill, cursor pill, diamond keyframe marker 형태로 정리했다.
 - Pulse graph를 별도 큰 영역에서 video canvas 하단 semi-transparent overlay로 옮기고, `Clear V1`/`Clear V2` 개별 video clear 버튼을 추가했다.
+- 1-video layout은 V1 단독 전체폭으로 표시하고, channel add는 toolbar combobox + button 방식으로 변경했다.
+- pulse overlay 우측 상단에 channel ISO code legend를 curve 색상과 동일하게 표시한다.
+- overlay legend에 현재 cursor 지점의 channel value/unit을 표시하고, 별도 Pulse Overlay 목록 영역을 제거했다.
+- video overlay pulse curve 두께를 낮춰 시야 방해를 줄였다.
 
 ## Files
 - `app/shell.py`
