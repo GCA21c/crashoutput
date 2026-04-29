@@ -23,6 +23,75 @@ from app.ui.styles import HEADER_FONT, MUTED_FG, PAGE_BG, TEXT_FG
 PAGE_TITLE = "REPORT - PLOTTING"
 
 
+class _PptExportOverlay:
+    def __init__(self, root):
+        self.root = root
+        self.frame = tk.Frame(root, bg="#20242a", bd=0)
+
+        self.message_var = tk.StringVar(value="PPT export 준비 중...")
+        self.detail_var = tk.StringVar(value="프로그램이 멈춘 것이 아니니 잠시 기다려 주세요.")
+        self.progress_var = tk.DoubleVar(value=0.0)
+
+        panel = tk.Frame(self.frame, bg="#ffffff", bd=1, relief=tk.SOLID)
+        panel.place(relx=0.5, rely=0.5, anchor="center", width=560, height=170)
+        tk.Label(
+            panel,
+            text="PPT EXPORT",
+            bg="#ffffff",
+            fg="#111827",
+            font=("맑은 고딕", 16, "bold"),
+        ).pack(anchor="w", padx=24, pady=(22, 6))
+        tk.Label(
+            panel,
+            textvariable=self.message_var,
+            bg="#ffffff",
+            fg="#111827",
+            font=("맑은 고딕", 11),
+            anchor="w",
+        ).pack(fill=tk.X, padx=24)
+        tk.Label(
+            panel,
+            textvariable=self.detail_var,
+            bg="#ffffff",
+            fg="#6b7280",
+            font=("맑은 고딕", 9),
+            anchor="w",
+        ).pack(fill=tk.X, padx=24, pady=(3, 12))
+        self.progress = ttk.Progressbar(panel, variable=self.progress_var, maximum=100.0, mode="determinate")
+        self.progress.pack(fill=tk.X, padx=24)
+
+    def show(self):
+        self.frame.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self.frame.lift()
+        try:
+            self.frame.grab_set()
+        except Exception:
+            pass
+        self.root.update_idletasks()
+        self.root.update()
+
+    def update(self, current, total, message):
+        total = max(1, int(total or 1))
+        current = max(0, min(int(current or 0), total))
+        percent = (current / total) * 100.0
+        self.progress_var.set(percent)
+        self.message_var.set(str(message or "PPT export 진행 중..."))
+        self.detail_var.set(f"{current} / {total} 단계 처리 중")
+        self.frame.lift()
+        self.root.update_idletasks()
+        self.root.update()
+
+    def close(self):
+        try:
+            self.frame.grab_release()
+        except Exception:
+            pass
+        try:
+            self.frame.destroy()
+        except Exception:
+            pass
+
+
 class ReportPlotingPage(tk.Frame):
     """Legacy class name kept for the existing report_ploting page key."""
 
@@ -421,6 +490,8 @@ class ReportPlotingPage(tk.Frame):
         output_path = self._select_export_path()
         if not output_path:
             return
+        overlay = _PptExportOverlay(self.winfo_toplevel())
+        overlay.show()
         try:
             result = export_plotting_report_to_ppt(
                 self.workbench,
@@ -428,15 +499,19 @@ class ReportPlotingPage(tk.Frame):
                 plotting_report_fields(self.workbench),
                 output_path=output_path,
                 template_path=template_path,
+                progress_callback=overlay.update,
             )
         except PptExportError as exc:
+            overlay.close()
             messagebox.showwarning("REPORT - PLOTTING", str(exc))
             self.status_var.set(str(exc))
             return
         except Exception as exc:
+            overlay.close()
             messagebox.showwarning("REPORT - PLOTTING", f"PPT export failed.\n{exc}")
             self.status_var.set(f"PPT export failed: {exc}")
             return
+        overlay.close()
         self.status_var.set(f"PPT export completed. | Saved to: {result.get('output_path')}")
         messagebox.showinfo("REPORT - PLOTTING", f"PPT export completed.\n{result.get('output_path')}")
         try:

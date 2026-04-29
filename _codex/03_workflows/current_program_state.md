@@ -96,6 +96,12 @@
   3. data load -> preprocessing -> injury calculation -> payload -> summary report -> plotting text 자동 회귀 실행
   4. 마지막 PPT export만 수동 확인
 
+## Deferred improvement notes
+- REPORT-PLOTTING background export:
+  - 현재 export는 UI page의 matplotlib figure/canvas를 재사용하므로 완전한 worker thread 분리가 아직 안전하지 않다
+  - 장기적으로 graph rendering을 headless matplotlib renderer로 분리한 뒤 PPT 조립/저장을 worker thread로 내려 창 이동/최소화 끊김을 줄인다
+  - 이 작업은 pilot graph부터 시작해 기존 화면 그래프와 export 그래프 스타일이 달라지지 않는지 검증해야 한다
+
 ## What future Codex should do first
 1. `AGENTS.md`
 2. `_codex/02_rules/dev_rules.md`

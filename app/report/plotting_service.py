@@ -730,6 +730,8 @@ def build_plotting_auto_text(item):
             lines.append("")
             lines.extend(_resultant_extrema_lines(rule.get("resultant_label") or "Resultant", rule.get("resultant_key") or "resultant", rule.get("unit") or "g", context, rule))
         if template == "acc_axes_then_injuries":
+            if bool(rule.get("injury_header_leading_blank", False)):
+                lines.append("")
             lines.append("- Injuries -")
             for line_rule in tuple(rule.get("injury_lines") or ()):
                 if rule.get("injury_multiline_value"):
@@ -952,7 +954,7 @@ def plotting_item_text(item):
     return build_plotting_auto_text(item)
 
 
-def render_plot_image(workbench, item, output_path):
+def render_plot_image(workbench, item, output_path, target_size_inches=None):
     item = dict(item or {})
     page = (getattr(workbench, "pages", {}) or {}).get(item.get("page_key"))
     if page is None:
@@ -962,50 +964,68 @@ def render_plot_image(workbench, item, output_path):
     if not slot or not graph_key:
         raise RuntimeError("Invalid plot item.")
     previous_slot = page._active_slot() if hasattr(page, "_active_slot") else None
-    if hasattr(page, "active_dummy_var"):
-        try:
-            page.active_dummy_var.set(slot)
-        except Exception:
-            pass
-    if not getattr(page, "_ensure_slot_plot_data")(slot):
-        raise RuntimeError(f"Plot data missing for {slot} {graph_key}")
-    if page.initial_mode == "hic":
-        page.show_hic_bundle_graph(graph_key, slot=slot, silent=True)
-    elif page.initial_mode == "nij":
-        page.show_neck_graph(graph_key, slot=slot, silent=True)
-    elif page.initial_mode == "chest":
-        page.show_chest_graph(graph_key, slot=slot, silent=True)
-    elif page.initial_mode == "pelvis":
-        page.show_pelvis_graph(graph_key, slot=slot, silent=True)
-    elif page.initial_mode == "femur":
-        page.show_femur_graph(graph_key, slot=slot, silent=True)
-    elif page.initial_mode == "knee":
-        page.show_knee_graph(graph_key, slot=slot, silent=True)
-    elif page.initial_mode == "iliac":
-        page.show_iliac_graph(graph_key, slot=slot, silent=True)
-    elif page.initial_mode == "tibia":
-        page.show_tibia_graph(graph_key, slot=slot, silent=True)
-    else:
-        raise RuntimeError(f"Unsupported plot mode: {page.initial_mode}")
-    page.figure.savefig(output_path, dpi=180, bbox_inches="tight")
-    if previous_slot and hasattr(page, "active_dummy_var"):
-        try:
-            page.active_dummy_var.set(previous_slot)
-        except Exception:
-            pass
+    original_size = tuple(float(v) for v in page.figure.get_size_inches())
+    target_size = tuple(float(v) for v in target_size_inches or () if float(v) > 0.0)
+    try:
+        if len(target_size) == 2:
+            page.figure.set_size_inches(target_size[0], target_size[1], forward=True)
+        if hasattr(page, "active_dummy_var"):
+            try:
+                page.active_dummy_var.set(slot)
+            except Exception:
+                pass
+        if not getattr(page, "_ensure_slot_plot_data")(slot):
+            raise RuntimeError(f"Plot data missing for {slot} {graph_key}")
+        if page.initial_mode == "hic":
+            page.show_hic_bundle_graph(graph_key, slot=slot, silent=True)
+        elif page.initial_mode == "nij":
+            page.show_neck_graph(graph_key, slot=slot, silent=True)
+        elif page.initial_mode == "chest":
+            page.show_chest_graph(graph_key, slot=slot, silent=True)
+        elif page.initial_mode == "pelvis":
+            page.show_pelvis_graph(graph_key, slot=slot, silent=True)
+        elif page.initial_mode == "femur":
+            page.show_femur_graph(graph_key, slot=slot, silent=True)
+        elif page.initial_mode == "knee":
+            page.show_knee_graph(graph_key, slot=slot, silent=True)
+        elif page.initial_mode == "iliac":
+            page.show_iliac_graph(graph_key, slot=slot, silent=True)
+        elif page.initial_mode == "tibia":
+            page.show_tibia_graph(graph_key, slot=slot, silent=True)
+        else:
+            raise RuntimeError(f"Unsupported plot mode: {page.initial_mode}")
+        page.figure.savefig(output_path, dpi=180)
+    finally:
+        if len(original_size) == 2:
+            page.figure.set_size_inches(original_size[0], original_size[1], forward=True)
+        if previous_slot and hasattr(page, "active_dummy_var"):
+            try:
+                page.active_dummy_var.set(previous_slot)
+            except Exception:
+                pass
+        canvas = getattr(page, "canvas", None)
+        if canvas is not None and hasattr(canvas, "draw_idle"):
+            try:
+                canvas.draw_idle()
+            except Exception:
+                pass
     return str(output_path)
 
 
 @contextmanager
-def rendered_plot_images(workbench, items):
+def rendered_plot_images(workbench, items, target_size_inches=None, progress_callback=None):
     rendered = []
     with tempfile.TemporaryDirectory(prefix="crashoutput_plotting_") as tmpdir:
         temp_dir = Path(tmpdir)
-        for index, item in enumerate(list(items or []), start=1):
+        included_items = [dict(item) for item in list(items or []) if bool(item.get("included", True))]
+        total = len(included_items)
+        for index, item in enumerate(included_items, start=1):
             if not bool(item.get("included", True)):
                 continue
             file_name = f"{index:03d}_{str(item.get('item_key') or 'plot').replace('|', '_')}.png"
             image_path = temp_dir / file_name
-            render_plot_image(workbench, item, image_path)
+            render_plot_image(workbench, item, image_path, target_size_inches=target_size_inches)
             rendered.append((dict(item), image_path))
+            if callable(progress_callback):
+                progress_callback(index, total, item)
         yield rendered
