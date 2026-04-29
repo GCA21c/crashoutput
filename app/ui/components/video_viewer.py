@@ -10,31 +10,53 @@ class VideoSlotViewer(tk.Frame):
         self._photo = None
         self.header = tk.Label(self, text=self.title, bg="#111827", fg="#e5e7eb", anchor="w", padx=10, pady=5)
         self.header.pack(side=tk.TOP, fill=tk.X)
-        self.image_label = tk.Label(
+        self.canvas = tk.Canvas(
             self,
-            text=f"{self.title}\nNo video loaded",
             bg="#0b1120",
-            fg="#d1d5db",
-            justify="center",
-            anchor="center",
+            highlightthickness=0,
+            bd=0,
         )
-        self.image_label.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=8, pady=(0, 8))
+        self.canvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=8, pady=(0, 8))
+        self.canvas.bind("<Configure>", lambda _event: self._redraw())
+        self._placeholder_text = f"{self.title}\nNo video loaded"
 
     def show_placeholder(self, text=None):
         self._photo = None
-        self.image_label.configure(
-            image="",
-            text=str(text or f"{self.title}\nNo video loaded"),
-            bg="#0b1120",
-            fg="#d1d5db",
-        )
+        self._placeholder_text = str(text or f"{self.title}\nNo video loaded")
+        self._redraw()
 
     def show_frame(self, photo_image):
         self._photo = photo_image
         if photo_image is None:
             self.show_placeholder()
             return
-        self.image_label.configure(image=photo_image, text="", bg="#000000")
+        self._redraw()
+
+    def image_size(self):
+        return (
+            max(320, int(self.canvas.winfo_width() or 640)),
+            max(240, int(self.canvas.winfo_height() or 360)),
+        )
+
+    def _redraw(self):
+        canvas = self.canvas
+        canvas.delete("all")
+        width = max(1, int(canvas.winfo_width()))
+        height = max(1, int(canvas.winfo_height()))
+        if self._photo is None:
+            canvas.create_rectangle(0, 0, width, height, fill="#0b1120", outline="")
+            canvas.create_text(
+                width / 2,
+                height / 2,
+                text=self._placeholder_text,
+                fill="#d1d5db",
+                justify="center",
+                anchor="center",
+                font=("Arial", 12, "bold"),
+            )
+            return
+        canvas.create_rectangle(0, 0, width, height, fill="#000000", outline="")
+        canvas.create_image(width / 2, height / 2, image=self._photo, anchor="center")
 
 
 class KeyframeTimeline(tk.Frame):
@@ -79,4 +101,3 @@ class KeyframeTimeline(tk.Frame):
         cursor_x = x_for_time(self.cursor_ms)
         canvas.create_line(cursor_x, 6, cursor_x, height - 6, fill="#dc2626", width=2)
         canvas.create_text(cursor_x + 4, 6, text=f"{self.cursor_ms:.1f}ms", anchor="nw", fill=TEXT_FG, font=("Arial", 8, "bold"))
-

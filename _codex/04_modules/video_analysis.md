@@ -9,10 +9,11 @@
 ## Current role
 - 고속 동영상과 로드된 dataset channel pulse를 frame/time 기준으로 같이 확인하는 초기 UI다.
 - 기존 injury/report/export 계산 경로와 payload 저장 구조는 건드리지 않는다.
-- `POST-PROCESSING > ANALYSIS > VIDEO ANALYSIS` 메뉴로 진입한다.
+- `ANALYSIS > VIDEO ANALYSIS` 메뉴로 진입한다.
 
 ## Current implementation
 - 동영상은 최대 2개까지 로드한다.
+- Reset 버튼으로 동영상, pulse channel, sync/keyframe 상태를 초기화한다.
 - OpenCV `VideoCapture`로 현재 frame만 seek/read 한다.
 - 두 영상은 첫 번째 영상 fps를 master로 사용한다.
 - fps가 다르면 사용자 경고를 띄우고, frame 계산은 첫 번째 영상 fps 기준으로 진행한다.

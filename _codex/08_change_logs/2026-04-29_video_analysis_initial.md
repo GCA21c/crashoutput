@@ -1,10 +1,12 @@
 # Video Analysis initial build
 
 ## What changed
-- `POST-PROCESSING > ANALYSIS > VIDEO ANALYSIS` 신규 메뉴와 페이지를 추가했다.
+- `ANALYSIS > VIDEO ANALYSIS` 신규 메뉴와 페이지를 추가했다.
 - OpenCV 기반 video load, 최대 2개 video slot, frame step/play/pause, sync frame offset 표시를 구현했다.
 - 기존 viewer dataset channel을 최대 3개까지 pulse graph에 추가하고 video frame cursor와 연동한다.
 - Key frame timeline은 duration bar/current marker/keyframe placeholder로 초기 구축했다.
+- Reset 버튼으로 video/pulse/sync/keyframe 상태를 초기화한다.
+- 재생 중 image label이 레이아웃을 밀지 않도록 video frame 표시를 고정 Canvas 방식으로 변경했다.
 
 ## Files
 - `app/shell.py`

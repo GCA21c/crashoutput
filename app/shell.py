@@ -185,8 +185,9 @@ class CrashAnalysisWorkbench(tk.Frame):
         self._add_nav_button("trimming", "DATA TRIMMING", indent=18)
         self._add_nav_section("POST-PROCESSING")
         self._build_injury_nav_group()
-        self._build_analysis_nav_group()
         self._build_report_nav_group()
+        self._add_nav_section("ANALYSIS")
+        self._add_nav_button("video_analysis", "VIDEO ANALYSIS", indent=18)
 
         quick = tk.LabelFrame(self.sidebar, text="Quick Guide", bg=SIDEBAR_BG)
         quick.pack(fill=tk.X, padx=12, pady=(16, 8))
@@ -386,23 +387,6 @@ class CrashAnalysisWorkbench(tk.Frame):
         ).pack(side=tk.LEFT)
         self._add_nav_button("report_summary", "L SUMMARY REPORT", indent=34, parent=group)
         self._add_nav_button("report_ploting", "L PLOTTING", indent=34, parent=group)
-
-    def _build_analysis_nav_group(self):
-        group = tk.Frame(self.sidebar, bg=SIDEBAR_BG)
-        group.pack(fill=tk.X)
-        header = tk.Frame(group, bg=SIDEBAR_BG)
-        header.pack(fill=tk.X)
-        tk.Label(
-            header,
-            text="ANALYSIS",
-            font=NAV_FONT_BOLD,
-            bg=SIDEBAR_BG,
-            fg=TEXT_FG,
-            anchor="w",
-            padx=32,
-            pady=6,
-        ).pack(side=tk.LEFT)
-        self._add_nav_button("video_analysis", "L VIDEO ANALYSIS", indent=34, parent=group)
 
     def _available_injury_pages(self):
         if not bool((self.shared_dummy_config or {}).get("setup_complete")):

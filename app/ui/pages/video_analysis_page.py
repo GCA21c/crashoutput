@@ -57,6 +57,7 @@ class VideoAnalysisPage(tk.Frame):
         tk.Button(toolbar, text="Video Load", command=self.load_video, width=13).pack(side=tk.LEFT)
         tk.Button(toolbar, text="Add channel", command=self.add_channel, width=13).pack(side=tk.LEFT, padx=(8, 0))
         tk.Button(toolbar, text="Sync adjust", command=self.adjust_sync, width=13).pack(side=tk.LEFT, padx=(8, 0))
+        tk.Button(toolbar, text="Reset", command=self.reset_session_state, width=10).pack(side=tk.LEFT, padx=(8, 0))
 
         controls = tk.Frame(toolbar, bg=PAGE_BG)
         controls.pack(side=tk.LEFT, expand=True)
@@ -371,8 +372,7 @@ class VideoAnalysisPage(tk.Frame):
         if cv2 is None:
             return None
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        max_width = max(320, int(viewer.image_label.winfo_width() or 640))
-        max_height = max(240, int(viewer.image_label.winfo_height() or 360))
+        max_width, max_height = viewer.image_size()
         if Image is not None and ImageTk is not None:
             image = Image.fromarray(rgb)
             image.thumbnail((max_width, max_height))
