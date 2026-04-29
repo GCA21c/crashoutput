@@ -7,8 +7,9 @@
 - Key frame timeline은 duration bar/current marker/keyframe placeholder로 초기 구축했다.
 - Reset 버튼으로 video/pulse/sync/keyframe 상태를 초기화한다.
 - 재생 중 image label이 레이아웃을 밀지 않도록 video frame 표시를 고정 Canvas 방식으로 변경했다.
-- sync 기준을 `1 video frame = 1 ms`로 정리하고, offset `-50` 입력 시 raw frame 50을 test T0로 맞추도록 이동한다.
+- sync 기준을 `1 video frame = 1 ms`로 정리하고, offset `-50` 입력 시 raw frame 0을 `-50ms`, raw frame 50을 test T0로 표시한다.
 - pulse graph cursor-only update, 작은 frame cache, Left/Right key hold 2-frame 가속, key frame timeline drag seek를 추가했다.
+- 데이터 pulse 앞에 음수 video offset 구간을 열어 표시하고, pulse legend를 우측 상단으로 고정했다.
 
 ## Files
 - `app/shell.py`

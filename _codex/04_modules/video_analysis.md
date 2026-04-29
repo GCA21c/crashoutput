@@ -22,11 +22,13 @@
 - Pulse channel은 최대 3개까지 선택한다.
 - `sync_frame_offset`은 frame 단위이며 음수 값을 허용한다.
 - 표시 frame/time은 `raw_frame_index + sync_frame_offset` 기준이다.
-- 예: offset `-50`이면 raw frame 50을 test T0 / 0ms로 맞추고, sync adjust 직후 raw frame 50으로 이동한다.
+- 예: offset `-50`이면 raw frame 0을 `-50ms`로 표시하고, raw frame 50이 test T0 / `0ms`가 된다.
+- 데이터 pulse는 기존 dataset time 기준으로 `0ms`부터 시작하며, graph/timeline은 음수 offset만큼 데이터 앞 구간을 열어 표시한다.
 - frame 이동 성능을 위해 현재 주변 frame만 메모리 cache에 유지한다.
 - pulse graph는 channel 변경 시 전체 redraw하고, frame 이동 시에는 vertical cursor만 갱신한다.
 - Left/Right key를 누르고 있으면 초기 1-frame 이동 후 반복 이동은 2-frame step으로 가속한다.
 - key frame timeline은 drag-to-seek를 지원한다.
+- Pulse graph legend는 움직이지 않도록 우측 상단에 고정한다.
 
 ## Placeholder / extension points
 - Pulse overlay-on-video는 아직 분리 Pulse 영역으로만 구현되어 있다.

@@ -11,7 +11,8 @@ class PulseTimeline(tk.Frame):
         super().__init__(parent, bg=PAGE_BG)
         self.channels = []
         self.cursor_ms = 0.0
-        self.duration_ms = 0.0
+        self.start_ms = 0.0
+        self.end_ms = 0.0
         self._cursor_line = None
         self.figure = Figure(figsize=(10, 2.2), dpi=100)
         self.ax = self.figure.add_subplot(111)
@@ -23,10 +24,15 @@ class PulseTimeline(tk.Frame):
         self.channels = [dict(item) for item in list(channels or [])]
         self._draw()
 
-    def set_cursor(self, cursor_ms, duration_ms=None):
+    def set_cursor(self, cursor_ms, duration_ms=None, start_ms=None, end_ms=None):
         self.cursor_ms = float(cursor_ms or 0.0)
-        if duration_ms is not None:
-            self.duration_ms = max(0.0, float(duration_ms or 0.0))
+        if start_ms is not None:
+            self.start_ms = float(start_ms or 0.0)
+        if end_ms is not None:
+            self.end_ms = float(end_ms or 0.0)
+        elif duration_ms is not None:
+            self.start_ms = min(0.0, self.start_ms)
+            self.end_ms = max(self.start_ms, float(duration_ms or 0.0))
         self._update_cursor()
 
     def _draw(self):
@@ -65,14 +71,14 @@ class PulseTimeline(tk.Frame):
             self.ax.plot(t, v, linewidth=1.0, label=name)
 
         self._cursor_line = self.ax.axvline(self.cursor_ms, color="#dc2626", linewidth=1.4, label="Current frame")
-        if self.duration_ms > 0.0:
-            left = min(0.0, self.cursor_ms)
-            right = max(self.duration_ms, self.cursor_ms)
+        if self.end_ms > self.start_ms:
+            left = min(self.start_ms, self.cursor_ms)
+            right = max(self.end_ms, self.cursor_ms)
             if right > left:
                 self.ax.set_xlim(left, right)
         self.ax.set_xlabel("Time (ms)")
         self.ax.grid(True, alpha=0.25)
-        self.ax.legend(loc="best", fontsize=8)
+        self.ax.legend(loc="upper right", fontsize=8)
         self.figure.tight_layout()
         self.canvas.draw_idle()
 

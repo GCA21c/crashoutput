@@ -63,6 +63,8 @@ class KeyframeTimeline(tk.Frame):
     def __init__(self, parent, on_seek=None):
         super().__init__(parent, bg=PAGE_BG)
         self.duration_ms = 0.0
+        self.start_ms = 0.0
+        self.end_ms = 0.0
         self.cursor_ms = 0.0
         self.keyframes = []
         self.on_seek = on_seek
@@ -74,8 +76,13 @@ class KeyframeTimeline(tk.Frame):
         self.canvas.bind("<B1-Motion>", self._on_drag)
         self.canvas.bind("<ButtonRelease-1>", self._on_release)
 
-    def set_state(self, duration_ms, cursor_ms, keyframes=None):
-        self.duration_ms = max(0.0, float(duration_ms or 0.0))
+    def set_state(self, duration_ms, cursor_ms, keyframes=None, start_ms=0.0, end_ms=None):
+        self.start_ms = float(start_ms or 0.0)
+        if end_ms is None:
+            self.end_ms = max(self.start_ms, float(duration_ms or 0.0))
+        else:
+            self.end_ms = max(self.start_ms, float(end_ms or 0.0))
+        self.duration_ms = max(0.0, self.end_ms - self.start_ms)
         self.cursor_ms = float(cursor_ms or 0.0)
         self.keyframes = list(keyframes or [])
         self._draw()
@@ -89,13 +96,13 @@ class KeyframeTimeline(tk.Frame):
         left = 18
         right = width - 18
         canvas.create_line(left, y, right, y, fill="#94a3b8", width=8, capstyle=tk.ROUND)
-        canvas.create_text(left, height - 8, text="0ms", anchor="sw", fill=MUTED_FG, font=("Arial", 8))
-        canvas.create_text(right, height - 8, text=f"{self.duration_ms:.0f}ms", anchor="se", fill=MUTED_FG, font=("Arial", 8))
+        canvas.create_text(left, height - 8, text=f"{self.start_ms:.0f}ms", anchor="sw", fill=MUTED_FG, font=("Arial", 8))
+        canvas.create_text(right, height - 8, text=f"{self.end_ms:.0f}ms", anchor="se", fill=MUTED_FG, font=("Arial", 8))
 
         def x_for_time(value_ms):
             if self.duration_ms <= 0.0:
                 return left
-            ratio = max(0.0, min(float(value_ms) / self.duration_ms, 1.0))
+            ratio = max(0.0, min((float(value_ms) - self.start_ms) / self.duration_ms, 1.0))
             return left + ratio * (right - left)
 
         for marker in self.keyframes:
@@ -112,9 +119,9 @@ class KeyframeTimeline(tk.Frame):
         left = 18
         right = width - 18
         if right <= left or self.duration_ms <= 0.0:
-            return 0.0
+            return self.start_ms
         ratio = max(0.0, min((float(x) - left) / float(right - left), 1.0))
-        return ratio * self.duration_ms
+        return self.start_ms + ratio * self.duration_ms
 
     def _seek_event(self, event):
         value_ms = self._time_for_x(event.x)

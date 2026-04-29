@@ -220,7 +220,6 @@ class VideoAnalysisPage(tk.Frame):
         if value is None:
             return
         self.state.set_sync_offset(value)
-        self.state.move_to_synced_zero()
         self._schedule_refresh()
 
     def _seek_timeline_ms(self, value_ms):
@@ -389,13 +388,20 @@ class VideoAnalysisPage(tk.Frame):
 
     def _refresh_pulse(self):
         self.channel_label_var.set("Selected channels: " + (", ".join(self.state.selected_channels) if self.state.selected_channels else "-"))
-        self.pulse_timeline.set_cursor(self.state.synced_time_ms, duration_ms=self._timeline_duration_ms())
+        start_ms, end_ms = self._timeline_range_ms()
+        self.pulse_timeline.set_cursor(self.state.synced_time_ms, start_ms=start_ms, end_ms=end_ms)
 
     def _refresh_keyframe(self):
-        self.keyframe_timeline.set_state(self._timeline_duration_ms(), self.state.synced_time_ms, self.state.keyframes)
+        start_ms, end_ms = self._timeline_range_ms()
+        self.keyframe_timeline.set_state(end_ms - start_ms, self.state.synced_time_ms, self.state.keyframes, start_ms=start_ms, end_ms=end_ms)
 
     def _timeline_duration_ms(self):
-        video_duration = self.state.duration_ms
+        start_ms, end_ms = self._timeline_range_ms()
+        return max(0.0, end_ms - start_ms)
+
+    def _timeline_range_ms(self):
+        start_ms = min(0.0, float(self.state.sync_frame_offset or 0))
+        video_end_ms = float(max(0, self.state.frame_count - 1)) + float(self.state.sync_frame_offset or 0)
         data_duration = 0.0
         if self.channel_data:
             max_time = 0.0
@@ -407,7 +413,10 @@ class VideoAnalysisPage(tk.Frame):
                     if finite.size:
                         max_time = max(max_time, float(np.max(finite)))
             data_duration = max_time
-        return max(video_duration, data_duration)
+        end_ms = max(0.0, video_end_ms, data_duration)
+        if end_ms <= start_ms:
+            end_ms = start_ms + 1.0
+        return start_ms, end_ms
 
     def _refresh_video_frames(self):
         viewers = (self.video_left, self.video_right)

@@ -59,12 +59,6 @@ class VideoAnalysisState:
     def set_sync_offset(self, offset: int) -> None:
         self.sync_frame_offset = int(offset or 0)
 
-    def move_to_synced_zero(self) -> None:
-        if int(self.sync_frame_offset) < 0:
-            self.set_frame(abs(int(self.sync_frame_offset)))
-        else:
-            self.set_frame(0)
-
 
 def clamp_frame(frame_index: int, frame_count: int) -> int:
     count = int(frame_count or 0)
