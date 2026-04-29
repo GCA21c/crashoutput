@@ -10,6 +10,8 @@
 - sync 기준을 `1 video frame = 1 ms`로 정리하고, offset `-50` 입력 시 raw frame 0을 `-50ms`, raw frame 50을 test T0로 표시한다.
 - pulse graph cursor-only update, 작은 frame cache, Left/Right key hold 2-frame 가속, key frame timeline drag seek를 추가했다.
 - 데이터 pulse 앞에 음수 video offset 구간을 열어 표시하고, pulse legend를 우측 상단으로 고정했다.
+- Key frame timeline을 dark editor-style track, progress fill, cursor pill, diamond keyframe marker 형태로 정리했다.
+- Pulse graph를 별도 큰 영역에서 video canvas 하단 semi-transparent overlay로 옮기고, `Clear V1`/`Clear V2` 개별 video clear 버튼을 추가했다.
 
 ## Files
 - `app/shell.py`

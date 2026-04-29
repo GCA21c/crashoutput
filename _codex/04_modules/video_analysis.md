@@ -29,6 +29,8 @@
 - Left/Right key를 누르고 있으면 초기 1-frame 이동 후 반복 이동은 2-frame step으로 가속한다.
 - key frame timeline은 drag-to-seek를 지원한다.
 - Pulse graph legend는 움직이지 않도록 우측 상단에 고정한다.
+- Pulse curve는 별도 큰 graph 영역 대신 video canvas 하단에 semi-transparent overlay로 표시한다.
+- `Clear V1`, `Clear V2`로 각 video slot을 개별 제거할 수 있다.
 
 ## Placeholder / extension points
 - Pulse overlay-on-video는 아직 분리 Pulse 영역으로만 구현되어 있다.

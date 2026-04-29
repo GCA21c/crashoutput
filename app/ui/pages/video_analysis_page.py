@@ -63,6 +63,8 @@ class VideoAnalysisPage(tk.Frame):
         tk.Button(toolbar, text="Add channel", command=self.add_channel, width=13).pack(side=tk.LEFT, padx=(8, 0))
         tk.Button(toolbar, text="Sync adjust", command=self.adjust_sync, width=13).pack(side=tk.LEFT, padx=(8, 0))
         tk.Button(toolbar, text="Reset", command=self.reset_session_state, width=10).pack(side=tk.LEFT, padx=(8, 0))
+        tk.Button(toolbar, text="Clear V1", command=lambda: self.clear_video(0), width=10).pack(side=tk.LEFT, padx=(8, 0))
+        tk.Button(toolbar, text="Clear V2", command=lambda: self.clear_video(1), width=10).pack(side=tk.LEFT, padx=(8, 0))
 
         controls = tk.Frame(toolbar, bg=PAGE_BG)
         controls.pack(side=tk.LEFT, expand=True)
@@ -85,15 +87,14 @@ class VideoAnalysisPage(tk.Frame):
         self.video_right = VideoSlotViewer(video_box, "VIDEO 2")
         self.video_right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(4, 8), pady=8)
 
-        pulse_box = tk.LabelFrame(outer, text="Pulse", bg=PAGE_BG)
-        pulse_box.pack(fill=tk.X, pady=(0, 10))
+        pulse_box = tk.LabelFrame(outer, text="Pulse Overlay", bg=PAGE_BG)
+        pulse_box.pack(fill=tk.X, pady=(0, 8))
         pulse_header = tk.Frame(pulse_box, bg=PAGE_BG)
         pulse_header.pack(fill=tk.X, padx=8, pady=(6, 0))
         self.channel_label_var = tk.StringVar(value="Selected channels: -")
         tk.Label(pulse_header, textvariable=self.channel_label_var, bg=PAGE_BG, fg=MUTED_FG, anchor="w").pack(side=tk.LEFT, fill=tk.X, expand=True)
         tk.Button(pulse_header, text="Clear channels", command=self.clear_channels, width=14).pack(side=tk.RIGHT)
         self.pulse_timeline = PulseTimeline(pulse_box)
-        self.pulse_timeline.pack(fill=tk.X, padx=8, pady=8)
 
         keyframe_box = tk.LabelFrame(outer, text="Key frame", bg=PAGE_BG)
         keyframe_box.pack(fill=tk.X)
@@ -177,6 +178,25 @@ class VideoAnalysisPage(tk.Frame):
             )
         frame_count = min(int(info["frame_count"]) for info in self.video_infos)
         self.state.set_video_master([info["path"] for info in self.video_infos], master_fps, frame_count)
+        self._refresh_all()
+
+    def clear_video(self, index):
+        if index < 0 or index >= len(self.captures):
+            return
+        self.pause()
+        try:
+            self.captures[index].release()
+        except Exception:
+            pass
+        self.captures.pop(index)
+        self.video_infos.pop(index)
+        self._frame_cache.clear()
+        if self.video_infos:
+            master_fps = float(self.video_infos[0]["fps"])
+            frame_count = min(int(info["frame_count"]) for info in self.video_infos)
+            self.state.set_video_master([info["path"] for info in self.video_infos], master_fps, frame_count)
+        else:
+            self.state.reset_videos()
         self._refresh_all()
 
     def add_channel(self):
@@ -390,6 +410,8 @@ class VideoAnalysisPage(tk.Frame):
         self.channel_label_var.set("Selected channels: " + (", ".join(self.state.selected_channels) if self.state.selected_channels else "-"))
         start_ms, end_ms = self._timeline_range_ms()
         self.pulse_timeline.set_cursor(self.state.synced_time_ms, start_ms=start_ms, end_ms=end_ms)
+        for viewer in (self.video_left, self.video_right):
+            viewer.set_pulse_overlay(self.channel_data, start_ms, end_ms, self.state.synced_time_ms)
 
     def _refresh_keyframe(self):
         start_ms, end_ms = self._timeline_range_ms()
@@ -500,4 +522,6 @@ class VideoAnalysisPage(tk.Frame):
         self.video_left.show_placeholder()
         self.video_right.show_placeholder()
         self.pulse_timeline.set_channels([])
+        for viewer in (self.video_left, self.video_right):
+            viewer.set_pulse_overlay([], 0.0, 1.0, 0.0)
         self._refresh_all()
