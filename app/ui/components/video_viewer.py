@@ -115,8 +115,8 @@ class VideoSlotViewer(tk.Frame):
         top = max(10, bottom - max(56, int(height * 0.22)))
         self._pulse_box = (left, top, right, bottom)
         canvas = self.canvas
-        canvas.create_rectangle(left, top, right, bottom, fill="#020617", outline="#38bdf8", stipple="gray50")
-        canvas.create_line(left, bottom, right, bottom, fill="#38bdf8", width=1)
+        canvas.create_rectangle(left, top, right, bottom, fill="#020617", outline="#38bdf8", stipple="gray50", tags=("pulse_bg",))
+        canvas.create_line(left, bottom, right, bottom, fill="#38bdf8", width=1, tags=("pulse_fg",))
         colors = ("#22d3ee", "#f97316", "#a3e635")
 
         def x_for_time(value):
@@ -159,20 +159,24 @@ class VideoSlotViewer(tk.Frame):
                 y = bottom - 6 - y_ratio * max(1, (bottom - top - 12))
                 points.extend((x, y))
             if len(points) >= 4:
-                canvas.create_line(*points, fill=colors[channel_index % len(colors)], width=1.35, smooth=True)
+                canvas.create_line(*points, fill=colors[channel_index % len(colors)], width=1.35, smooth=True, tags=("pulse_curve", "pulse_fg"))
 
         t0_x = x_for_time(0.0)
         if left <= t0_x <= right:
             dash_top = top + 2
             dash_bottom = bottom - 2
-            canvas.create_line(t0_x, dash_top, t0_x, dash_bottom, fill="#ef4444", width=1.4, dash=(4, 3))
+            canvas.create_line(t0_x, dash_top, t0_x, dash_bottom, fill="#ef4444", width=1.4, dash=(4, 3), tags=("pulse_fg",))
 
         time_text = f"Time: {self.overlay_cursor_ms:.0f}ms"
-        canvas.create_text(left + 8, bottom - 8, text=time_text, anchor="sw", fill="#e5e7eb", font=("Arial", 8, "bold"))
+        time_box_right = left + 88
+        canvas.create_rectangle(left + 4, bottom - 23, time_box_right, bottom - 4, fill="#020617", outline="#334155", tags=("pulse_fg",))
+        canvas.create_text(left + 8, bottom - 8, text=time_text, anchor="sw", fill="#f8fafc", font=("Arial", 8, "bold"), tags=("pulse_fg",))
 
         cursor_x = x_for_time(self.overlay_cursor_ms)
-        canvas.create_line(cursor_x, top - 5, cursor_x, bottom + 5, fill="#f8fafc", width=2)
+        canvas.create_line(cursor_x, top - 5, cursor_x, bottom + 5, fill="#f8fafc", width=2, tags=("pulse_fg",))
         self._draw_overlay_legend(left, right, top, colors)
+        canvas.tag_lower("pulse_bg")
+        canvas.tag_raise("pulse_fg")
 
     def _pulse_view_range(self):
         total_start = self.overlay_start_ms
@@ -207,11 +211,28 @@ class VideoSlotViewer(tk.Frame):
         legend_height = 10 + line_height * len(labels)
         legend_left = max(left + 6, right - legend_width - 6)
         legend_top = top + 6
-        canvas.create_rectangle(legend_left, legend_top, legend_left + legend_width, legend_top + legend_height, fill="#020617", outline="#334155", stipple="gray25")
+        canvas.create_rectangle(
+            legend_left,
+            legend_top,
+            legend_left + legend_width,
+            legend_top + legend_height,
+            fill="#020617",
+            outline="#38bdf8",
+            tags=("pulse_fg", "pulse_legend_bg"),
+        )
         for index, label in enumerate(labels):
             y = legend_top + 9 + index * line_height
             color = colors[index % len(colors)]
-            canvas.create_text(legend_left + 9, y, text=label, anchor="w", fill=color, font=("Arial", 8, "bold"))
+            canvas.create_text(
+                legend_left + 9,
+                y,
+                text=label,
+                anchor="w",
+                fill=color,
+                font=("Arial", 8, "bold"),
+                tags=("pulse_fg", "pulse_legend_text"),
+            )
+        canvas.tag_raise("pulse_legend_text")
 
     def _legend_label(self, item):
         item = dict(item or {})
