@@ -74,3 +74,5 @@ Preferred read order:
 ## Next direction
 - representative `.dat` 기반 자동 회귀에 plotting preview/text를 포함한다
 - formatter는 canonical payload 의존도를 더 높이고 legacy fallback을 점진적으로 축소한다
+- 장기 개선 과제로 PPT export graph rendering을 UI page/canvas 의존에서 분리한 headless matplotlib renderer로 전환한다
+- headless renderer 전환 후 PPT 조립/저장은 worker thread에서 수행하여 창 이동/최소화가 끊기지 않는 background export 구조로 개선한다
