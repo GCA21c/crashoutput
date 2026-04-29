@@ -40,6 +40,7 @@ class VideoAnalysisPage(tk.Frame):
         self.video_infos = []
         self.channel_data = []
         self.channel_select_var = tk.StringVar()
+        self.pulse_view_mode_var = tk.IntVar(value=2)
         self._play_after_id = None
         self._refresh_after_id = None
         self._frame_cache = {}
@@ -62,7 +63,7 @@ class VideoAnalysisPage(tk.Frame):
 
         tk.Button(toolbar, text="Video Load", command=self.load_video, width=13).pack(side=tk.LEFT)
         tk.Button(toolbar, text="Sync adjust", command=self.adjust_sync, width=13).pack(side=tk.LEFT, padx=(8, 0))
-        tk.Button(toolbar, text="Reset", command=self.reset_session_state, width=10).pack(side=tk.LEFT, padx=(8, 0))
+        tk.Button(toolbar, text="Reset", command=self.confirm_reset_session_state, width=10).pack(side=tk.LEFT, padx=(8, 0))
         tk.Button(toolbar, text="Clear V1", command=lambda: self.clear_video(0), width=10).pack(side=tk.LEFT, padx=(8, 0))
         tk.Button(toolbar, text="Clear V2", command=lambda: self.clear_video(1), width=10).pack(side=tk.LEFT, padx=(8, 0))
         self.channel_combo = ttk.Combobox(toolbar, textvariable=self.channel_select_var, state="readonly", width=34)
@@ -101,14 +102,34 @@ class VideoAnalysisPage(tk.Frame):
         self.keyframe_timeline = KeyframeTimeline(keyframe_box, on_seek=self._seek_timeline_ms)
         self.keyframe_timeline.pack(fill=tk.X, padx=8, pady=8)
 
+        footer = tk.Frame(outer, bg=PAGE_BG)
+        footer.pack(fill=tk.X, pady=(8, 0))
         note = tk.Label(
-            outer,
+            footer,
             text="Space: Play/Pause | Left/Right: 1 frame 이동 | Sync offset은 frame 단위이며 음수 frame/time 표시를 허용한다.",
             bg=PAGE_BG,
             fg=MUTED_FG,
             anchor="w",
         )
-        note.pack(fill=tk.X, pady=(8, 0))
+        note.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        pulse_view_box = tk.Frame(footer, bg=PAGE_BG)
+        pulse_view_box.pack(side=tk.RIGHT)
+        tk.Label(pulse_view_box, text="Pulse", bg=PAGE_BG, fg=MUTED_FG).pack(side=tk.LEFT, padx=(0, 4))
+        for value, text in ((1, "View 1"), (2, "View 2")):
+            tk.Radiobutton(
+                pulse_view_box,
+                text=text,
+                value=value,
+                variable=self.pulse_view_mode_var,
+                command=self._apply_pulse_view_mode,
+                bg=PAGE_BG,
+                fg=MUTED_FG,
+                selectcolor=PAGE_BG,
+                indicatoron=False,
+                width=7,
+                bd=1,
+                relief=tk.RIDGE,
+            ).pack(side=tk.LEFT, padx=(3, 0))
 
     def on_show(self):
         if not self._key_bindings_ready:
@@ -435,7 +456,13 @@ class VideoAnalysisPage(tk.Frame):
         self.pulse_timeline.set_cursor(self.state.synced_time_ms, start_ms=start_ms, end_ms=end_ms)
         overlay_channels = self._overlay_channel_snapshot()
         for viewer in (self.video_left, self.video_right):
+            viewer.set_pulse_view_mode(self.pulse_view_mode_var.get())
             viewer.set_pulse_overlay(overlay_channels, start_ms, end_ms, self.state.synced_time_ms)
+
+    def _apply_pulse_view_mode(self):
+        mode = self.pulse_view_mode_var.get()
+        self.video_left.set_pulse_view_mode(mode)
+        self.video_right.set_pulse_view_mode(mode)
 
     def _overlay_channel_snapshot(self):
         current_ms = float(self.state.synced_time_ms)
@@ -552,6 +579,15 @@ class VideoAnalysisPage(tk.Frame):
             return tk.PhotoImage(data=encoded.tobytes())
         except Exception:
             return None
+
+    def confirm_reset_session_state(self):
+        if not messagebox.askyesno(
+            "VIDEO ANALYSIS",
+            "현재 Video Analysis 상태를 초기화할까?\n로드된 동영상과 pulse 채널이 모두 해제된다.",
+            parent=self,
+        ):
+            return
+        self.reset_session_state()
 
     def reset_session_state(self):
         self.pause()

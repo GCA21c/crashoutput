@@ -18,6 +18,7 @@ class VideoSlotViewer(tk.Frame):
         self.overlay_start_ms = 0.0
         self.overlay_end_ms = 1.0
         self.overlay_cursor_ms = 0.0
+        self.pulse_view_mode = 2
         self._pulse_box = None
         self._zoom_callback = None
         self._drag_mode = None
@@ -68,6 +69,13 @@ class VideoSlotViewer(tk.Frame):
 
     def set_zoom_callback(self, callback):
         self._zoom_callback = callback
+
+    def set_pulse_view_mode(self, mode):
+        next_mode = 1 if int(mode or 2) == 1 else 2
+        if self.pulse_view_mode == next_mode:
+            return
+        self.pulse_view_mode = next_mode
+        self._redraw()
 
     def reset_zoom(self):
         self.zoom_scale = 1.0
@@ -168,9 +176,13 @@ class VideoSlotViewer(tk.Frame):
             canvas.create_line(t0_x, dash_top, t0_x, dash_bottom, fill="#ef4444", width=1.4, dash=(4, 3), tags=("pulse_fg",))
 
         time_text = f"Time: {self.overlay_cursor_ms:.0f}ms"
-        time_box_right = left + 88
-        canvas.create_rectangle(left + 4, bottom - 23, time_box_right, bottom - 4, fill="#020617", outline="#334155", tags=("pulse_fg",))
-        canvas.create_text(left + 8, bottom - 8, text=time_text, anchor="sw", fill="#f8fafc", font=("Arial", 8, "bold"), tags=("pulse_fg",))
+        if self.pulse_view_mode == 2:
+            time_box_right = left + 88
+            canvas.create_rectangle(left + 4, bottom - 23, time_box_right, bottom - 4, fill="#020617", outline="#334155", tags=("pulse_fg",))
+            time_fill = "#f8fafc"
+        else:
+            time_fill = "#e5e7eb"
+        canvas.create_text(left + 8, bottom - 8, text=time_text, anchor="sw", fill=time_fill, font=("Arial", 8, "bold"), tags=("pulse_fg",))
 
         cursor_x = x_for_time(self.overlay_cursor_ms)
         canvas.create_line(cursor_x, top - 5, cursor_x, bottom + 5, fill="#f8fafc", width=2, tags=("pulse_fg",))
@@ -211,14 +223,19 @@ class VideoSlotViewer(tk.Frame):
         legend_height = 10 + line_height * len(labels)
         legend_left = max(left + 6, right - legend_width - 6)
         legend_top = top + 6
+        legend_options = {
+            "fill": "#020617",
+            "outline": "#38bdf8" if self.pulse_view_mode == 2 else "#334155",
+            "tags": ("pulse_fg", "pulse_legend_bg"),
+        }
+        if self.pulse_view_mode == 1:
+            legend_options["stipple"] = "gray25"
         canvas.create_rectangle(
             legend_left,
             legend_top,
             legend_left + legend_width,
             legend_top + legend_height,
-            fill="#020617",
-            outline="#38bdf8",
-            tags=("pulse_fg", "pulse_legend_bg"),
+            **legend_options,
         )
         for index, label in enumerate(labels):
             y = legend_top + 9 + index * line_height
