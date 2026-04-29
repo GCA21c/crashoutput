@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from pathlib import Path
+from struct import unpack
 
 from app.report.plotting_config import PLOTTING_TEMPLATE_TEXT_MARKERS
 from app.report.plotting_service import plotting_item_display_name, plotting_item_text, rendered_plot_images
@@ -9,6 +10,9 @@ from app.report.plotting_service import plotting_item_display_name, plotting_ite
 
 class PptExportError(RuntimeError):
     pass
+
+
+EMU_PER_INCH = 914400
 
 
 def _load_presentation_api():
@@ -79,6 +83,45 @@ def _duplicate_template_slide(presentation, source_slide):
     return slide
 
 
+def _shape_size_inches(shape):
+    return (
+        float(getattr(shape, "width", 0) or 0) / EMU_PER_INCH,
+        float(getattr(shape, "height", 0) or 0) / EMU_PER_INCH,
+    )
+
+
+def _png_size(image_path):
+    try:
+        with open(image_path, "rb") as handle:
+            header = handle.read(24)
+    except OSError:
+        return None
+    if len(header) >= 24 and header[:8] == b"\x89PNG\r\n\x1a\n":
+        return unpack(">II", header[16:24])
+    return None
+
+
+def _fit_rect_to_placeholder(image_path, left, top, width, height):
+    image_size = _png_size(image_path)
+    if not image_size:
+        return left, top, width, height
+    image_width, image_height = image_size
+    if image_width <= 0 or image_height <= 0 or width <= 0 or height <= 0:
+        return left, top, width, height
+
+    placeholder_ratio = float(width) / float(height)
+    image_ratio = float(image_width) / float(image_height)
+    if image_ratio >= placeholder_ratio:
+        fitted_width = width
+        fitted_height = int(round(float(width) / image_ratio))
+    else:
+        fitted_height = height
+        fitted_width = int(round(float(height) * image_ratio))
+    fitted_left = int(round(float(left) + (float(width) - float(fitted_width)) / 2.0))
+    fitted_top = int(round(float(top) + (float(height) - float(fitted_height)) / 2.0))
+    return fitted_left, fitted_top, fitted_width, fitted_height
+
+
 def _report_info_lines(report_fields, item, workbench):
     report_fields = dict(report_fields or {})
     config = getattr(workbench, "get_shared_dummy_config", lambda: {})() or {}
@@ -129,24 +172,22 @@ def _apply_plot_image(slide, image_path, mso_shape_type):
     plot_shape = _find_marker_shape(slide, PLOTTING_TEMPLATE_TEXT_MARKERS["plot_box"])
     if plot_shape is None:
         raise PptExportError("Template marker not found: Plot here")
-    if getattr(plot_shape, "shape_type", None) == mso_shape_type.AUTO_SHAPE:
-        try:
-            plot_shape.fill.user_picture(str(image_path))
-            if getattr(plot_shape, "has_text_frame", False):
-                _set_shape_lines(plot_shape, [""])
-            return
-        except Exception:
-            pass
     left = plot_shape.left
     top = plot_shape.top
     width = plot_shape.width
     height = plot_shape.height
-    slide.shapes.add_picture(str(image_path), left, top, width=width, height=height)
+    pic_left, pic_top, pic_width, pic_height = _fit_rect_to_placeholder(image_path, left, top, width, height)
+    slide.shapes.add_picture(str(image_path), pic_left, pic_top, width=pic_width, height=pic_height)
     if getattr(plot_shape, "has_text_frame", False):
         _set_shape_lines(plot_shape, [""])
 
 
-def export_plotting_report_to_ppt(workbench, items, report_fields, output_path, template_path):
+def _notify_progress(progress_callback, current, total, message):
+    if callable(progress_callback):
+        progress_callback(int(current), int(total), str(message or ""))
+
+
+def export_plotting_report_to_ppt(workbench, items, report_fields, output_path, template_path, progress_callback=None):
     Presentation, MSO_SHAPE_TYPE = _load_presentation_api()
     template = Path(str(template_path or "")).expanduser().resolve()
     if not template.exists():
@@ -156,28 +197,58 @@ def export_plotting_report_to_ppt(workbench, items, report_fields, output_path, 
     if not included_items:
         raise PptExportError("No included plots to export.")
 
+    total_steps = max(1, len(included_items) * 2 + 3)
+    step = 0
+    _notify_progress(progress_callback, step, total_steps, "PPT 템플릿을 여는 중...")
+
     presentation = Presentation(str(template))
     if not presentation.slides:
         raise PptExportError("Template has no slides.")
     template_slide = presentation.slides[0]
+    plot_shape = _find_marker_shape(template_slide, PLOTTING_TEMPLATE_TEXT_MARKERS["plot_box"])
+    if plot_shape is None:
+        raise PptExportError("Template marker not found: Plot here")
+    plot_size_inches = _shape_size_inches(plot_shape)
+    step += 1
+    _notify_progress(progress_callback, step, total_steps, "템플릿 매핑을 확인하는 중...")
 
     output = Path(str(output_path)).expanduser().resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     written = 0
 
-    with rendered_plot_images(workbench, included_items) as rendered_items:
+    def _render_progress(rendered_count, render_total, item):
+        nonlocal step
+        step = min(total_steps - 2, 1 + int(rendered_count))
+        label = plotting_item_display_name(item)
+        _notify_progress(progress_callback, step, total_steps, f"그래프 렌더링 중... {label}")
+
+    with rendered_plot_images(
+        workbench,
+        included_items,
+        target_size_inches=plot_size_inches,
+        progress_callback=_render_progress,
+    ) as rendered_items:
         if not rendered_items:
             raise PptExportError("No rendered plots available for export.")
         slides = [template_slide]
         for _ in rendered_items[1:]:
             slides.append(_duplicate_template_slide(presentation, template_slide))
 
-        for slide, (item, image_path) in zip(slides, rendered_items):
+        for index, (slide, (item, image_path)) in enumerate(zip(slides, rendered_items), start=1):
             _apply_text_mapping(slide, item, report_fields, workbench)
             _apply_plot_image(slide, image_path, MSO_SHAPE_TYPE)
             written += 1
+            step = min(total_steps - 1, 1 + len(rendered_items) + index)
+            _notify_progress(
+                progress_callback,
+                step,
+                total_steps,
+                f"PPT 슬라이드 작성 중... {plotting_item_display_name(item)}",
+            )
 
+    _notify_progress(progress_callback, total_steps - 1, total_steps, "PPT 파일을 저장하는 중...")
     presentation.save(str(output))
+    _notify_progress(progress_callback, total_steps, total_steps, "PPT export 완료")
     return {
         "template_path": str(template),
         "output_path": str(output),

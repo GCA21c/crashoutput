@@ -27,7 +27,7 @@ def _configure_matplotlib_font():
 if __name__ == "__main__":
     _configure_matplotlib_font()
     root = tk.Tk()
-    root.title("noname Workbench")
+    root.title("Crashoutput™")
     root.geometry("1800x980")
     try:
         icon_path = Path(__file__).parent / "app" / "ui" / "components" / "assets" / "crash_icon.ico"
