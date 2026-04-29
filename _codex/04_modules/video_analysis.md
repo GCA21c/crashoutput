@@ -39,7 +39,9 @@
 - mouse wheel:
   - cursor가 video 영역에 있으면 video image zoom
   - cursor가 pulse overlay box 안에 있으면 pulse time-axis zoom
-  - pan은 아직 구현하지 않는다.
+- drag pan:
+  - 확대된 video 영역을 drag 하면 image pan
+  - 확대된 pulse overlay box 안을 drag 하면 pulse time-window pan
 
 ## Placeholder / extension points
 - Pulse overlay-on-video는 아직 분리 Pulse 영역으로만 구현되어 있다.

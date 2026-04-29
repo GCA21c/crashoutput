@@ -10,6 +10,8 @@ class VideoSlotViewer(tk.Frame):
         self._photo = None
         self._source_photo = None
         self.zoom_scale = 1.0
+        self.pan_x = 0.0
+        self.pan_y = 0.0
         self.pulse_zoom_scale = 1.0
         self.pulse_zoom_center_ms = None
         self.overlay_channels = []
@@ -18,6 +20,9 @@ class VideoSlotViewer(tk.Frame):
         self.overlay_cursor_ms = 0.0
         self._pulse_box = None
         self._zoom_callback = None
+        self._drag_mode = None
+        self._drag_last_x = 0
+        self._drag_last_y = 0
         self.header = tk.Label(self, text=self.title, bg="#111827", fg="#e5e7eb", anchor="w", padx=10, pady=5)
         self.header.pack(side=tk.TOP, fill=tk.X)
         self.canvas = tk.Canvas(
@@ -31,6 +36,9 @@ class VideoSlotViewer(tk.Frame):
         self.canvas.bind("<MouseWheel>", self._on_mouse_wheel)
         self.canvas.bind("<Button-4>", self._on_mouse_wheel)
         self.canvas.bind("<Button-5>", self._on_mouse_wheel)
+        self.canvas.bind("<ButtonPress-1>", self._on_drag_start)
+        self.canvas.bind("<B1-Motion>", self._on_drag_move)
+        self.canvas.bind("<ButtonRelease-1>", self._on_drag_end)
         self._placeholder_text = f"{self.title}\nNo video loaded"
 
     def show_placeholder(self, text=None):
@@ -63,6 +71,8 @@ class VideoSlotViewer(tk.Frame):
 
     def reset_zoom(self):
         self.zoom_scale = 1.0
+        self.pan_x = 0.0
+        self.pan_y = 0.0
         self.pulse_zoom_scale = 1.0
         self.pulse_zoom_center_ms = None
         self._redraw()
@@ -92,7 +102,8 @@ class VideoSlotViewer(tk.Frame):
             )
             return
         canvas.create_rectangle(0, 0, width, height, fill="#000000", outline="")
-        canvas.create_image(width / 2, height / 2, image=self._photo, anchor="center")
+        self._clamp_pan(width, height)
+        canvas.create_image(width / 2 + self.pan_x, height / 2 + self.pan_y, image=self._photo, anchor="center")
         self._draw_pulse_overlay(width, height)
 
     def _draw_pulse_overlay(self, width, height):
@@ -233,6 +244,9 @@ class VideoSlotViewer(tk.Frame):
     def _zoom_video(self, direction):
         factor = 1.12 if direction > 0 else 1.0 / 1.12
         self.zoom_scale = max(1.0, min(6.0, self.zoom_scale * factor))
+        if self.zoom_scale <= 1.0:
+            self.pan_x = 0.0
+            self.pan_y = 0.0
         if callable(self._zoom_callback):
             self._zoom_callback(self.pulse_zoom_scale, self.pulse_zoom_center_ms)
         self._redraw()
@@ -248,6 +262,66 @@ class VideoSlotViewer(tk.Frame):
         if callable(self._zoom_callback):
             self._zoom_callback(self.pulse_zoom_scale, self.pulse_zoom_center_ms)
         self._redraw()
+
+    def _on_drag_start(self, event):
+        self._drag_last_x = int(event.x)
+        self._drag_last_y = int(event.y)
+        self._drag_mode = "pulse" if self._is_inside_pulse_box(event.x, event.y) else "video"
+        return "break"
+
+    def _on_drag_move(self, event):
+        dx = int(event.x) - int(self._drag_last_x)
+        dy = int(event.y) - int(self._drag_last_y)
+        self._drag_last_x = int(event.x)
+        self._drag_last_y = int(event.y)
+        if self._drag_mode == "pulse":
+            self._pan_pulse(dx)
+        elif self._drag_mode == "video":
+            self._pan_video(dx, dy)
+        return "break"
+
+    def _on_drag_end(self, _event):
+        self._drag_mode = None
+        return "break"
+
+    def _pan_video(self, dx, dy):
+        if self.zoom_scale <= 1.0:
+            return
+        self.pan_x += float(dx)
+        self.pan_y += float(dy)
+        self._redraw()
+
+    def _pan_pulse(self, dx):
+        if self.pulse_zoom_scale <= 1.0 or self._pulse_box is None:
+            return
+        left, _top, right, _bottom = self._pulse_box
+        box_width = max(1.0, float(right - left))
+        view_start, view_end = self._pulse_view_range()
+        view_span = max(1.0, view_end - view_start)
+        shift_ms = -(float(dx) / box_width) * view_span
+        center = self.pulse_zoom_center_ms
+        if center is None:
+            center = (view_start + view_end) / 2.0
+        total_start = self.overlay_start_ms
+        total_end = self.overlay_end_ms
+        half_span = view_span / 2.0
+        center = max(total_start + half_span, min(float(center) + shift_ms, total_end - half_span))
+        self.pulse_zoom_center_ms = center
+        if callable(self._zoom_callback):
+            self._zoom_callback(self.pulse_zoom_scale, self.pulse_zoom_center_ms)
+        self._redraw()
+
+    def _clamp_pan(self, width, height):
+        if self._photo is None or self.zoom_scale <= 1.0:
+            self.pan_x = 0.0
+            self.pan_y = 0.0
+            return
+        image_width = max(1, int(self._photo.width()))
+        image_height = max(1, int(self._photo.height()))
+        max_x = max(0.0, (image_width - width) / 2.0)
+        max_y = max(0.0, (image_height - height) / 2.0)
+        self.pan_x = max(-max_x, min(float(self.pan_x), max_x))
+        self.pan_y = max(-max_y, min(float(self.pan_y), max_y))
 
 
 class KeyframeTimeline(tk.Frame):
