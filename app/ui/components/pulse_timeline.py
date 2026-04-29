@@ -12,6 +12,7 @@ class PulseTimeline(tk.Frame):
         self.channels = []
         self.cursor_ms = 0.0
         self.duration_ms = 0.0
+        self._cursor_line = None
         self.figure = Figure(figsize=(10, 2.2), dpi=100)
         self.ax = self.figure.add_subplot(111)
         self.canvas = FigureCanvasTkAgg(self.figure, master=self)
@@ -26,16 +27,17 @@ class PulseTimeline(tk.Frame):
         self.cursor_ms = float(cursor_ms or 0.0)
         if duration_ms is not None:
             self.duration_ms = max(0.0, float(duration_ms or 0.0))
-        self._draw()
+        self._update_cursor()
 
     def _draw(self):
         self.ax.clear()
+        self._cursor_line = None
         if not self.channels:
             self.ax.text(0.5, 0.5, "Add channel to display pulse data", ha="center", va="center", transform=self.ax.transAxes)
             self.ax.set_xlabel("Time (ms)")
             self.ax.set_yticks([])
             self.ax.grid(True, axis="x", alpha=0.25)
-            self.ax.axvline(self.cursor_ms, color="#dc2626", linewidth=1.4)
+            self._cursor_line = self.ax.axvline(self.cursor_ms, color="#dc2626", linewidth=1.4)
             self.figure.tight_layout()
             self.canvas.draw_idle()
             return
@@ -62,7 +64,7 @@ class PulseTimeline(tk.Frame):
                 v = v[::step]
             self.ax.plot(t, v, linewidth=1.0, label=name)
 
-        self.ax.axvline(self.cursor_ms, color="#dc2626", linewidth=1.4, label="Current frame")
+        self._cursor_line = self.ax.axvline(self.cursor_ms, color="#dc2626", linewidth=1.4, label="Current frame")
         if self.duration_ms > 0.0:
             left = min(0.0, self.cursor_ms)
             right = max(self.duration_ms, self.cursor_ms)
@@ -72,4 +74,11 @@ class PulseTimeline(tk.Frame):
         self.ax.grid(True, alpha=0.25)
         self.ax.legend(loc="best", fontsize=8)
         self.figure.tight_layout()
+        self.canvas.draw_idle()
+
+    def _update_cursor(self):
+        if self._cursor_line is None:
+            self._draw()
+            return
+        self._cursor_line.set_xdata([self.cursor_ms, self.cursor_ms])
         self.canvas.draw_idle()

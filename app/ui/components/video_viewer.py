@@ -60,14 +60,19 @@ class VideoSlotViewer(tk.Frame):
 
 
 class KeyframeTimeline(tk.Frame):
-    def __init__(self, parent):
+    def __init__(self, parent, on_seek=None):
         super().__init__(parent, bg=PAGE_BG)
         self.duration_ms = 0.0
         self.cursor_ms = 0.0
         self.keyframes = []
+        self.on_seek = on_seek
+        self._dragging = False
         self.canvas = tk.Canvas(self, height=42, bg="#f8fafc", highlightthickness=1, highlightbackground="#cbd5e1")
         self.canvas.pack(fill=tk.X, expand=True)
         self.canvas.bind("<Configure>", lambda _event: self._draw())
+        self.canvas.bind("<ButtonPress-1>", self._on_press)
+        self.canvas.bind("<B1-Motion>", self._on_drag)
+        self.canvas.bind("<ButtonRelease-1>", self._on_release)
 
     def set_state(self, duration_ms, cursor_ms, keyframes=None):
         self.duration_ms = max(0.0, float(duration_ms or 0.0))
@@ -101,3 +106,32 @@ class KeyframeTimeline(tk.Frame):
         cursor_x = x_for_time(self.cursor_ms)
         canvas.create_line(cursor_x, 6, cursor_x, height - 6, fill="#dc2626", width=2)
         canvas.create_text(cursor_x + 4, 6, text=f"{self.cursor_ms:.1f}ms", anchor="nw", fill=TEXT_FG, font=("Arial", 8, "bold"))
+
+    def _time_for_x(self, x):
+        width = max(1, int(self.canvas.winfo_width()))
+        left = 18
+        right = width - 18
+        if right <= left or self.duration_ms <= 0.0:
+            return 0.0
+        ratio = max(0.0, min((float(x) - left) / float(right - left), 1.0))
+        return ratio * self.duration_ms
+
+    def _seek_event(self, event):
+        value_ms = self._time_for_x(event.x)
+        self.cursor_ms = value_ms
+        self._draw()
+        if callable(self.on_seek):
+            self.on_seek(value_ms)
+
+    def _on_press(self, event):
+        self._dragging = True
+        self._seek_event(event)
+
+    def _on_drag(self, event):
+        if self._dragging:
+            self._seek_event(event)
+
+    def _on_release(self, event):
+        if self._dragging:
+            self._dragging = False
+            self._seek_event(event)

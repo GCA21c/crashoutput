@@ -40,6 +40,11 @@ class VideoAnalysisPage(tk.Frame):
         self.video_infos = []
         self.channel_data = []
         self._play_after_id = None
+        self._refresh_after_id = None
+        self._frame_cache = {}
+        self._held_key = None
+        self._key_hold_after_id = None
+        self._key_hold_started = False
         self._key_bindings_ready = False
         self._build_ui()
 
@@ -92,7 +97,7 @@ class VideoAnalysisPage(tk.Frame):
 
         keyframe_box = tk.LabelFrame(outer, text="Key frame", bg=PAGE_BG)
         keyframe_box.pack(fill=tk.X)
-        self.keyframe_timeline = KeyframeTimeline(keyframe_box)
+        self.keyframe_timeline = KeyframeTimeline(keyframe_box, on_seek=self._seek_timeline_ms)
         self.keyframe_timeline.pack(fill=tk.X, padx=8, pady=8)
 
         note = tk.Label(
@@ -108,8 +113,10 @@ class VideoAnalysisPage(tk.Frame):
         if not self._key_bindings_ready:
             root = self.winfo_toplevel()
             root.bind_all("<space>", self._on_space)
-            root.bind_all("<Left>", self._on_left)
-            root.bind_all("<Right>", self._on_right)
+            root.bind_all("<KeyPress-Left>", self._on_left_press)
+            root.bind_all("<KeyRelease-Left>", self._on_left_release)
+            root.bind_all("<KeyPress-Right>", self._on_right_press)
+            root.bind_all("<KeyRelease-Right>", self._on_right_release)
             self._key_bindings_ready = True
         self.focus_set()
         self._refresh_all()
@@ -160,6 +167,7 @@ class VideoAnalysisPage(tk.Frame):
 
         self.captures.extend(new_captures)
         self.video_infos.extend(new_infos)
+        self._frame_cache.clear()
         master_fps = float(self.video_infos[0]["fps"])
         mismatched = [info for info in self.video_infos[1:] if abs(float(info["fps"]) - master_fps) > 0.01]
         if mismatched:
@@ -193,11 +201,13 @@ class VideoAnalysisPage(tk.Frame):
         values = viewer.get_numeric_column(selected)
         self.state.selected_channels.append(selected)
         self.channel_data.append({"name": selected, "time_ms": np.asarray(time_s, dtype=float) * 1000.0, "values": np.asarray(values, dtype=float)})
+        self.pulse_timeline.set_channels(self.channel_data)
         self._refresh_pulse()
 
     def clear_channels(self):
         self.state.selected_channels.clear()
         self.channel_data.clear()
+        self.pulse_timeline.set_channels([])
         self._refresh_pulse()
 
     def adjust_sync(self):
@@ -211,17 +221,72 @@ class VideoAnalysisPage(tk.Frame):
             return
         self.state.set_sync_offset(value)
         self.state.move_to_synced_zero()
+        self._schedule_refresh()
+
+    def _seek_timeline_ms(self, value_ms):
+        self.pause()
+        raw_frame = int(round(float(value_ms or 0.0) - float(self.state.sync_frame_offset)))
+        self.state.set_frame(raw_frame)
+        self._schedule_refresh()
+
+    def _step_frame(self, delta, pause=True):
+        if pause:
+            self.pause()
+        self.state.step_frame(delta)
+        self._schedule_refresh()
+
+    def _start_key_hold(self, key_name, delta):
+        if not self._is_active_page():
+            return None
+        self.pause()
+        first_press = self._held_key != key_name
+        self._held_key = key_name
+        if first_press:
+            self._key_hold_started = False
+            self._step_frame(delta, pause=False)
+            self._schedule_key_hold(delta, initial=True)
+        return "break"
+
+    def _schedule_key_hold(self, delta, initial=False):
+        if self._key_hold_after_id is not None:
+            return
+        delay = 220 if initial else 34
+        self._key_hold_after_id = self.after(delay, lambda: self._key_hold_step(delta))
+
+    def _key_hold_step(self, delta):
+        self._key_hold_after_id = None
+        if self._held_key is None or not self._is_active_page():
+            return
+        self._key_hold_started = True
+        self._step_frame(delta * 2, pause=False)
+        self._schedule_key_hold(delta, initial=False)
+
+    def _stop_key_hold(self, key_name):
+        if self._held_key == key_name:
+            self._held_key = None
+        if self._key_hold_after_id is not None:
+            try:
+                self.after_cancel(self._key_hold_after_id)
+            except Exception:
+                pass
+            self._key_hold_after_id = None
+        self._key_hold_started = False
+        return "break" if self._is_active_page() else None
+
+    def _schedule_refresh(self):
+        if self._refresh_after_id is not None:
+            return
+        self._refresh_after_id = self.after(1, self._refresh_all_scheduled)
+
+    def _refresh_all_scheduled(self):
+        self._refresh_after_id = None
         self._refresh_all()
 
     def prev_frame(self):
-        self.pause()
-        self.state.step_frame(-1)
-        self._refresh_all()
+        self._step_frame(-1)
 
     def next_frame(self):
-        self.pause()
-        self.state.step_frame(1)
-        self._refresh_all()
+        self._step_frame(1)
 
     def toggle_play(self):
         if self.state.is_playing:
@@ -245,6 +310,7 @@ class VideoAnalysisPage(tk.Frame):
             except Exception:
                 pass
             self._play_after_id = None
+        self._held_key = None
 
     def _schedule_play_step(self):
         if not self.state.is_playing:
@@ -260,7 +326,7 @@ class VideoAnalysisPage(tk.Frame):
             self.pause()
             return
         self.state.step_frame(1)
-        self._refresh_all()
+        self._schedule_refresh()
         self._schedule_play_step()
 
     def _on_space(self, event):
@@ -269,17 +335,17 @@ class VideoAnalysisPage(tk.Frame):
             return "break"
         return None
 
-    def _on_left(self, event):
-        if self._is_active_page():
-            self.prev_frame()
-            return "break"
-        return None
+    def _on_left_press(self, event):
+        return self._start_key_hold("left", -1)
 
-    def _on_right(self, event):
-        if self._is_active_page():
-            self.next_frame()
-            return "break"
-        return None
+    def _on_left_release(self, event):
+        return self._stop_key_hold("left")
+
+    def _on_right_press(self, event):
+        return self._start_key_hold("right", 1)
+
+    def _on_right_release(self, event):
+        return self._stop_key_hold("right")
 
     def _is_active_page(self):
         return getattr(self.workbench, "current_page_key", None) == "video_analysis"
@@ -323,7 +389,6 @@ class VideoAnalysisPage(tk.Frame):
 
     def _refresh_pulse(self):
         self.channel_label_var.set("Selected channels: " + (", ".join(self.state.selected_channels) if self.state.selected_channels else "-"))
-        self.pulse_timeline.set_channels(self.channel_data)
         self.pulse_timeline.set_cursor(self.state.synced_time_ms, duration_ms=self._timeline_duration_ms())
 
     def _refresh_keyframe(self):
@@ -350,11 +415,31 @@ class VideoAnalysisPage(tk.Frame):
             if index >= len(self.captures):
                 viewer.show_placeholder()
                 continue
-            frame = self._read_frame(index, self.state.current_raw_frame)
+            frame = self._read_frame_cached(index, self.state.current_raw_frame)
             if frame is None:
                 viewer.show_placeholder("Frame read failed")
                 continue
             viewer.show_frame(self._frame_to_photo(frame, viewer))
+
+    def _read_frame_cached(self, index, frame_index):
+        key = (int(index), int(frame_index))
+        cached = self._frame_cache.get(key)
+        if cached is not None:
+            return cached
+        frame = self._read_frame(index, frame_index)
+        if frame is None:
+            return None
+        self._frame_cache[key] = frame
+        current = int(frame_index)
+        keep = {
+            (int(index), current + delta)
+            for index in range(len(self.captures))
+            for delta in range(-3, 4)
+        }
+        for cache_key in list(self._frame_cache.keys()):
+            if cache_key not in keep:
+                self._frame_cache.pop(cache_key, None)
+        return frame
 
     def _read_frame(self, index, frame_index):
         cv2 = _load_cv2()
@@ -401,7 +486,9 @@ class VideoAnalysisPage(tk.Frame):
         self.captures = []
         self.video_infos = []
         self.channel_data = []
+        self._frame_cache.clear()
         self.state = VideoAnalysisState()
         self.video_left.show_placeholder()
         self.video_right.show_placeholder()
+        self.pulse_timeline.set_channels([])
         self._refresh_all()

@@ -8,6 +8,7 @@
 - Reset 버튼으로 video/pulse/sync/keyframe 상태를 초기화한다.
 - 재생 중 image label이 레이아웃을 밀지 않도록 video frame 표시를 고정 Canvas 방식으로 변경했다.
 - sync 기준을 `1 video frame = 1 ms`로 정리하고, offset `-50` 입력 시 raw frame 50을 test T0로 맞추도록 이동한다.
+- pulse graph cursor-only update, 작은 frame cache, Left/Right key hold 2-frame 가속, key frame timeline drag seek를 추가했다.
 
 ## Files
 - `app/shell.py`
