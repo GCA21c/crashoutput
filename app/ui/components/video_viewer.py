@@ -189,8 +189,6 @@ class VideoSlotViewer(tk.Frame):
         cursor_x = x_for_time(self.overlay_cursor_ms)
         canvas.create_line(cursor_x, top - 5, cursor_x, bottom + 5, fill="#f8fafc", width=2, tags=("pulse_fg",))
         self._draw_overlay_legend(left, right, top, colors)
-        canvas.tag_lower("pulse_bg")
-        canvas.tag_lower("pulse_grid")
         canvas.tag_raise("pulse_fg")
 
     def _draw_pulse_view1_grid(self, left, top, right, bottom):
