@@ -125,6 +125,8 @@ class VideoSlotViewer(tk.Frame):
         canvas = self.canvas
         canvas.create_rectangle(left, top, right, bottom, fill="#020617", outline="#38bdf8", stipple="gray50", tags=("pulse_bg",))
         canvas.create_line(left, bottom, right, bottom, fill="#38bdf8", width=1, tags=("pulse_fg",))
+        if self.pulse_view_mode == 1:
+            self._draw_pulse_view1_grid(left, top, right, bottom)
         colors = ("#22d3ee", "#f97316", "#a3e635")
 
         def x_for_time(value):
@@ -188,7 +190,18 @@ class VideoSlotViewer(tk.Frame):
         canvas.create_line(cursor_x, top - 5, cursor_x, bottom + 5, fill="#f8fafc", width=2, tags=("pulse_fg",))
         self._draw_overlay_legend(left, right, top, colors)
         canvas.tag_lower("pulse_bg")
+        canvas.tag_lower("pulse_grid")
         canvas.tag_raise("pulse_fg")
+
+    def _draw_pulse_view1_grid(self, left, top, right, bottom):
+        canvas = self.canvas
+        grid_color = "#64748b"
+        for index in range(1, 5):
+            x = left + (right - left) * index / 5.0
+            canvas.create_line(x, top, x, bottom, fill=grid_color, width=1, stipple="gray25", tags=("pulse_bg", "pulse_grid"))
+        for index in range(1, 4):
+            y = top + (bottom - top) * index / 4.0
+            canvas.create_line(left, y, right, y, fill=grid_color, width=1, stipple="gray25", tags=("pulse_bg", "pulse_grid"))
 
     def _pulse_view_range(self):
         total_start = self.overlay_start_ms
