@@ -1,0 +1,32 @@
+# Video analysis module
+
+## Main code paths
+- `app/ui/pages/video_analysis_page.py`
+- `app/ui/components/video_viewer.py`
+- `app/ui/components/pulse_timeline.py`
+- `app/core/video/video_sync.py`
+
+## Current role
+- 고속 동영상과 로드된 dataset channel pulse를 frame/time 기준으로 같이 확인하는 초기 UI다.
+- 기존 injury/report/export 계산 경로와 payload 저장 구조는 건드리지 않는다.
+- `POST-PROCESSING > ANALYSIS > VIDEO ANALYSIS` 메뉴로 진입한다.
+
+## Current implementation
+- 동영상은 최대 2개까지 로드한다.
+- OpenCV `VideoCapture`로 현재 frame만 seek/read 한다.
+- 두 영상은 첫 번째 영상 fps를 master로 사용한다.
+- fps가 다르면 사용자 경고를 띄우고, frame 계산은 첫 번째 영상 fps 기준으로 진행한다.
+- dataset channel은 기존 viewer의 `df`와 `time_column`을 참조한다.
+- Pulse channel은 최대 3개까지 선택한다.
+- `sync_frame_offset`은 frame 단위이며 음수 값을 허용한다.
+- 표시 frame/time은 `raw_frame_index + sync_frame_offset` 기준이다.
+
+## Placeholder / extension points
+- Pulse overlay-on-video는 아직 분리 Pulse 영역으로만 구현되어 있다.
+- Key frame 영역은 duration bar, current marker, keyframe placeholder 구조만 있다.
+- keyframe/event tagging 저장 구조는 `VideoAnalysisState.keyframes`를 확장한다.
+- 저장/복원은 아직 연결하지 않았고, 필요 시 기존 metadata/report cache 패턴에 맞춰 payload화한다.
+
+## Dependency note
+- `cv2`가 없으면 앱 import는 깨지지 않고, Video Load 시 OpenCV 설치 안내를 표시한다.
+- Pillow가 있으면 `ImageTk`로 frame을 표시하고, 없으면 OpenCV PNG encode + Tk `PhotoImage` fallback을 시도한다.

@@ -1,0 +1,82 @@
+import tkinter as tk
+
+from app.ui.styles import MUTED_FG, PAGE_BG, TEXT_FG
+
+
+class VideoSlotViewer(tk.Frame):
+    def __init__(self, parent, title):
+        super().__init__(parent, bg="#111827", bd=1, relief=tk.SOLID)
+        self.title = str(title)
+        self._photo = None
+        self.header = tk.Label(self, text=self.title, bg="#111827", fg="#e5e7eb", anchor="w", padx=10, pady=5)
+        self.header.pack(side=tk.TOP, fill=tk.X)
+        self.image_label = tk.Label(
+            self,
+            text=f"{self.title}\nNo video loaded",
+            bg="#0b1120",
+            fg="#d1d5db",
+            justify="center",
+            anchor="center",
+        )
+        self.image_label.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=8, pady=(0, 8))
+
+    def show_placeholder(self, text=None):
+        self._photo = None
+        self.image_label.configure(
+            image="",
+            text=str(text or f"{self.title}\nNo video loaded"),
+            bg="#0b1120",
+            fg="#d1d5db",
+        )
+
+    def show_frame(self, photo_image):
+        self._photo = photo_image
+        if photo_image is None:
+            self.show_placeholder()
+            return
+        self.image_label.configure(image=photo_image, text="", bg="#000000")
+
+
+class KeyframeTimeline(tk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent, bg=PAGE_BG)
+        self.duration_ms = 0.0
+        self.cursor_ms = 0.0
+        self.keyframes = []
+        self.canvas = tk.Canvas(self, height=42, bg="#f8fafc", highlightthickness=1, highlightbackground="#cbd5e1")
+        self.canvas.pack(fill=tk.X, expand=True)
+        self.canvas.bind("<Configure>", lambda _event: self._draw())
+
+    def set_state(self, duration_ms, cursor_ms, keyframes=None):
+        self.duration_ms = max(0.0, float(duration_ms or 0.0))
+        self.cursor_ms = float(cursor_ms or 0.0)
+        self.keyframes = list(keyframes or [])
+        self._draw()
+
+    def _draw(self):
+        canvas = self.canvas
+        canvas.delete("all")
+        width = max(1, int(canvas.winfo_width()))
+        height = max(1, int(canvas.winfo_height()))
+        y = height // 2
+        left = 18
+        right = width - 18
+        canvas.create_line(left, y, right, y, fill="#94a3b8", width=8, capstyle=tk.ROUND)
+        canvas.create_text(left, height - 8, text="0ms", anchor="sw", fill=MUTED_FG, font=("Arial", 8))
+        canvas.create_text(right, height - 8, text=f"{self.duration_ms:.0f}ms", anchor="se", fill=MUTED_FG, font=("Arial", 8))
+
+        def x_for_time(value_ms):
+            if self.duration_ms <= 0.0:
+                return left
+            ratio = max(0.0, min(float(value_ms) / self.duration_ms, 1.0))
+            return left + ratio * (right - left)
+
+        for marker in self.keyframes:
+            marker_ms = float(dict(marker or {}).get("time_ms") or 0.0)
+            x = x_for_time(marker_ms)
+            canvas.create_polygon(x, y - 11, x - 5, y - 1, x + 5, y - 1, fill="#f59e0b", outline="")
+
+        cursor_x = x_for_time(self.cursor_ms)
+        canvas.create_line(cursor_x, 6, cursor_x, height - 6, fill="#dc2626", width=2)
+        canvas.create_text(cursor_x + 4, 6, text=f"{self.cursor_ms:.1f}ms", anchor="nw", fill=TEXT_FG, font=("Arial", 8, "bold"))
+

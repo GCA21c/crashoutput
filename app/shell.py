@@ -17,6 +17,7 @@ from app.ui.pages.injury_page import InjuryPage
 from app.ui.pages.test_setup_page import TestSetupPage
 from app.ui.pages.report_summary_page import ReportSummaryPage
 from app.ui.pages.report_ploting_page import ReportPlotingPage
+from app.ui.pages.video_analysis_page import VideoAnalysisPage
 from app.ui.styles import (
     APP_BG,
     APP_TITLE_FONT,
@@ -184,6 +185,7 @@ class CrashAnalysisWorkbench(tk.Frame):
         self._add_nav_button("trimming", "DATA TRIMMING", indent=18)
         self._add_nav_section("POST-PROCESSING")
         self._build_injury_nav_group()
+        self._build_analysis_nav_group()
         self._build_report_nav_group()
 
         quick = tk.LabelFrame(self.sidebar, text="Quick Guide", bg=SIDEBAR_BG)
@@ -228,6 +230,7 @@ class CrashAnalysisWorkbench(tk.Frame):
         self.pages["report_summary"] = ReportSummaryPage(self.page_host, self)
         # Internal key/class spelling is kept for compatibility; user-facing text says PLOTTING.
         self.pages["report_ploting"] = ReportPlotingPage(self.page_host, self)
+        self.pages["video_analysis"] = VideoAnalysisPage(self.page_host, self)
         self._apply_injury_mode_nav()
 
     def _render_top_status_shimmer(self):
@@ -383,6 +386,23 @@ class CrashAnalysisWorkbench(tk.Frame):
         ).pack(side=tk.LEFT)
         self._add_nav_button("report_summary", "L SUMMARY REPORT", indent=34, parent=group)
         self._add_nav_button("report_ploting", "L PLOTTING", indent=34, parent=group)
+
+    def _build_analysis_nav_group(self):
+        group = tk.Frame(self.sidebar, bg=SIDEBAR_BG)
+        group.pack(fill=tk.X)
+        header = tk.Frame(group, bg=SIDEBAR_BG)
+        header.pack(fill=tk.X)
+        tk.Label(
+            header,
+            text="ANALYSIS",
+            font=NAV_FONT_BOLD,
+            bg=SIDEBAR_BG,
+            fg=TEXT_FG,
+            anchor="w",
+            padx=32,
+            pady=6,
+        ).pack(side=tk.LEFT)
+        self._add_nav_button("video_analysis", "L VIDEO ANALYSIS", indent=34, parent=group)
 
     def _available_injury_pages(self):
         if not bool((self.shared_dummy_config or {}).get("setup_complete")):

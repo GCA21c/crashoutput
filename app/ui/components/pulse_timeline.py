@@ -1,0 +1,75 @@
+import numpy as np
+import tkinter as tk
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+
+from app.ui.styles import PAGE_BG
+
+
+class PulseTimeline(tk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent, bg=PAGE_BG)
+        self.channels = []
+        self.cursor_ms = 0.0
+        self.duration_ms = 0.0
+        self.figure = Figure(figsize=(10, 2.2), dpi=100)
+        self.ax = self.figure.add_subplot(111)
+        self.canvas = FigureCanvasTkAgg(self.figure, master=self)
+        self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        self._draw()
+
+    def set_channels(self, channels):
+        self.channels = [dict(item) for item in list(channels or [])]
+        self._draw()
+
+    def set_cursor(self, cursor_ms, duration_ms=None):
+        self.cursor_ms = float(cursor_ms or 0.0)
+        if duration_ms is not None:
+            self.duration_ms = max(0.0, float(duration_ms or 0.0))
+        self._draw()
+
+    def _draw(self):
+        self.ax.clear()
+        if not self.channels:
+            self.ax.text(0.5, 0.5, "Add channel to display pulse data", ha="center", va="center", transform=self.ax.transAxes)
+            self.ax.set_xlabel("Time (ms)")
+            self.ax.set_yticks([])
+            self.ax.grid(True, axis="x", alpha=0.25)
+            self.ax.axvline(self.cursor_ms, color="#dc2626", linewidth=1.4)
+            self.figure.tight_layout()
+            self.canvas.draw_idle()
+            return
+
+        for item in self.channels[:3]:
+            name = str(item.get("name") or "-")
+            time_values = item.get("time_ms")
+            signal_values = item.get("values")
+            t = np.asarray([] if time_values is None else time_values, dtype=float)
+            v = np.asarray([] if signal_values is None else signal_values, dtype=float)
+            n = min(len(t), len(v))
+            if n <= 0:
+                continue
+            t = t[:n]
+            v = v[:n]
+            mask = np.isfinite(t) & np.isfinite(v)
+            if not np.any(mask):
+                continue
+            t = t[mask]
+            v = v[mask]
+            if len(t) > 4000:
+                step = int(np.ceil(len(t) / 4000.0))
+                t = t[::step]
+                v = v[::step]
+            self.ax.plot(t, v, linewidth=1.0, label=name)
+
+        self.ax.axvline(self.cursor_ms, color="#dc2626", linewidth=1.4, label="Current frame")
+        if self.duration_ms > 0.0:
+            left = min(0.0, self.cursor_ms)
+            right = max(self.duration_ms, self.cursor_ms)
+            if right > left:
+                self.ax.set_xlim(left, right)
+        self.ax.set_xlabel("Time (ms)")
+        self.ax.grid(True, alpha=0.25)
+        self.ax.legend(loc="best", fontsize=8)
+        self.figure.tight_layout()
+        self.canvas.draw_idle()
