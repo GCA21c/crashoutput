@@ -8,10 +8,16 @@ class VideoSlotViewer(tk.Frame):
         super().__init__(parent, bg="#111827", bd=1, relief=tk.SOLID)
         self.title = str(title)
         self._photo = None
+        self._source_photo = None
+        self.zoom_scale = 1.0
+        self.pulse_zoom_scale = 1.0
+        self.pulse_zoom_center_ms = None
         self.overlay_channels = []
         self.overlay_start_ms = 0.0
         self.overlay_end_ms = 1.0
         self.overlay_cursor_ms = 0.0
+        self._pulse_box = None
+        self._zoom_callback = None
         self.header = tk.Label(self, text=self.title, bg="#111827", fg="#e5e7eb", anchor="w", padx=10, pady=5)
         self.header.pack(side=tk.TOP, fill=tk.X)
         self.canvas = tk.Canvas(
@@ -22,31 +28,50 @@ class VideoSlotViewer(tk.Frame):
         )
         self.canvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=8, pady=(0, 8))
         self.canvas.bind("<Configure>", lambda _event: self._redraw())
+        self.canvas.bind("<MouseWheel>", self._on_mouse_wheel)
+        self.canvas.bind("<Button-4>", self._on_mouse_wheel)
+        self.canvas.bind("<Button-5>", self._on_mouse_wheel)
         self._placeholder_text = f"{self.title}\nNo video loaded"
 
     def show_placeholder(self, text=None):
         self._photo = None
+        self._source_photo = None
         self._placeholder_text = str(text or f"{self.title}\nNo video loaded")
         self._redraw()
 
     def show_frame(self, photo_image):
+        self._source_photo = photo_image
         self._photo = photo_image
         if photo_image is None:
             self.show_placeholder()
             return
         self._redraw()
 
-    def set_pulse_overlay(self, channels, start_ms, end_ms, cursor_ms):
+    def set_pulse_overlay(self, channels, start_ms, end_ms, cursor_ms, zoom_scale=None, zoom_center_ms=None):
         self.overlay_channels = [dict(item) for item in list(channels or [])[:3]]
         self.overlay_start_ms = float(start_ms or 0.0)
         self.overlay_end_ms = max(self.overlay_start_ms + 1.0, float(end_ms or 1.0))
         self.overlay_cursor_ms = float(cursor_ms or 0.0)
+        if zoom_scale is not None:
+            self.pulse_zoom_scale = max(1.0, float(zoom_scale or 1.0))
+        if zoom_center_ms is not None:
+            self.pulse_zoom_center_ms = float(zoom_center_ms)
+        self._redraw()
+
+    def set_zoom_callback(self, callback):
+        self._zoom_callback = callback
+
+    def reset_zoom(self):
+        self.zoom_scale = 1.0
+        self.pulse_zoom_scale = 1.0
+        self.pulse_zoom_center_ms = None
         self._redraw()
 
     def image_size(self):
+        scale = max(1.0, float(self.zoom_scale or 1.0))
         return (
-            max(320, int(self.canvas.winfo_width() or 640)),
-            max(240, int(self.canvas.winfo_height() or 360)),
+            max(320, int((self.canvas.winfo_width() or 640) * scale)),
+            max(240, int((self.canvas.winfo_height() or 360) * scale)),
         )
 
     def _redraw(self):
@@ -73,18 +98,20 @@ class VideoSlotViewer(tk.Frame):
     def _draw_pulse_overlay(self, width, height):
         if not self.overlay_channels:
             return
-        left = 18
-        right = max(left + 1, width - 18)
+        left = 8
+        right = max(left + 1, width - 8)
         bottom = max(42, height - 16)
         top = max(10, bottom - max(56, int(height * 0.22)))
+        self._pulse_box = (left, top, right, bottom)
         canvas = self.canvas
         canvas.create_rectangle(left, top, right, bottom, fill="#020617", outline="#38bdf8", stipple="gray50")
         canvas.create_line(left, bottom, right, bottom, fill="#38bdf8", width=1)
         colors = ("#22d3ee", "#f97316", "#a3e635")
 
         def x_for_time(value):
-            span = max(1.0, self.overlay_end_ms - self.overlay_start_ms)
-            ratio = max(0.0, min((float(value) - self.overlay_start_ms) / span, 1.0))
+            view_start, view_end = self._pulse_view_range()
+            span = max(1.0, view_end - view_start)
+            ratio = max(0.0, min((float(value) - view_start) / span, 1.0))
             return left + ratio * (right - left)
 
         for channel_index, item in enumerate(self.overlay_channels):
@@ -105,7 +132,8 @@ class VideoSlotViewer(tk.Frame):
                     v = float(v)
                 except (TypeError, ValueError):
                     continue
-                if self.overlay_start_ms <= t <= self.overlay_end_ms:
+                view_start, view_end = self._pulse_view_range()
+                if view_start <= t <= view_end:
                     pairs.append((t, v))
             if len(pairs) <= 1:
                 continue
@@ -124,24 +152,46 @@ class VideoSlotViewer(tk.Frame):
 
         cursor_x = x_for_time(self.overlay_cursor_ms)
         canvas.create_line(cursor_x, top - 5, cursor_x, bottom + 5, fill="#f8fafc", width=2)
-        self._draw_overlay_legend(width, colors)
+        self._draw_overlay_legend(left, right, top, colors)
 
-    def _draw_overlay_legend(self, width, colors):
+    def _pulse_view_range(self):
+        total_start = self.overlay_start_ms
+        total_end = self.overlay_end_ms
+        total_span = max(1.0, total_end - total_start)
+        scale = max(1.0, float(self.pulse_zoom_scale or 1.0))
+        view_span = max(1.0, total_span / scale)
+        center = self.pulse_zoom_center_ms
+        if center is None:
+            center = self.overlay_cursor_ms
+        center = max(total_start, min(float(center), total_end))
+        start = center - view_span / 2.0
+        end = center + view_span / 2.0
+        if start < total_start:
+            end += total_start - start
+            start = total_start
+        if end > total_end:
+            start -= end - total_end
+            end = total_end
+        start = max(total_start, start)
+        end = min(total_end, max(start + 1.0, end))
+        return start, end
+
+    def _draw_overlay_legend(self, left, right, top, colors):
         if not self.overlay_channels:
             return
         canvas = self.canvas
         labels = [self._legend_label(item) for item in self.overlay_channels]
-        legend_width = min(max(150, max(len(label) for label in labels) * 7 + 34), max(150, width - 36))
+        overlay_width = max(1, right - left)
+        legend_width = min(max(150, max(len(label) for label in labels) * 7 + 18), max(150, overlay_width - 12))
         line_height = 18
         legend_height = 10 + line_height * len(labels)
-        left = max(18, width - legend_width - 18)
-        top = 18
-        canvas.create_rectangle(left, top, left + legend_width, top + legend_height, fill="#020617", outline="#334155", stipple="gray25")
+        legend_left = max(left + 6, right - legend_width - 6)
+        legend_top = top + 6
+        canvas.create_rectangle(legend_left, legend_top, legend_left + legend_width, legend_top + legend_height, fill="#020617", outline="#334155", stipple="gray25")
         for index, label in enumerate(labels):
-            y = top + 9 + index * line_height
+            y = legend_top + 9 + index * line_height
             color = colors[index % len(colors)]
-            canvas.create_line(left + 10, y, left + 24, y, fill=color, width=3)
-            canvas.create_text(left + 30, y, text=label, anchor="w", fill=color, font=("Arial", 8, "bold"))
+            canvas.create_text(legend_left + 9, y, text=label, anchor="w", fill=color, font=("Arial", 8, "bold"))
 
     def _legend_label(self, item):
         item = dict(item or {})
@@ -152,7 +202,43 @@ class VideoSlotViewer(tk.Frame):
             value_text = f"{float(value):.4g}"
         except (TypeError, ValueError):
             value_text = "-"
-        return f"{label} {value_text} [{unit or '-'}]"
+        return f"{label}  {value_text} [{unit or '-'}]"
+
+    def _on_mouse_wheel(self, event):
+        direction = 1
+        if getattr(event, "num", None) == 5 or getattr(event, "delta", 0) < 0:
+            direction = -1
+        pulse_hit = self._is_inside_pulse_box(event.x, event.y)
+        if pulse_hit:
+            self._zoom_pulse(direction, event.x)
+        else:
+            self._zoom_video(direction)
+        return "break"
+
+    def _is_inside_pulse_box(self, x, y):
+        if self._pulse_box is None:
+            return False
+        left, top, right, bottom = self._pulse_box
+        return left <= x <= right and top <= y <= bottom
+
+    def _zoom_video(self, direction):
+        factor = 1.12 if direction > 0 else 1.0 / 1.12
+        self.zoom_scale = max(1.0, min(6.0, self.zoom_scale * factor))
+        if callable(self._zoom_callback):
+            self._zoom_callback(self.pulse_zoom_scale, self.pulse_zoom_center_ms)
+        self._redraw()
+
+    def _zoom_pulse(self, direction, x):
+        factor = 1.2 if direction > 0 else 1.0 / 1.2
+        self.pulse_zoom_scale = max(1.0, min(50.0, self.pulse_zoom_scale * factor))
+        if self._pulse_box is not None:
+            left, _top, right, _bottom = self._pulse_box
+            ratio = max(0.0, min((float(x) - left) / max(1.0, right - left), 1.0))
+            view_start, view_end = self._pulse_view_range()
+            self.pulse_zoom_center_ms = view_start + ratio * (view_end - view_start)
+        if callable(self._zoom_callback):
+            self._zoom_callback(self.pulse_zoom_scale, self.pulse_zoom_center_ms)
+        self._redraw()
 
 
 class KeyframeTimeline(tk.Frame):

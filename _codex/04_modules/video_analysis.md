@@ -36,6 +36,10 @@
 - overlay 우측 상단에 pulse channel ISO code legend를 curve 색상과 같은 색으로 표시한다.
 - overlay legend는 현재 cursor 지점의 channel value와 unit을 `ISOCODE value [unit]` 형식으로 표시한다.
 - 별도 Pulse Overlay 목록 영역은 제거했고, pulse는 video overlay에만 표시한다.
+- mouse wheel:
+  - cursor가 video 영역에 있으면 video image zoom
+  - cursor가 pulse overlay box 안에 있으면 pulse time-axis zoom
+  - pan은 아직 구현하지 않는다.
 
 ## Placeholder / extension points
 - Pulse overlay-on-video는 아직 분리 Pulse 영역으로만 구현되어 있다.

@@ -16,6 +16,7 @@
 - pulse overlay 우측 상단에 channel ISO code legend를 curve 색상과 동일하게 표시한다.
 - overlay legend에 현재 cursor 지점의 channel value/unit을 표시하고, 별도 Pulse Overlay 목록 영역을 제거했다.
 - video overlay pulse curve 두께를 낮춰 시야 방해를 줄였다.
+- mouse wheel zoom을 추가했다. cursor가 video 영역이면 video zoom, pulse overlay box 안이면 pulse time-axis zoom으로 분기한다. pan은 제외했다.
 
 ## Files
 - `app/shell.py`

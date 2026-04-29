@@ -89,6 +89,8 @@ class VideoAnalysisPage(tk.Frame):
         self.video_left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(8, 4), pady=8)
         self.video_right = VideoSlotViewer(video_box, "VIDEO 2")
         self.video_right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(4, 8), pady=8)
+        self.video_left.set_zoom_callback(lambda _scale=None, _center=None: self._schedule_refresh())
+        self.video_right.set_zoom_callback(lambda _scale=None, _center=None: self._schedule_refresh())
 
         self.pulse_timeline = PulseTimeline(outer)
 
@@ -167,6 +169,8 @@ class VideoAnalysisPage(tk.Frame):
         self.captures.extend(new_captures)
         self.video_infos.extend(new_infos)
         self._frame_cache.clear()
+        self.video_left.reset_zoom()
+        self.video_right.reset_zoom()
         master_fps = float(self.video_infos[0]["fps"])
         mismatched = [info for info in self.video_infos[1:] if abs(float(info["fps"]) - master_fps) > 0.01]
         if mismatched:
@@ -190,6 +194,8 @@ class VideoAnalysisPage(tk.Frame):
         self.captures.pop(index)
         self.video_infos.pop(index)
         self._frame_cache.clear()
+        self.video_left.reset_zoom()
+        self.video_right.reset_zoom()
         if self.video_infos:
             master_fps = float(self.video_infos[0]["fps"])
             frame_count = min(int(info["frame_count"]) for info in self.video_infos)
@@ -549,6 +555,8 @@ class VideoAnalysisPage(tk.Frame):
         self.state = VideoAnalysisState()
         self.video_left.show_placeholder()
         self.video_right.show_placeholder()
+        self.video_left.reset_zoom()
+        self.video_right.reset_zoom()
         self.pulse_timeline.set_channels([])
         for viewer in (self.video_left, self.video_right):
             viewer.set_pulse_overlay([], 0.0, 1.0, 0.0)
