@@ -151,7 +151,7 @@ class VideoAnalysisPage(tk.Frame):
                 messagebox.showwarning("VIDEO ANALYSIS", f"프레임 정보를 읽을 수 없습니다.\n{path}")
                 capture.release()
                 continue
-            duration_ms = (max(0, frame_count - 1) / fps) * 1000.0
+            duration_ms = float(max(0, frame_count - 1))
             new_captures.append(capture)
             new_infos.append({"path": str(path), "fps": fps, "frame_count": frame_count, "duration_ms": duration_ms})
 
@@ -203,13 +203,14 @@ class VideoAnalysisPage(tk.Frame):
     def adjust_sync(self):
         value = simpledialog.askinteger(
             "Sync adjust",
-            "sync_frame_offset 값을 입력하세요. 예: -30",
+            "동영상 시작 frame offset을 입력하세요. 예: -50\n-50이면 raw frame 50을 test T0(0ms)으로 맞춥니다.",
             parent=self,
             initialvalue=int(self.state.sync_frame_offset),
         )
         if value is None:
             return
         self.state.set_sync_offset(value)
+        self.state.move_to_synced_zero()
         self._refresh_all()
 
     def prev_frame(self):

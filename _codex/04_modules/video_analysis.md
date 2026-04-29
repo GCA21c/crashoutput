@@ -15,12 +15,14 @@
 - 동영상은 최대 2개까지 로드한다.
 - Reset 버튼으로 동영상, pulse channel, sync/keyframe 상태를 초기화한다.
 - OpenCV `VideoCapture`로 현재 frame만 seek/read 한다.
-- 두 영상은 첫 번째 영상 fps를 master로 사용한다.
-- fps가 다르면 사용자 경고를 띄우고, frame 계산은 첫 번째 영상 fps 기준으로 진행한다.
+- 두 영상은 첫 번째 영상 fps를 master metadata로 사용한다.
+- fps가 다르면 사용자 경고를 띄운다.
+- sync/pulse matching 기준은 fps 환산이 아니라 `1 video frame = 1 ms`이다.
 - dataset channel은 기존 viewer의 `df`와 `time_column`을 참조한다.
 - Pulse channel은 최대 3개까지 선택한다.
 - `sync_frame_offset`은 frame 단위이며 음수 값을 허용한다.
 - 표시 frame/time은 `raw_frame_index + sync_frame_offset` 기준이다.
+- 예: offset `-50`이면 raw frame 50을 test T0 / 0ms로 맞추고, sync adjust 직후 raw frame 50으로 이동한다.
 
 ## Placeholder / extension points
 - Pulse overlay-on-video는 아직 분리 Pulse 영역으로만 구현되어 있다.

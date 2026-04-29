@@ -42,17 +42,13 @@ class VideoAnalysisState:
 
     @property
     def synced_time_ms(self) -> float:
-        fps = float(self.fps or 1000.0)
-        if fps <= 0.0:
-            fps = 1000.0
-        return (float(self.synced_frame) / fps) * 1000.0
+        # Video analysis sync is frame-based: high-speed video uses 1 frame = 1 ms.
+        # fps remains metadata/playback information, not the pulse matching unit.
+        return float(self.synced_frame)
 
     @property
     def duration_ms(self) -> float:
-        fps = float(self.fps or 1000.0)
-        if fps <= 0.0:
-            fps = 1000.0
-        return (float(max(0, self.frame_count - 1)) / fps) * 1000.0
+        return float(max(0, self.frame_count - 1))
 
     def set_frame(self, frame_index: int) -> None:
         self.current_raw_frame = clamp_frame(frame_index, self.frame_count)
@@ -63,10 +59,15 @@ class VideoAnalysisState:
     def set_sync_offset(self, offset: int) -> None:
         self.sync_frame_offset = int(offset or 0)
 
+    def move_to_synced_zero(self) -> None:
+        if int(self.sync_frame_offset) < 0:
+            self.set_frame(abs(int(self.sync_frame_offset)))
+        else:
+            self.set_frame(0)
+
 
 def clamp_frame(frame_index: int, frame_count: int) -> int:
     count = int(frame_count or 0)
     if count <= 0:
         return 0
     return max(0, min(int(frame_index or 0), count - 1))
-
