@@ -13,7 +13,7 @@
 
 ## Current implementation
 - 동영상은 최대 2개까지 로드한다.
-- Reset 버튼으로 동영상, pulse channel, sync/keyframe 상태를 초기화한다.
+- Reset 버튼은 Yes/No 확인 후 동영상, pulse channel, sync/keyframe 상태를 초기화한다.
 - OpenCV `VideoCapture`로 현재 frame만 seek/read 한다.
 - 두 영상은 첫 번째 영상 fps를 master metadata로 사용한다.
 - fps가 다르면 사용자 경고를 띄운다.
@@ -36,6 +36,13 @@
 - overlay 우측 상단에 pulse channel ISO code legend를 curve 색상과 같은 색으로 표시한다.
 - overlay legend는 현재 cursor 지점의 channel value와 unit을 `ISOCODE value [unit]` 형식으로 표시한다.
 - 별도 Pulse Overlay 목록 영역은 제거했고, pulse는 video overlay에만 표시한다.
+- 하단 안내문구 우측에 `Pulse View 1` / `Pulse View 2` 선택 버튼을 둔다.
+- `Pulse View 1`은 semi-transparent pulse box와 내부 grid line을 보여주는 graph-box 스타일이다.
+- `Pulse View 2`는 time/legend background를 더 또렷하게 표시하는 readability 우선 스타일이다.
+- pulse overlay layer 규칙:
+  - `pulse_bg`, `pulse_grid`는 항상 뒤로 내린다.
+  - `pulse_fg`, `pulse_legend_text`는 항상 앞으로 올린다.
+  - pulse curve, time text, T0 line, current cursor, legend text는 background/stipple에 가려지면 안 된다.
 - mouse wheel:
   - cursor가 video 영역에 있으면 video image zoom
   - cursor가 pulse overlay box 안에 있으면 pulse time-axis zoom
@@ -44,10 +51,37 @@
   - 확대된 pulse overlay box 안을 drag 하면 pulse time-window pan
 
 ## Placeholder / extension points
-- Pulse overlay-on-video는 아직 분리 Pulse 영역으로만 구현되어 있다.
+- Pulse overlay-on-video는 현재 video canvas 하단 overlay로 구현되어 있고, 필요하면 향후 완전 overlay/opacity control panel로 확장한다.
 - Key frame 영역은 duration bar, current marker, keyframe placeholder 구조만 있다.
 - keyframe/event tagging 저장 구조는 `VideoAnalysisState.keyframes`를 확장한다.
 - 저장/복원은 아직 연결하지 않았고, 필요 시 기존 metadata/report cache 패턴에 맞춰 payload화한다.
+
+## Next optimization work
+- Frame decode/cache 최적화:
+  - 현재는 `VideoCapture.set(CAP_PROP_POS_FRAMES)` 기반 seek/read 구조다.
+  - 키보드 연속 이동, play, timeline drag가 더 부드러워지려면 주변 frame prefetch cache 또는 worker thread decode queue를 검토한다.
+  - 단, Tk widget 업데이트는 main thread에서만 수행한다.
+- Playback responsiveness:
+  - play loop와 redraw loop를 분리해서 frame read 지연이 UI event loop를 막지 않게 한다.
+  - video frame image update와 pulse cursor update를 가능한 한 분리한다.
+- Pulse rendering 최적화:
+  - channel 추가/zoom/pan 때만 pulse curve points를 재계산하고, frame 이동 때는 current cursor/time/legend value만 갱신하는 방향으로 분리한다.
+  - 큰 DAT channel에서는 downsampling/window sampling을 view range 기준으로 캐시한다.
+- Video zoom/pan 품질:
+  - 현재 zoom은 viewer canvas 크기 기준 image thumbnail을 다시 만드는 방식이다.
+  - 고해상도 영상에서 더 부드럽게 하려면 raw frame crop/resize 방식 또는 cached resized levels를 검토한다.
+- Sync UX:
+  - offset input 외에 T0 jump, current frame set as T0, offset +/- step 버튼을 추가할 수 있다.
+  - offset은 계속 `1 frame = 1 ms` 기준을 유지한다.
+- Keyframe/event tagging:
+  - `VideoAnalysisState.keyframes`를 event object list로 확장한다.
+  - 예: `{time_ms, raw_frame, label, note, color}`.
+- Persistence:
+  - Video path, sync offset, selected channels, pulse view mode, keyframes는 나중에 project/session payload에 저장 가능하다.
+  - 동영상 binary 자체는 저장하지 않고 path/reference만 저장하는 방향이 안전하다.
+- Background decode risk:
+  - OpenCV capture object는 thread-safety가 제한적일 수 있으므로 slot별 worker/capture ownership을 명확히 해야 한다.
+  - worker 도입 전에는 cancel/close/reset 시 capture release와 queue clear 순서를 먼저 설계한다.
 
 ## Dependency note
 - `cv2`가 없으면 앱 import는 깨지지 않고, Video Load 시 OpenCV 설치 안내를 표시한다.
