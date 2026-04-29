@@ -19,9 +19,9 @@
 - mouse wheel zoom을 추가했다. cursor가 video 영역이면 video zoom, pulse overlay box 안이면 pulse time-axis zoom으로 분기한다. pan은 제외했다.
 - 확대 상태에서 drag pan을 추가했다. video 영역 drag는 image pan, pulse overlay box drag는 pulse time-window pan으로 동작한다.
 - Reset 버튼은 Yes/No 확인 팝업을 거친 뒤 초기화한다.
-- pulse overlay background, grid, foreground layer tag를 분리했다. pulse line/time/legend/T0/current cursor는 항상 background보다 위에 표시한다.
+- pulse overlay background와 foreground layer tag를 분리했다. pulse line/time/legend/T0/current cursor는 항상 background보다 위에 표시한다.
 - 하단 안내문구 우측에 `Pulse View 1` / `Pulse View 2` 선택 버튼을 추가했다.
-- `Pulse View 1`은 반투명 pulse box와 내부 grid line이 있는 graph-box 스타일이고, `Pulse View 2`는 time/legend readability를 강화한 스타일이다.
+- `Pulse View 1`은 4면 outline이 모두 있는 반투명 pulse box 스타일이고, `Pulse View 2`는 pulse box background 없이 하단 line만 표시하는 readability 강화 스타일이다.
 - 다음 최적화 방향은 `_codex/04_modules/video_analysis.md`의 `Next optimization work`에 정리했다.
 
 ## Files

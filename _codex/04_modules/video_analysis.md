@@ -37,10 +37,10 @@
 - overlay legend는 현재 cursor 지점의 channel value와 unit을 `ISOCODE value [unit]` 형식으로 표시한다.
 - 별도 Pulse Overlay 목록 영역은 제거했고, pulse는 video overlay에만 표시한다.
 - 하단 안내문구 우측에 `Pulse View 1` / `Pulse View 2` 선택 버튼을 둔다.
-- `Pulse View 1`은 semi-transparent pulse box와 내부 grid line을 보여주는 graph-box 스타일이다.
-- `Pulse View 2`는 time/legend background를 더 또렷하게 표시하는 readability 우선 스타일이다.
+- `Pulse View 1`은 4면 outline이 모두 있는 semi-transparent pulse box와 semi-transparent legend background를 쓰는 graph-box 스타일이다.
+- `Pulse View 2`는 pulse box background 없이 하단 line만 표시하고, time/legend는 opaque background를 쓰는 readability 우선 스타일이다.
 - pulse overlay layer 규칙:
-  - `pulse_bg`, `pulse_grid`는 항상 뒤로 내린다.
+  - pulse box/background는 video 위, pulse line/text 아래에 먼저 그린다.
   - `pulse_fg`, `pulse_legend_text`는 항상 앞으로 올린다.
   - pulse curve, time text, T0 line, current cursor, legend text는 background/stipple에 가려지면 안 된다.
 - mouse wheel:
