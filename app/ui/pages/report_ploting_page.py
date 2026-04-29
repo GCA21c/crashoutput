@@ -26,22 +26,13 @@ PAGE_TITLE = "REPORT - PLOTTING"
 class _PptExportOverlay:
     def __init__(self, root):
         self.root = root
-        self.window = tk.Toplevel(root)
-        self.window.withdraw()
-        self.window.overrideredirect(True)
-        self.window.transient(root)
-        self.window.configure(bg="#20242a")
-        try:
-            self.window.attributes("-topmost", True)
-            self.window.attributes("-alpha", 0.96)
-        except Exception:
-            pass
+        self.frame = tk.Frame(root, bg="#20242a", bd=0)
 
         self.message_var = tk.StringVar(value="PPT export 준비 중...")
         self.detail_var = tk.StringVar(value="프로그램이 멈춘 것이 아니니 잠시 기다려 주세요.")
         self.progress_var = tk.DoubleVar(value=0.0)
 
-        panel = tk.Frame(self.window, bg="#ffffff", bd=1, relief=tk.SOLID)
+        panel = tk.Frame(self.frame, bg="#ffffff", bd=1, relief=tk.SOLID)
         panel.place(relx=0.5, rely=0.5, anchor="center", width=560, height=170)
         tk.Label(
             panel,
@@ -70,14 +61,14 @@ class _PptExportOverlay:
         self.progress.pack(fill=tk.X, padx=24)
 
     def show(self):
-        self._sync_geometry()
-        self.window.deiconify()
-        self.window.lift()
+        self.frame.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self.frame.lift()
         try:
-            self.window.grab_set()
+            self.frame.grab_set()
         except Exception:
             pass
-        self.window.update_idletasks()
+        self.root.update_idletasks()
+        self.root.update()
 
     def update(self, current, total, message):
         total = max(1, int(total or 1))
@@ -86,24 +77,17 @@ class _PptExportOverlay:
         self.progress_var.set(percent)
         self.message_var.set(str(message or "PPT export 진행 중..."))
         self.detail_var.set(f"{current} / {total} 단계 처리 중")
-        self._sync_geometry()
-        self.window.update_idletasks()
+        self.frame.lift()
+        self.root.update_idletasks()
+        self.root.update()
 
     def close(self):
         try:
-            self.window.grab_release()
+            self.frame.grab_release()
         except Exception:
             pass
-        self.window.destroy()
-
-    def _sync_geometry(self):
         try:
-            self.root.update_idletasks()
-            width = max(1, self.root.winfo_width())
-            height = max(1, self.root.winfo_height())
-            x = self.root.winfo_rootx()
-            y = self.root.winfo_rooty()
-            self.window.geometry(f"{width}x{height}+{x}+{y}")
+            self.frame.destroy()
         except Exception:
             pass
 

@@ -73,6 +73,7 @@ PLOTTING_GRAPH_TEXT_RULES = {
         "resultant_value_indent": "  ",
         "resultant_blank_between": False,
         "unit": "g",
+        "injury_header_leading_blank": True,
         "injury_multiline_value": True,
         "injury_lines": (
             {"type": "range", "label": "One Peak 3ms_Clip", "detail_key": "one_peak_3ms_detail", "unit": "g"},

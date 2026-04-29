@@ -730,6 +730,8 @@ def build_plotting_auto_text(item):
             lines.append("")
             lines.extend(_resultant_extrema_lines(rule.get("resultant_label") or "Resultant", rule.get("resultant_key") or "resultant", rule.get("unit") or "g", context, rule))
         if template == "acc_axes_then_injuries":
+            if bool(rule.get("injury_header_leading_blank", False)):
+                lines.append("")
             lines.append("- Injuries -")
             for line_rule in tuple(rule.get("injury_lines") or ()):
                 if rule.get("injury_multiline_value"):

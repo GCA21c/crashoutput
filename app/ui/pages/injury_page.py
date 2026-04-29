@@ -3042,20 +3042,61 @@ class InjuryPage(tk.Frame):
         resultant = np.asarray(bundle.get('resultant_g', []), dtype=float)
         valid, t_plot, v_plot = self._time_value_valid_mask_ms(t, resultant)
         if np.any(valid):
-            self.ax.plot(t_plot[valid], v_plot[valid], linewidth=1.6, label='HEAD Resultant')
-        for hic_key, color, label in (
-            ('hic15', '#fca5a5', 'HIC15 구간'),
-            ('hic36', '#87ceeb', 'HIC36 구간'),
-        ):
-            info = bundle.get(hic_key)
+            self.ax.plot(t_plot[valid], v_plot[valid], linewidth=1.6, label='HEAD Resultant', zorder=3)
+
+        hic15 = bundle.get('hic15')
+        hic36 = bundle.get('hic36')
+
+        def _span_ms(info):
             if not info:
-                continue
+                return None
+            start = info.get('start_time')
+            end = info.get('end_time')
+            if start is None or end is None:
+                return None
+            start_ms = float(start) * 1000.0
+            end_ms = float(end) * 1000.0
+            if end_ms <= start_ms:
+                return None
+            return start_ms, end_ms
+
+        def _subtract_span(base_span, cut_span):
+            if base_span is None:
+                return []
+            if cut_span is None:
+                return [base_span]
+            base_start, base_end = base_span
+            cut_start, cut_end = cut_span
+            if cut_end <= base_start or cut_start >= base_end:
+                return [base_span]
+            segments = []
+            if cut_start > base_start:
+                segments.append((base_start, min(cut_start, base_end)))
+            if cut_end < base_end:
+                segments.append((max(cut_end, base_start), base_end))
+            return [(start, end) for start, end in segments if end > start]
+
+        hic15_span = _span_ms(hic15)
+        hic36_span = _span_ms(hic36)
+        label_used = False
+        for start_ms, end_ms in _subtract_span(hic36_span, hic15_span):
             self.ax.axvspan(
-                info['start_time'] * 1000.0,
-                info['end_time'] * 1000.0,
+                start_ms,
+                end_ms,
                 alpha=0.22,
-                color=color,
-                label=label,
+                color='#87ceeb',
+                label=None if label_used else 'HIC36 구간',
+                zorder=0.2,
+            )
+            label_used = True
+        if hic15_span is not None:
+            self.ax.axvspan(
+                hic15_span[0],
+                hic15_span[1],
+                alpha=0.22,
+                color='#fca5a5',
+                label='HIC15 구간',
+                zorder=0.3,
             )
         clip_value = bundle.get('clip3')
         if clip_value is not None:
@@ -3065,6 +3106,7 @@ class InjuryPage(tk.Frame):
                 linewidth=1.0,
                 color='#7c3aed',
                 label=f'One Peak 3ms_Clip = {fmt_value(clip_value, bundle.get("plot_unit", "g"), decimals=4)}',
+                zorder=3,
             )
         self.ax.set_title(self._head_graph_title(slot, 'head_resultant'))
         self.ax.set_xlabel(self._x_axis_label())
