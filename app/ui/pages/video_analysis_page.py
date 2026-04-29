@@ -71,10 +71,12 @@ class VideoAnalysisPage(tk.Frame):
 
         controls = tk.Frame(toolbar, bg=PAGE_BG)
         controls.pack(side=tk.LEFT, expand=True)
+        tk.Button(controls, text="|◀", command=self.first_frame, width=7).pack(side=tk.LEFT, padx=4)
         tk.Button(controls, text="◀◀", command=self.prev_frame, width=7).pack(side=tk.LEFT, padx=4)
         self.play_button = tk.Button(controls, text="▶", command=self.toggle_play, width=7)
         self.play_button.pack(side=tk.LEFT, padx=4)
         tk.Button(controls, text="▶▶", command=self.next_frame, width=7).pack(side=tk.LEFT, padx=4)
+        tk.Button(controls, text="▶|", command=self.last_frame, width=7).pack(side=tk.LEFT, padx=4)
 
         status = tk.Frame(toolbar, bg=PAGE_BG)
         status.pack(side=tk.RIGHT)
@@ -323,6 +325,16 @@ class VideoAnalysisPage(tk.Frame):
     def next_frame(self):
         self._step_frame(1)
 
+    def first_frame(self):
+        self.pause()
+        self.state.set_frame(0)
+        self._schedule_refresh()
+
+    def last_frame(self):
+        self.pause()
+        self.state.set_frame(max(0, self.state.frame_count - 1))
+        self._schedule_refresh()
+
     def toggle_play(self):
         if self.state.is_playing:
             self.pause()
@@ -333,7 +345,7 @@ class VideoAnalysisPage(tk.Frame):
         if not self.captures or self.state.frame_count <= 0:
             return
         self.state.is_playing = True
-        self.play_button.configure(text="Ⅱ")
+        self.play_button.configure(text="❚❚")
         self._schedule_play_step()
 
     def pause(self):

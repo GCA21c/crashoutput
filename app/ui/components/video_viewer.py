@@ -150,6 +150,15 @@ class VideoSlotViewer(tk.Frame):
             if len(points) >= 4:
                 canvas.create_line(*points, fill=colors[channel_index % len(colors)], width=1.35, smooth=True)
 
+        t0_x = x_for_time(0.0)
+        if left <= t0_x <= right:
+            dash_top = top + 2
+            dash_bottom = bottom - 2
+            canvas.create_line(t0_x, dash_top, t0_x, dash_bottom, fill="#ef4444", width=1.4, dash=(4, 3))
+
+        time_text = f"Time: {self.overlay_cursor_ms:.0f}ms"
+        canvas.create_text(left + 8, bottom - 8, text=time_text, anchor="sw", fill="#e5e7eb", font=("Arial", 8, "bold"))
+
         cursor_x = x_for_time(self.overlay_cursor_ms)
         canvas.create_line(cursor_x, top - 5, cursor_x, bottom + 5, fill="#f8fafc", width=2)
         self._draw_overlay_legend(left, right, top, colors)
