@@ -36,8 +36,8 @@ class VideoAnalysisPage(tk.Frame):
         super().__init__(parent, bg=PAGE_BG)
         self.workbench = workbench
         self.state = VideoAnalysisState()
-        self.captures = []
-        self.video_infos = []
+        self.captures = [None] * MAX_VIDEOS
+        self.video_infos = [None] * MAX_VIDEOS
         self.channel_data = []
         self.channel_select_var = tk.StringVar()
         self.pulse_view_mode_var = tk.IntVar(value=2)
@@ -151,7 +151,8 @@ class VideoAnalysisPage(tk.Frame):
         if cv2 is None:
             messagebox.showwarning("VIDEO ANALYSIS", "OpenCV(cv2)가 필요합니다. opencv-python 설치 후 다시 시도하세요.")
             return
-        if len(self.captures) >= MAX_VIDEOS:
+        free_slots = [index for index, capture in enumerate(self.captures) if capture is None]
+        if not free_slots:
             messagebox.showinfo("VIDEO ANALYSIS", "동영상은 최대 2개까지 로드할 수 있습니다.")
             return
         paths = filedialog.askopenfilenames(
@@ -164,13 +165,14 @@ class VideoAnalysisPage(tk.Frame):
         )
         if not paths:
             return
-        free_slots = MAX_VIDEOS - len(self.captures)
-        selected = list(paths)[:free_slots]
-        if len(paths) > free_slots:
+        ordered_paths = self._confirm_video_load_order(list(paths))
+        if not ordered_paths:
+            return
+        selected = ordered_paths[:len(free_slots)]
+        if len(ordered_paths) > len(free_slots):
             messagebox.showinfo("VIDEO ANALYSIS", "동영상은 최대 2개까지만 추가합니다.")
 
-        new_captures = []
-        new_infos = []
+        assigned = 0
         for path in selected:
             capture = cv2.VideoCapture(str(path))
             if not capture.isOpened():
@@ -184,46 +186,113 @@ class VideoAnalysisPage(tk.Frame):
                 capture.release()
                 continue
             duration_ms = float(max(0, frame_count - 1))
-            new_captures.append(capture)
-            new_infos.append({"path": str(path), "fps": fps, "frame_count": frame_count, "duration_ms": duration_ms})
+            slot_index = free_slots[assigned]
+            self.captures[slot_index] = capture
+            self.video_infos[slot_index] = {"path": str(path), "fps": fps, "frame_count": frame_count, "duration_ms": duration_ms}
+            assigned += 1
 
-        if not new_captures:
+        if assigned <= 0:
             return
 
-        self.captures.extend(new_captures)
-        self.video_infos.extend(new_infos)
         self._frame_cache.clear()
         self.video_left.reset_zoom()
         self.video_right.reset_zoom()
-        master_fps = float(self.video_infos[0]["fps"])
-        mismatched = [info for info in self.video_infos[1:] if abs(float(info["fps"]) - master_fps) > 0.01]
+        active_infos = self._active_video_infos()
+        master_fps = float(active_infos[0]["fps"])
+        mismatched = [info for info in active_infos[1:] if abs(float(info["fps"]) - master_fps) > 0.01]
         if mismatched:
             messagebox.showwarning(
                 "VIDEO ANALYSIS",
                 "동영상 FPS가 서로 다릅니다. 초기 구현에서는 첫 번째 영상 FPS를 master로 사용합니다.",
             )
-        frame_count = min(int(info["frame_count"]) for info in self.video_infos)
-        self.state.set_video_master([info["path"] for info in self.video_infos], master_fps, frame_count)
+        frame_count = min(int(info["frame_count"]) for info in active_infos)
+        self.state.set_video_master([info["path"] for info in active_infos], master_fps, frame_count)
         self._refresh_video_layout()
         self._refresh_all()
 
+    def _confirm_video_load_order(self, paths):
+        ordered = [str(path) for path in paths]
+        if len(ordered) <= 1:
+            return ordered
+
+        result = {"paths": None}
+        dialog = tk.Toplevel(self)
+        dialog.title("Video load order")
+        dialog.transient(self.winfo_toplevel())
+        dialog.grab_set()
+        dialog.resizable(False, False)
+        dialog.configure(bg=PAGE_BG)
+
+        tk.Label(
+            dialog,
+            text="로드 순서를 확인해. 위에서부터 빈 video slot에 들어간다.",
+            bg=PAGE_BG,
+            fg=TEXT_FG,
+            anchor="w",
+        ).pack(fill=tk.X, padx=12, pady=(12, 6))
+
+        listbox = tk.Listbox(dialog, width=64, height=min(6, len(ordered)), exportselection=False)
+        listbox.pack(fill=tk.BOTH, expand=True, padx=12, pady=(0, 8))
+
+        def refresh_listbox(selection=0):
+            listbox.delete(0, tk.END)
+            for path in ordered:
+                listbox.insert(tk.END, Path(path).name)
+            if ordered:
+                selection = max(0, min(int(selection or 0), len(ordered) - 1))
+                listbox.selection_set(selection)
+                listbox.activate(selection)
+
+        def selected_index():
+            selection = listbox.curselection()
+            return int(selection[0]) if selection else 0
+
+        def move(delta):
+            index = selected_index()
+            next_index = index + int(delta)
+            if next_index < 0 or next_index >= len(ordered):
+                return
+            ordered[index], ordered[next_index] = ordered[next_index], ordered[index]
+            refresh_listbox(next_index)
+
+        def accept():
+            result["paths"] = list(ordered)
+            dialog.destroy()
+
+        def cancel():
+            result["paths"] = None
+            dialog.destroy()
+
+        buttons = tk.Frame(dialog, bg=PAGE_BG)
+        buttons.pack(fill=tk.X, padx=12, pady=(0, 12))
+        tk.Button(buttons, text="Up", command=lambda: move(-1), width=10).pack(side=tk.LEFT)
+        tk.Button(buttons, text="Down", command=lambda: move(1), width=10).pack(side=tk.LEFT, padx=(6, 0))
+        tk.Button(buttons, text="Cancel", command=cancel, width=10).pack(side=tk.RIGHT)
+        tk.Button(buttons, text="OK", command=accept, width=10).pack(side=tk.RIGHT, padx=(0, 6))
+
+        refresh_listbox()
+        dialog.protocol("WM_DELETE_WINDOW", cancel)
+        self.wait_window(dialog)
+        return result["paths"]
+
     def clear_video(self, index):
-        if index < 0 or index >= len(self.captures):
+        if index < 0 or index >= MAX_VIDEOS or self.captures[index] is None:
             return
         self.pause()
         try:
             self.captures[index].release()
         except Exception:
             pass
-        self.captures.pop(index)
-        self.video_infos.pop(index)
+        self.captures[index] = None
+        self.video_infos[index] = None
         self._frame_cache.clear()
         self.video_left.reset_zoom()
         self.video_right.reset_zoom()
-        if self.video_infos:
-            master_fps = float(self.video_infos[0]["fps"])
-            frame_count = min(int(info["frame_count"]) for info in self.video_infos)
-            self.state.set_video_master([info["path"] for info in self.video_infos], master_fps, frame_count)
+        active_infos = self._active_video_infos()
+        if active_infos:
+            master_fps = float(active_infos[0]["fps"])
+            frame_count = min(int(info["frame_count"]) for info in active_infos)
+            self.state.set_video_master([info["path"] for info in active_infos], master_fps, frame_count)
         else:
             self.state.reset_videos()
         self._refresh_video_layout()
@@ -369,7 +438,7 @@ class VideoAnalysisPage(tk.Frame):
             self.play()
 
     def play(self):
-        if not self.captures or self.state.frame_count <= 0:
+        if not self._active_video_indices() or self.state.frame_count <= 0:
             return
         self.state.is_playing = True
         self.play_button.configure(text="❚❚")
@@ -438,11 +507,22 @@ class VideoAnalysisPage(tk.Frame):
         if current not in values:
             self.channel_select_var.set(values[0] if values else "")
 
+    def _active_video_infos(self):
+        return [info for info in self.video_infos if info is not None]
+
+    def _active_video_indices(self):
+        return [index for index, capture in enumerate(self.captures) if capture is not None]
+
     def _refresh_video_layout(self):
         self.video_left.pack_forget()
         self.video_right.pack_forget()
-        if len(self.captures) <= 1:
+        active_indices = self._active_video_indices()
+        if not active_indices or active_indices == [0]:
             self.video_left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=8, pady=8)
+            self._schedule_post_layout_refresh()
+            return
+        if active_indices == [1]:
+            self.video_right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=8, pady=8)
             self._schedule_post_layout_refresh()
             return
         self.video_left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(8, 4), pady=8)
@@ -560,7 +640,7 @@ class VideoAnalysisPage(tk.Frame):
     def _refresh_video_frames(self):
         viewers = (self.video_left, self.video_right)
         for index, viewer in enumerate(viewers):
-            if index >= len(self.captures):
+            if self.captures[index] is None:
                 viewer.show_placeholder()
                 continue
             frame = self._read_frame_cached(index, self.state.current_raw_frame)
@@ -581,7 +661,7 @@ class VideoAnalysisPage(tk.Frame):
         current = int(frame_index)
         keep = {
             (int(index), current + delta)
-            for index in range(len(self.captures))
+            for index in self._active_video_indices()
             for delta in range(-3, 4)
         }
         for cache_key in list(self._frame_cache.keys()):
@@ -591,7 +671,7 @@ class VideoAnalysisPage(tk.Frame):
 
     def _read_frame(self, index, frame_index):
         cv2 = _load_cv2()
-        if cv2 is None or index >= len(self.captures):
+        if cv2 is None or index < 0 or index >= MAX_VIDEOS or self.captures[index] is None:
             return None
         capture = self.captures[index]
         capture.set(cv2.CAP_PROP_POS_FRAMES, int(frame_index))
@@ -636,12 +716,14 @@ class VideoAnalysisPage(tk.Frame):
     def reset_session_state(self):
         self.pause()
         for capture in self.captures:
+            if capture is None:
+                continue
             try:
                 capture.release()
             except Exception:
                 pass
-        self.captures = []
-        self.video_infos = []
+        self.captures = [None] * MAX_VIDEOS
+        self.video_infos = [None] * MAX_VIDEOS
         self.channel_data = []
         self._frame_cache.clear()
         self.state = VideoAnalysisState()

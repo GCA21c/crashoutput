@@ -13,6 +13,8 @@
 
 ## Current implementation
 - 동영상은 최대 2개까지 로드한다.
+- video slot은 V1/V2 고정 슬롯으로 관리한다. V1을 clear해도 V2는 V1으로 당겨지지 않는다.
+- 다중 video 선택 후에는 load order 확인 창에서 Up/Down으로 V1/V2 투입 순서를 조정할 수 있다.
 - Reset 버튼은 Yes/No 확인 후 동영상, pulse channel, sync/keyframe 상태를 초기화한다.
 - OpenCV `VideoCapture`로 현재 frame만 seek/read 한다.
 - 두 영상은 첫 번째 영상 fps를 master metadata로 사용한다.
@@ -31,7 +33,7 @@
 - Pulse graph legend는 움직이지 않도록 우측 상단에 고정한다.
 - Pulse curve는 별도 큰 graph 영역 대신 video canvas 하단에 semi-transparent overlay로 표시한다.
 - `Clear V1`, `Clear V2`로 각 video slot을 개별 제거할 수 있다.
-- video가 1개만 로드된 경우 V2 영역을 숨기고 V1이 전체 video 영역을 사용한다.
+- video가 1개만 로드된 경우 해당 slot viewer만 전체 video 영역을 사용한다. 예: V1 clear 후 V2만 남으면 VIDEO 2가 단독 전체폭으로 표시된다.
 - channel add는 toolbar의 상시 combobox에서 channel을 선택한 뒤 `Add channel` 버튼으로 추가한다.
 - overlay 우측 상단에 pulse channel ISO code legend를 curve 색상과 같은 색으로 표시한다.
 - overlay legend는 현재 cursor 지점의 channel value와 unit을 `ISOCODE value [unit]` 형식으로 표시한다.
