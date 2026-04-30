@@ -1,4 +1,5 @@
 import tkinter as tk
+from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
 import numpy as np
@@ -115,7 +116,7 @@ class VideoAnalysisPage(tk.Frame):
         pulse_view_box = tk.Frame(footer, bg=PAGE_BG)
         pulse_view_box.pack(side=tk.RIGHT)
         tk.Label(pulse_view_box, text="Pulse", bg=PAGE_BG, fg=MUTED_FG).pack(side=tk.LEFT, padx=(0, 4))
-        for value, text in ((1, "View 1"), (2, "View 2")):
+        for value, text in ((1, "View 1"), (2, "View 2"), (3, "View 3")):
             tk.Radiobutton(
                 pulse_view_box,
                 text=text,
@@ -445,6 +446,7 @@ class VideoAnalysisPage(tk.Frame):
         return [index for index, capture in enumerate(self.captures) if capture is not None]
 
     def _refresh_video_layout(self):
+        self._refresh_video_titles()
         self.video_left.pack_forget()
         self.video_right.pack_forget()
         active_indices = self._active_video_indices()
@@ -459,6 +461,12 @@ class VideoAnalysisPage(tk.Frame):
         self.video_left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(8, 4), pady=8)
         self.video_right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(4, 8), pady=8)
         self._schedule_post_layout_refresh()
+
+    def _refresh_video_titles(self):
+        for index, viewer in enumerate((self.video_left, self.video_right)):
+            info = self.video_infos[index]
+            filename = Path(str(info.get("path", ""))).name if info else ""
+            viewer.set_title_suffix(filename)
 
     def _schedule_post_layout_refresh(self):
         if self._layout_refresh_after_id is not None:

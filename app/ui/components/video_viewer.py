@@ -19,6 +19,7 @@ class VideoSlotViewer(tk.Frame):
         self.overlay_end_ms = 1.0
         self.overlay_cursor_ms = 0.0
         self.pulse_view_mode = 2
+        self._pulse_sample_cache = {}
         self._pulse_box = None
         self._zoom_callback = None
         self._drag_mode = None
@@ -58,6 +59,11 @@ class VideoSlotViewer(tk.Frame):
             return
         self._redraw()
 
+    def set_title_suffix(self, suffix=None):
+        suffix_text = str(suffix or "").strip()
+        label = self.title if not suffix_text else f"{self.title} - {suffix_text}"
+        self.header.configure(text=label)
+
     def set_pulse_overlay(self, channels, start_ms, end_ms, cursor_ms, zoom_scale=None, zoom_center_ms=None):
         self.overlay_channels = [dict(item) for item in list(channels or [])[:3]]
         self.overlay_start_ms = float(start_ms or 0.0)
@@ -73,7 +79,8 @@ class VideoSlotViewer(tk.Frame):
         self._zoom_callback = callback
 
     def set_pulse_view_mode(self, mode):
-        next_mode = 1 if int(mode or 2) == 1 else 2
+        raw_mode = int(mode or 2)
+        next_mode = raw_mode if raw_mode in (1, 2, 3) else 2
         if self.pulse_view_mode == next_mode:
             return
         self.pulse_view_mode = next_mode
@@ -85,6 +92,7 @@ class VideoSlotViewer(tk.Frame):
         self.pan_y = 0.0
         self.pulse_zoom_scale = 1.0
         self.pulse_zoom_center_ms = None
+        self._pulse_sample_cache.clear()
         self._redraw()
 
     def image_size(self):
@@ -137,43 +145,30 @@ class VideoSlotViewer(tk.Frame):
             ratio = max(0.0, min((float(value) - view_start) / span, 1.0))
             return left + ratio * (right - left)
 
+        view_start, view_end = self._pulse_view_range()
+        channel_draw_cache = []
         for channel_index, item in enumerate(self.overlay_channels):
-            time_source = item.get("time_ms")
-            signal_source = item.get("values")
-            time_values = [] if time_source is None else list(time_source)
-            signal_values = [] if signal_source is None else list(signal_source)
-            n = min(len(time_values), len(signal_values))
-            if n <= 1:
-                continue
-            pairs = []
-            step = max(1, n // 900)
-            for idx in range(0, n, step):
-                t = time_values[idx]
-                v = signal_values[idx]
-                try:
-                    t = float(t)
-                    v = float(v)
-                except (TypeError, ValueError):
-                    continue
-                view_start, view_end = self._pulse_view_range()
-                if view_start <= t <= view_end:
-                    pairs.append((t, v))
+            pairs = self._sample_pulse_pairs(item, view_start, view_end)
             if len(pairs) <= 1:
+                channel_draw_cache.append(([], None, None, None))
                 continue
             values = [v for _t, v in pairs]
             v_min = min(values)
             v_max = max(values)
             v_span = max(1e-9, v_max - v_min)
+            draw_pairs = pairs
+            if self.pulse_view_mode == 3:
+                draw_pairs = [(t, v) for t, v in pairs if t <= self.overlay_cursor_ms]
             points = []
-            for t, v in pairs:
+            for t, v in draw_pairs:
                 x = x_for_time(t)
                 y_ratio = (v - v_min) / v_span
                 y = bottom - 6 - y_ratio * max(1, (bottom - top - 12))
                 points.extend((x, y))
             if len(points) >= 4:
                 canvas.create_line(*points, fill=colors[channel_index % len(colors)], width=1.40, smooth=True, tags=("pulse_curve", "pulse_fg"))
+            channel_draw_cache.append((pairs, v_min, v_span, colors[channel_index % len(colors)]))
 
-        view_start, view_end = self._pulse_view_range()
         for channel_index, item in enumerate(self.overlay_channels):
             try:
                 peak_time = float(item.get("peak_time_ms"))
@@ -181,16 +176,32 @@ class VideoSlotViewer(tk.Frame):
                 continue
             if not (view_start <= peak_time <= view_end):
                 continue
+            if self.pulse_view_mode == 3 and peak_time > self.overlay_cursor_ms:
+                continue
             peak_x = x_for_time(peak_time)
-            canvas.create_line(
-                peak_x,
-                top + 2,
-                peak_x,
-                bottom - 2,
-                fill=colors[channel_index % len(colors)],
-                width=1.2,
-                tags=("pulse_peak", "pulse_fg"),
-            )
+            if self.pulse_view_mode == 3:
+                try:
+                    peak_value = float(item.get("peak_value"))
+                except (TypeError, ValueError):
+                    continue
+                if channel_index >= len(channel_draw_cache):
+                    continue
+                _pairs, v_min, v_span, color = channel_draw_cache[channel_index]
+                if v_min is None or v_span is None:
+                    continue
+                y_ratio = (peak_value - v_min) / max(1e-9, v_span)
+                peak_y = bottom - 6 - y_ratio * max(1, (bottom - top - 12))
+                canvas.create_oval(peak_x - 3, peak_y - 3, peak_x + 3, peak_y + 3, fill=color, outline="", tags=("pulse_peak", "pulse_fg"))
+            else:
+                canvas.create_line(
+                    peak_x,
+                    top + 2,
+                    peak_x,
+                    bottom - 2,
+                    fill=colors[channel_index % len(colors)],
+                    width=1.2,
+                    tags=("pulse_peak", "pulse_fg"),
+                )
 
         t0_x = x_for_time(0.0)
         if left <= t0_x <= right:
@@ -199,7 +210,7 @@ class VideoSlotViewer(tk.Frame):
             canvas.create_line(t0_x, dash_top, t0_x, dash_bottom, fill="#ef4444", width=1.4, dash=(4, 3), tags=("pulse_fg",))
 
         time_text = f"Time: {self.overlay_cursor_ms:.0f}ms"
-        if self.pulse_view_mode == 2:
+        if self.pulse_view_mode in (2, 3):
             time_box_right = left + 88
             canvas.create_rectangle(left + 4, bottom - 23, time_box_right, bottom - 4, fill="#020617", outline="#334155", tags=("pulse_fg",))
             time_fill = "#f8fafc"
@@ -216,11 +227,45 @@ class VideoSlotViewer(tk.Frame):
         )
 
         cursor_x = x_for_time(self.overlay_cursor_ms)
-        canvas.create_line(cursor_x, top - 5, cursor_x, bottom + 5, fill="#00ff00", width=1, tags=("pulse_fg",))
+        if self.pulse_view_mode != 3:
+            canvas.create_line(cursor_x, top - 5, cursor_x, bottom + 5, fill="#00ff00", width=1, tags=("pulse_fg",))
         self._draw_overlay_legend(left, right, top, colors)
         canvas.tag_raise("pulse_fg")
         canvas.tag_raise("pulse_time_text")
         canvas.tag_raise("pulse_legend_text")
+
+    def _sample_pulse_pairs(self, item, view_start, view_end):
+        time_source = item.get("time_ms")
+        signal_source = item.get("values")
+        if time_source is None or signal_source is None:
+            return []
+        n = min(len(time_source), len(signal_source))
+        if n <= 1:
+            return []
+        key = (
+            id(time_source),
+            id(signal_source),
+            n,
+            round(float(view_start), 3),
+            round(float(view_end), 3),
+        )
+        cached = self._pulse_sample_cache.get(key)
+        if cached is not None:
+            return cached
+        step = max(1, n // 900)
+        pairs = []
+        for idx in range(0, n, step):
+            try:
+                t = float(time_source[idx])
+                v = float(signal_source[idx])
+            except (TypeError, ValueError, IndexError):
+                continue
+            if view_start <= t <= view_end:
+                pairs.append((t, v))
+        if len(self._pulse_sample_cache) > 48:
+            self._pulse_sample_cache.clear()
+        self._pulse_sample_cache[key] = pairs
+        return pairs
 
     def _pulse_view_range(self):
         total_start = self.overlay_start_ms

@@ -41,6 +41,8 @@
 - 하단 안내문구 우측에 `Pulse View 1` / `Pulse View 2` 선택 버튼을 둔다.
 - `Pulse View 1`은 4면 outline이 모두 있는 semi-transparent pulse box와 semi-transparent legend background를 쓰는 graph-box 스타일이다.
 - `Pulse View 2`는 pulse box background 없이 하단 line만 표시하고, time/legend는 opaque background를 쓰는 readability 우선 스타일이다.
+- `Pulse View 3`은 View 2 스타일을 기반으로 현재 video time까지의 pulse line만 누적 표시한다. frame cursor line은 표시하지 않고, peak가 지나간 뒤 같은 색상의 point marker로 표시한다.
+- `Pulse View 3`은 view range별 sampled pulse points를 cache해 frame 진행 중 전체 pulse data 재샘플링을 줄인다.
 - pulse overlay layer 규칙:
   - pulse box/background는 video 위, pulse line/text 아래에 먼저 그린다.
   - `pulse_fg`, `pulse_legend_text`는 항상 앞으로 올린다.
