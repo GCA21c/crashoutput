@@ -81,6 +81,7 @@
   - raw frame cache와 별도로 slot/frame/image size/zoom 기준 PhotoImage cache를 추가했다.
   - zoom 변경, layout resize, clear/reset/load 시 관련 cache를 무효화한다.
   - Tk PhotoImage 객체 생성은 여전히 main thread에서 수행한다.
+  - 수동 frame 이동/keyframe seek 후에는 표시 중인 video slot 기준 ±5 frame의 PhotoImage를 `after_idle`에서 1장씩 prebuild한다. 효과가 없거나 UI를 막으면 제거 후보로 본다.
 - Canvas redraw 최적화:
   - video background/image canvas item은 유지하고, frame 변경 시 `itemconfigure(image=...)`와 `coords(...)`로 갱신한다.
   - placeholder 전환은 잔상 방지를 위해 전체 delete를 유지한다.

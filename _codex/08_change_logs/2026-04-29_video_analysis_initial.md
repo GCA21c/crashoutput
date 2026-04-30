@@ -38,6 +38,7 @@
 - 재생 중에는 video/status/pulse/keyframe timeline을 즉시 갱신한다.
 - keyframe timeline drag는 cursor marker만 즉시 갱신하고, video seek는 33ms throttle로 마지막 drag 위치를 반영한다. drag release 시에는 최종 위치를 즉시 반영한다.
 - 수동 frame step 이동은 현재 frame 기준 ±20 raw frame, keyframe/first/last seek는 ±50 raw frame을 background prefetch로 준비한다. 재생 중 prefetch는 기존처럼 기본 OFF를 유지한다.
+- 수동 frame 이동/keyframe seek 후 표시 중인 video slot의 ±5 frame PhotoImage를 `after_idle`에서 1장씩 prebuild한다. 효과가 없거나 UI를 막으면 제거 후보로 본다.
 - 단독 video layout에서는 현재 보이는 viewer만 pulse overlay를 갱신하고, 숨겨진 viewer의 placeholder redraw를 피한다.
 - 다음 최적화 방향은 `_codex/04_modules/video_analysis.md`의 `Next optimization work`에 정리했다.
 

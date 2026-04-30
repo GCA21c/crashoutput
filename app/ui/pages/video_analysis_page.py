@@ -17,6 +17,7 @@ MAX_VIDEOS = 2
 MAX_CHANNELS = 3
 STEP_PREFETCH_RADIUS = 20
 SEEK_PREFETCH_RADIUS = 50
+PHOTO_PREBUILD_RADIUS = 5
 
 
 def _load_cv2():
@@ -56,6 +57,8 @@ class VideoAnalysisPage(tk.Frame):
         self._prefetch_enabled = False
         self._pulse_base_snapshot = []
         self._photo_cache = {}
+        self._photo_prebuild_queue = []
+        self._photo_prebuild_after_id = None
         self._capture_next_frames = [None] * MAX_VIDEOS
         self._playback_frame_accumulator = 0.0
         self._playback_ui_frame_counter = 0
@@ -226,6 +229,7 @@ class VideoAnalysisPage(tk.Frame):
 
         self._frame_cache.clear()
         self._photo_cache.clear()
+        self._cancel_photo_prebuild()
         self.video_left.reset_zoom()
         self.video_right.reset_zoom()
         active_infos = self._active_video_infos()
@@ -254,6 +258,7 @@ class VideoAnalysisPage(tk.Frame):
         self._frame_prefetcher.stop_slot(index)
         self._frame_cache.clear_slot(index)
         self._clear_photo_cache_slot(index)
+        self._cancel_photo_prebuild()
         self._capture_next_frames[index] = None
         self.video_left.reset_zoom()
         self.video_right.reset_zoom()
@@ -353,6 +358,7 @@ class VideoAnalysisPage(tk.Frame):
         self._reset_capture_positions()
         self._refresh_all()
         self._request_manual_frame_prefetch(SEEK_PREFETCH_RADIUS)
+        self._schedule_photo_prebuild(PHOTO_PREBUILD_RADIUS)
 
     def _cancel_pending_timeline_seek(self):
         if self._timeline_seek_after_id is not None:
@@ -371,6 +377,7 @@ class VideoAnalysisPage(tk.Frame):
         self._reset_capture_positions()
         self._schedule_refresh()
         self._request_manual_frame_prefetch(STEP_PREFETCH_RADIUS)
+        self._schedule_photo_prebuild(PHOTO_PREBUILD_RADIUS)
 
     def _start_key_hold(self, key_name, delta):
         if not self._is_active_page():
@@ -432,6 +439,7 @@ class VideoAnalysisPage(tk.Frame):
         self._reset_capture_positions()
         self._schedule_refresh()
         self._request_manual_frame_prefetch(SEEK_PREFETCH_RADIUS)
+        self._schedule_photo_prebuild(PHOTO_PREBUILD_RADIUS)
 
     def last_frame(self):
         self._cancel_pending_timeline_seek()
@@ -440,6 +448,7 @@ class VideoAnalysisPage(tk.Frame):
         self._reset_capture_positions()
         self._schedule_refresh()
         self._request_manual_frame_prefetch(SEEK_PREFETCH_RADIUS)
+        self._schedule_photo_prebuild(PHOTO_PREBUILD_RADIUS)
 
     def toggle_play(self):
         if self.state.is_playing:
@@ -740,7 +749,7 @@ class VideoAnalysisPage(tk.Frame):
         photo = self._frame_to_photo(frame, viewer, size=size)
         if photo is None:
             return None
-        if len(self._photo_cache) > 48:
+        if len(self._photo_cache) > 96:
             self._trim_photo_cache(int(frame_index))
         self._photo_cache[key] = photo
         return photo
@@ -750,7 +759,7 @@ class VideoAnalysisPage(tk.Frame):
         active_slots = set(self._active_video_indices())
         for key in list(self._photo_cache):
             slot, frame, _width, _height, _zoom = key
-            if slot not in active_slots or abs(int(frame) - center) > 4:
+            if slot not in active_slots or abs(int(frame) - center) > PHOTO_PREBUILD_RADIUS:
                 self._photo_cache.pop(key, None)
 
     def _clear_photo_cache_slot(self, slot_index):
@@ -761,7 +770,59 @@ class VideoAnalysisPage(tk.Frame):
 
     def _on_viewer_zoom_changed(self, slot_index):
         self._clear_photo_cache_slot(slot_index)
+        self._cancel_photo_prebuild()
         self._schedule_refresh()
+
+    def _schedule_photo_prebuild(self, radius):
+        self._cancel_photo_prebuild()
+        active_slots = self._active_video_indices()
+        if not active_slots or self.state.frame_count <= 0:
+            return
+        viewers = (self.video_left, self.video_right)
+        center = int(self.state.current_raw_frame)
+        frame_count = int(self.state.frame_count)
+        request_radius = max(0, int(radius or 0))
+        queue = []
+        offsets = [0]
+        for delta in range(1, request_radius + 1):
+            offsets.extend((delta, -delta))
+        for slot_index in active_slots:
+            viewer = viewers[slot_index]
+            if not viewer.winfo_ismapped():
+                continue
+            size = viewer.image_size()
+            zoom_key = round(float(viewer.zoom_scale or 1.0), 3)
+            for offset in offsets:
+                frame_index = center + offset
+                if frame_index < 0 or frame_index >= frame_count:
+                    continue
+                key = (int(slot_index), int(frame_index), int(size[0]), int(size[1]), zoom_key)
+                if key not in self._photo_cache:
+                    queue.append((slot_index, frame_index, viewer, size))
+        self._photo_prebuild_queue = queue
+        if self._photo_prebuild_queue:
+            self._photo_prebuild_after_id = self.after_idle(self._photo_prebuild_step)
+
+    def _photo_prebuild_step(self):
+        self._photo_prebuild_after_id = None
+        if not self._photo_prebuild_queue:
+            return
+        slot_index, frame_index, viewer, size = self._photo_prebuild_queue.pop(0)
+        if self.captures[slot_index] is not None and viewer.winfo_ismapped():
+            frame = self._frame_cache.get(slot_index, frame_index)
+            if frame is not None:
+                self._frame_to_photo_cached(slot_index, frame_index, frame, viewer)
+        if self._photo_prebuild_queue:
+            self._photo_prebuild_after_id = self.after_idle(self._photo_prebuild_step)
+
+    def _cancel_photo_prebuild(self):
+        if self._photo_prebuild_after_id is not None:
+            try:
+                self.after_cancel(self._photo_prebuild_after_id)
+            except Exception:
+                pass
+            self._photo_prebuild_after_id = None
+        self._photo_prebuild_queue = []
 
     def _request_frame_prefetch(self):
         active_slots = self._active_video_indices()
@@ -864,6 +925,7 @@ class VideoAnalysisPage(tk.Frame):
         self._frame_prefetcher.stop_all()
         self._frame_cache.clear()
         self._photo_cache.clear()
+        self._cancel_photo_prebuild()
         self._reset_capture_positions()
         self._playback_frame_accumulator = 0.0
         self._playback_ui_frame_counter = 0
