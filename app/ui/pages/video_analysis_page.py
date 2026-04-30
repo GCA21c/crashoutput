@@ -47,6 +47,7 @@ class VideoAnalysisPage(tk.Frame):
         self._layout_refresh_after_id = None
         self._play_after_id = None
         self._refresh_after_id = None
+        self._playback_refresh_after_id = None
         self._frame_cache = FrameCache(radius=4, max_items=40)
         self._frame_prefetcher = FramePrefetchManager(self._frame_cache, radius=8)
         self._prefetch_enabled = False
@@ -54,6 +55,7 @@ class VideoAnalysisPage(tk.Frame):
         self._photo_cache = {}
         self._capture_next_frames = [None] * MAX_VIDEOS
         self._playback_frame_accumulator = 0.0
+        self._playback_ui_frame_counter = 0
         self._held_key = None
         self._key_hold_after_id = None
         self._key_hold_started = False
@@ -383,6 +385,15 @@ class VideoAnalysisPage(tk.Frame):
         self._refresh_after_id = None
         self._refresh_all()
 
+    def _schedule_playback_refresh(self):
+        if self._playback_refresh_after_id is not None:
+            return
+        self._playback_refresh_after_id = self.after_idle(self._refresh_playback_view_scheduled)
+
+    def _refresh_playback_view_scheduled(self):
+        self._playback_refresh_after_id = None
+        self._refresh_playback_view()
+
     def prev_frame(self):
         self._step_frame(-1)
 
@@ -404,6 +415,7 @@ class VideoAnalysisPage(tk.Frame):
     def toggle_play(self):
         if self.state.is_playing:
             self.pause()
+            self._schedule_refresh()
         else:
             self.play()
 
@@ -411,6 +423,7 @@ class VideoAnalysisPage(tk.Frame):
         if not self._active_video_indices() or self.state.frame_count <= 0:
             return
         self._playback_frame_accumulator = 0.0
+        self._playback_ui_frame_counter = 0
         self.state.is_playing = True
         self.play_button.configure(text="❚❚")
         self._schedule_play_step()
@@ -424,8 +437,15 @@ class VideoAnalysisPage(tk.Frame):
             except Exception:
                 pass
             self._play_after_id = None
+        if self._playback_refresh_after_id is not None:
+            try:
+                self.after_cancel(self._playback_refresh_after_id)
+            except Exception:
+                pass
+            self._playback_refresh_after_id = None
         self._held_key = None
         self._playback_frame_accumulator = 0.0
+        self._playback_ui_frame_counter = 0
 
     def _schedule_play_step(self):
         if not self.state.is_playing:
@@ -468,9 +488,10 @@ class VideoAnalysisPage(tk.Frame):
         last_frame = max(0, self.state.frame_count - 1)
         if self.state.current_raw_frame >= last_frame:
             self.pause()
+            self._schedule_refresh()
             return
         self.state.step_frame(min(self._playback_frame_delta(), last_frame - int(self.state.current_raw_frame)))
-        self._schedule_refresh()
+        self._schedule_playback_refresh()
         self._schedule_play_step()
 
     def _on_space(self, event):
@@ -513,6 +534,14 @@ class VideoAnalysisPage(tk.Frame):
 
     def _active_video_indices(self):
         return [index for index, capture in enumerate(self.captures) if capture is not None]
+
+    def _visible_video_viewers(self):
+        active_indices = self._active_video_indices()
+        if active_indices == [1]:
+            return (self.video_right,)
+        if active_indices == [0, 1]:
+            return (self.video_left, self.video_right)
+        return (self.video_left,)
 
     def _refresh_video_layout(self):
         self._refresh_video_titles()
@@ -561,6 +590,16 @@ class VideoAnalysisPage(tk.Frame):
         self._refresh_pulse()
         self._refresh_keyframe()
 
+    def _refresh_playback_view(self):
+        self._playback_ui_frame_counter += 1
+        self._refresh_status()
+        if self._prefetch_enabled:
+            self._request_frame_prefetch()
+        self._refresh_video_frames()
+        self._refresh_pulse()
+        if self._playback_ui_frame_counter % 4 == 0:
+            self._refresh_keyframe()
+
     def _refresh_status(self):
         self.time_var.set(f"Time : {self.state.synced_time_ms:.1f}ms")
         self.frame_var.set(f"Frame : {self.state.synced_frame:04d}")
@@ -569,7 +608,7 @@ class VideoAnalysisPage(tk.Frame):
         start_ms, end_ms = self._timeline_range_ms()
         self.pulse_timeline.set_cursor(self.state.synced_time_ms, start_ms=start_ms, end_ms=end_ms)
         overlay_channels = self._overlay_channel_snapshot()
-        for viewer in (self.video_left, self.video_right):
+        for viewer in self._visible_video_viewers():
             viewer.set_pulse_view_mode(self.pulse_view_mode_var.get())
             viewer.set_pulse_overlay(overlay_channels, start_ms, end_ms, self.state.synced_time_ms)
 
@@ -660,7 +699,8 @@ class VideoAnalysisPage(tk.Frame):
         viewers = (self.video_left, self.video_right)
         for index, viewer in enumerate(viewers):
             if self.captures[index] is None:
-                viewer.show_placeholder()
+                if viewer.winfo_ismapped():
+                    viewer.show_placeholder()
                 continue
             frame = self._read_frame_cached(index, self.state.current_raw_frame)
             if frame is None:
@@ -787,6 +827,7 @@ class VideoAnalysisPage(tk.Frame):
         self._photo_cache.clear()
         self._reset_capture_positions()
         self._playback_frame_accumulator = 0.0
+        self._playback_ui_frame_counter = 0
         self.state = VideoAnalysisState()
         self.video_left.show_placeholder()
         self.video_right.show_placeholder()

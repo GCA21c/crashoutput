@@ -72,8 +72,9 @@
   - 2차로 slot별 background prefetch worker를 적용했다.
   - 단, Tk widget 업데이트는 main thread에서만 수행한다.
 - Playback responsiveness:
-  - play loop와 redraw loop를 분리해서 frame read 지연이 UI event loop를 막지 않게 한다.
-  - video frame image update와 pulse cursor update를 가능한 한 분리한다.
+  - play loop는 frame index advance를 담당하고, 화면 갱신은 `after_idle` 기반 playback refresh로 예약한다.
+  - 재생 중에는 video/status/pulse를 우선 갱신하고, keyframe timeline은 4 frame마다 갱신해 보조 UI redraw 부담을 줄인다.
+  - 현재 화면에 보이는 video viewer만 pulse overlay를 갱신한다. 숨겨진 V1/V2 viewer는 재생 중 불필요한 placeholder/pulse redraw를 피한다.
 - PhotoImage conversion 최적화:
   - raw frame cache와 별도로 slot/frame/image size/zoom 기준 PhotoImage cache를 추가했다.
   - zoom 변경, layout resize, clear/reset/load 시 관련 cache를 무효화한다.
