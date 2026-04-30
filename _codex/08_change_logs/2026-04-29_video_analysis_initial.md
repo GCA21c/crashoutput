@@ -44,6 +44,7 @@
 - 자동재생용 순차 read-ahead buffer를 추가했다. 별도 worker/capture를 쓰지 않고 UI capture로 현재 frame 이후 +12 frame을 idle에서 최대 3 frame씩 채운다.
 - PhotoImage idle prebuild는 체감 효과가 낮아 제거했다.
 - 단독 video layout에서는 현재 보이는 viewer만 pulse overlay를 갱신하고, 숨겨진 viewer의 placeholder redraw를 피한다.
+- video overlay pulse의 x-axis 기본 표시 범위를 video time range로 분리했다. 데이터 time은 그대로 유지하고, key frame timeline은 기존처럼 video/data 전체 범위를 포함한다.
 - 다음 최적화 방향은 `_codex/04_modules/video_analysis.md`의 `Next optimization work`에 정리했다.
 
 ## Files

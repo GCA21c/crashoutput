@@ -25,6 +25,8 @@
 - 표시 frame/time은 `raw_frame_index + sync_frame_offset` 기준이다.
 - 예: offset `-50`이면 raw frame 0을 `-50ms`로 표시하고, raw frame 50이 test T0 / `0ms`가 된다.
 - 데이터 pulse는 기존 dataset time 기준으로 `0ms`부터 시작하며, graph/timeline은 음수 offset만큼 데이터 앞 구간을 열어 표시한다.
+- video overlay pulse의 x-axis 표시 범위는 video time range를 기준으로 한다. 예: offset `-50`, frame_count `700`이면 overlay range는 `-50ms ~ 649ms`이고, 데이터 시간이 더 길어도 overlay 기본 범위를 늘리지 않는다.
+- key frame timeline은 전체 확인을 위해 video range와 data range를 모두 포함한다. 데이터 time 값 자체는 sync/overlay 표시를 위해 변경하지 않는다.
 - frame 이동 성능을 위해 현재 주변 frame만 메모리 cache에 유지한다.
 - frame cache는 `app/core/video/frame_cache.py`의 `FrameCache`로 분리했다.
 - 공통 RAM segment buffer는 현재 frame 기준 뒤쪽 50ms, 앞쪽 200ms를 유지한다.

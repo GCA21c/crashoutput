@@ -636,10 +636,11 @@ class VideoAnalysisPage(tk.Frame):
     def _refresh_pulse(self):
         start_ms, end_ms = self._timeline_range_ms()
         self.pulse_timeline.set_cursor(self.state.synced_time_ms, start_ms=start_ms, end_ms=end_ms)
+        overlay_start_ms, overlay_end_ms = self._video_time_range_ms()
         overlay_channels = self._overlay_channel_snapshot()
         for viewer in self._visible_video_viewers():
             viewer.set_pulse_view_mode(self.pulse_view_mode_var.get())
-            viewer.set_pulse_overlay(overlay_channels, start_ms, end_ms, self.state.synced_time_ms)
+            viewer.set_pulse_overlay(overlay_channels, overlay_start_ms, overlay_end_ms, self.state.synced_time_ms)
 
     def _apply_pulse_view_mode(self):
         mode = self.pulse_view_mode_var.get()
@@ -720,6 +721,15 @@ class VideoAnalysisPage(tk.Frame):
                         max_time = max(max_time, float(np.max(finite)))
             data_duration = max_time
         end_ms = max(0.0, video_end_ms, data_duration)
+        if end_ms <= start_ms:
+            end_ms = start_ms + 1.0
+        return start_ms, end_ms
+
+    def _video_time_range_ms(self):
+        if self.state.frame_count <= 1 or not self._active_video_indices():
+            return self._timeline_range_ms()
+        start_ms = float(self.state.sync_frame_offset or 0)
+        end_ms = start_ms + float(max(0, self.state.frame_count - 1))
         if end_ms <= start_ms:
             end_ms = start_ms + 1.0
         return start_ms, end_ms
