@@ -129,7 +129,7 @@ class VideoSlotViewer(tk.Frame):
             canvas.create_rectangle(left, top, right, bottom, fill="#020617", outline="#38bdf8", stipple="gray50", tags=("pulse_bg",))
         else:
             canvas.create_line(left, bottom, right, bottom, fill="#38bdf8", width=1, tags=("pulse_bg",))
-        colors = ("#22d3ee", "#f97316", "#a3e635")
+        colors = ("#ff4fd8", "#f97316", "#a3e635")
 
         def x_for_time(value):
             view_start, view_end = self._pulse_view_range()
@@ -171,7 +171,7 @@ class VideoSlotViewer(tk.Frame):
                 y = bottom - 6 - y_ratio * max(1, (bottom - top - 12))
                 points.extend((x, y))
             if len(points) >= 4:
-                canvas.create_line(*points, fill=colors[channel_index % len(colors)], width=1.35, smooth=True, tags=("pulse_curve", "pulse_fg"))
+                canvas.create_line(*points, fill=colors[channel_index % len(colors)], width=1.55, smooth=True, tags=("pulse_curve", "pulse_fg"))
 
         view_start, view_end = self._pulse_view_range()
         for channel_index, item in enumerate(self.overlay_channels):
@@ -189,7 +189,6 @@ class VideoSlotViewer(tk.Frame):
                 bottom - 2,
                 fill=colors[channel_index % len(colors)],
                 width=1.2,
-                dash=(2, 2),
                 tags=("pulse_peak", "pulse_fg"),
             )
 
@@ -209,7 +208,7 @@ class VideoSlotViewer(tk.Frame):
         canvas.create_text(left + 8, bottom - 8, text=time_text, anchor="sw", fill=time_fill, font=("Arial", 8, "bold"), tags=("pulse_fg",))
 
         cursor_x = x_for_time(self.overlay_cursor_ms)
-        canvas.create_line(cursor_x, top - 5, cursor_x, bottom + 5, fill="#f8fafc", width=2, tags=("pulse_fg",))
+        canvas.create_line(cursor_x, top - 5, cursor_x, bottom + 5, fill="#00ff00", width=1, tags=("pulse_fg",))
         self._draw_overlay_legend(left, right, top, colors)
         canvas.tag_raise("pulse_fg")
         canvas.tag_raise("pulse_legend_text")
