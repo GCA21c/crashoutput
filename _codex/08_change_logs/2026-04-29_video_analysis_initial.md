@@ -23,17 +23,18 @@
 - 하단 안내문구 우측에 `Pulse View 1` / `Pulse View 2` 선택 버튼을 추가했다.
 - `Pulse View 1`은 4면 outline이 모두 있는 반투명 pulse box 스타일이고, `Pulse View 2`는 pulse box background 없이 하단 line만 표시하는 readability 강화 스타일이다.
 - video slot layout 변경 직후 실제 canvas size가 확정된 다음 frame을 다시 렌더링하도록 post-layout refresh를 추가했다. 2개 video 동시 load 시 V2가 초기 작은 크기로 표시되는 현상을 방지한다.
-- selected pulse channel별 absolute peak 위치를 계산하고, pulse line과 같은 색상의 vertical dashed line으로 overlay에 표시한다.
+- selected pulse channel별 absolute peak 위치를 계산하고, View 1/2에서는 pulse line과 같은 색상의 vertical solid line으로 overlay에 표시한다.
 - video slot을 V1/V2 고정 배열로 바꿔 `Clear V1` 후에도 V2가 V1으로 당겨지지 않게 했다. 단독 video 표시 시 남아 있는 slot viewer가 전체폭을 사용한다.
 - `Pulse View 3`을 추가했다. View 2 스타일을 기반으로 현재 video time까지 pulse line을 누적 표시하고, frame cursor line 대신 peak point marker를 표시한다.
 - View 3 redraw 부하를 줄이기 위해 view range별 sampled pulse point cache를 추가했다.
-- playback speed selector를 추가했다. `x1.0`, `x1.5`, `x2`, `x3` 배율은 UI playback delay에만 반영하고 frame/time 기준은 유지한다.
+- playback speed selector를 추가했다. `x1.0`, `x1.5`, `x2`, `x3` 배율은 frame advance delta에 반영하며 frame/time 기준은 유지한다.
 - video playback 1차 리팩토링을 적용했다. Frame cache를 `FrameCache`로 분리하고, 순차 재생 중 가능한 경우 `capture.set()` seek 없이 `read()`를 이어가며, x2/x3는 frame skip 방식으로 체감 배속을 높인다.
 - video playback 2차 리팩토링을 적용했다. slot별 background prefetch worker가 별도 `VideoCapture`로 주변 raw frame을 `FrameCache`에 미리 채우고, Tk UI thread는 cache 조회와 표시를 담당한다.
 - x1.0 체감 저하 가능성 때문에 background prefetch worker는 기본 OFF로 두고, 기본 재생 경로는 1차 리팩토링 상태를 유지한다.
 - pulse channel base snapshot을 추가해 frame 이동 중 overlay payload 전체 재구성을 줄였다.
 - slot/frame/image size/zoom 기준 PhotoImage cache를 추가해 같은 표시 조건에서 RGB 변환/resize/PhotoImage 재생성을 줄였다.
-- video canvas item을 재사용하도록 변경했다. frame 이동 시 전체 canvas delete 대신 video image item을 갱신하고, pulse overlay tag만 재생성한다.
+- video canvas item을 재사용하도록 변경했다. frame 이동 시 전체 canvas delete 대신 video image item을 갱신한다.
+- Pulse View 1/2는 curve/peak/T0/background static layer를 유지하고, frame 이동 시 current cursor/time/legend value만 `pulse_dynamic` layer로 갱신한다.
 - 다음 최적화 방향은 `_codex/04_modules/video_analysis.md`의 `Next optimization work`에 정리했다.
 
 ## Files

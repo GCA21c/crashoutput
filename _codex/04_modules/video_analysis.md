@@ -31,7 +31,7 @@
 - slot별 `FramePrefetchManager`를 추가했다. worker는 UI capture와 별도 `VideoCapture`를 소유하고 현재 frame 주변 raw frame을 `FrameCache`에 미리 채운다.
 - prefetch worker는 x1.0 체감 저하 가능성이 있어 기본 OFF(`_prefetch_enabled = False`)로 둔다. 코드 확장점은 유지하되 기본 재생 경로는 1차 리팩토링(`FrameCache + 순차 read + frame skip`)을 사용한다.
 - worker는 Tk widget/PhotoImage를 만들지 않는다. UI update와 image object 생성은 계속 main thread에서 수행한다.
-- pulse graph는 channel 변경 시 전체 redraw하고, frame 이동 시에는 vertical cursor만 갱신한다.
+- Pulse View 1/2는 channel 변경/zoom/pan 시 static pulse layer를 다시 그리고, frame 이동 시에는 current cursor/time/legend value만 갱신한다.
 - Left/Right key를 누르고 있으면 초기 1-frame 이동 후 반복 이동은 2-frame step으로 가속한다.
 - playback speed selector는 `x1.0`, `x1.5`, `x2`, `x3`를 제공한다. 배율은 timer delay가 아니라 frame advance delta에 반영해 x2/x3에서 frame skip으로 체감 속도를 높인다. frame/time 계산은 기존 `1 frame = 1 ms` 기준을 유지한다.
 - key frame timeline은 drag-to-seek를 지원한다.
@@ -42,7 +42,7 @@
 - channel add는 toolbar의 상시 combobox에서 channel을 선택한 뒤 `Add channel` 버튼으로 추가한다.
 - overlay 우측 상단에 pulse channel ISO code legend를 curve 색상과 같은 색으로 표시한다.
 - overlay legend는 현재 cursor 지점의 channel value와 unit을 `ISOCODE value [unit]` 형식으로 표시한다.
-- 선택된 각 pulse channel은 해당 채널 값의 absolute peak 지점을 계산해 pulse line과 같은 색상의 vertical dashed line으로 표시한다.
+- 선택된 각 pulse channel은 해당 채널 값의 absolute peak 지점을 계산해 View 1/2에서는 pulse line과 같은 색상의 vertical solid line으로 표시한다.
 - 별도 Pulse Overlay 목록 영역은 제거했고, pulse는 video overlay에만 표시한다.
 - 하단 안내문구 우측에 `Pulse View 1` / `Pulse View 2` 선택 버튼을 둔다.
 - `Pulse View 1`은 4면 outline이 모두 있는 semi-transparent pulse box와 semi-transparent legend background를 쓰는 graph-box 스타일이다.
@@ -81,9 +81,10 @@
 - Canvas redraw 최적화:
   - video background/image canvas item은 유지하고, frame 변경 시 `itemconfigure(image=...)`와 `coords(...)`로 갱신한다.
   - placeholder 전환은 잔상 방지를 위해 전체 delete를 유지한다.
-  - pulse overlay는 `pulse` tag만 삭제 후 재생성한다.
+  - Pulse View 1/2는 curve/peak/T0/background를 static layer로 유지하고, frame 이동 시 current cursor/time/legend value만 `pulse_dynamic` tag로 갱신한다.
+  - Pulse View 3은 cursor time에 따라 curve 자체가 자라므로 기존처럼 pulse overlay를 전체 갱신한다.
 - Pulse rendering 최적화:
-  - channel 추가/zoom/pan 때만 pulse curve points를 재계산하고, frame 이동 때는 current cursor/time/legend value만 갱신하는 방향으로 분리한다.
+  - channel 추가/zoom/pan 때만 Pulse View 1/2의 pulse curve points를 재계산하고, frame 이동 때는 current cursor/time/legend value만 갱신한다.
   - 큰 DAT channel에서는 downsampling/window sampling을 view range 기준으로 캐시한다.
   - 1차로 pulse channel base snapshot을 분리해 frame 이동 시 channel payload 전체 재구성을 줄인다.
 - Video zoom/pan 품질:
