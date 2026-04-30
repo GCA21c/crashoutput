@@ -17,6 +17,8 @@ MAX_VIDEOS = 2
 MAX_CHANNELS = 3
 STEP_PREFETCH_RADIUS = 20
 SEEK_PREFETCH_RADIUS = 50
+PLAYBACK_BUFFER_AHEAD = 12
+PLAYBACK_BUFFER_REFILL_BATCH = 3
 
 
 def _load_cv2():
@@ -57,6 +59,8 @@ class VideoAnalysisPage(tk.Frame):
         self._pulse_base_snapshot = []
         self._photo_cache = {}
         self._capture_next_frames = [None] * MAX_VIDEOS
+        self._playback_buffers = [dict() for _ in range(MAX_VIDEOS)]
+        self._playback_buffer_after_id = None
         self._playback_frame_accumulator = 0.0
         self._playback_ui_frame_counter = 0
         self._held_key = None
@@ -226,6 +230,7 @@ class VideoAnalysisPage(tk.Frame):
 
         self._frame_cache.clear()
         self._photo_cache.clear()
+        self._reset_playback_buffers()
         self.video_left.reset_zoom()
         self.video_right.reset_zoom()
         active_infos = self._active_video_infos()
@@ -255,6 +260,7 @@ class VideoAnalysisPage(tk.Frame):
         self._frame_cache.clear_slot(index)
         self._clear_photo_cache_slot(index)
         self._capture_next_frames[index] = None
+        self._clear_playback_buffer(index)
         self.video_left.reset_zoom()
         self.video_right.reset_zoom()
         active_infos = self._active_video_infos()
@@ -454,6 +460,7 @@ class VideoAnalysisPage(tk.Frame):
         self._cancel_pending_timeline_seek()
         self._playback_frame_accumulator = 0.0
         self._playback_ui_frame_counter = 0
+        self._reset_playback_buffers()
         self.state.is_playing = True
         self.play_button.configure(text="❚❚")
         self._schedule_play_step()
@@ -470,6 +477,7 @@ class VideoAnalysisPage(tk.Frame):
         self._held_key = None
         self._playback_frame_accumulator = 0.0
         self._playback_ui_frame_counter = 0
+        self._cancel_playback_buffer_refill()
 
     def _schedule_play_step(self):
         if not self.state.is_playing:
@@ -611,6 +619,7 @@ class VideoAnalysisPage(tk.Frame):
         if self._prefetch_enabled:
             self._request_frame_prefetch()
         self._refresh_video_frames()
+        self._schedule_playback_buffer_refill()
         self._refresh_pulse()
         self._refresh_keyframe()
 
@@ -786,7 +795,72 @@ class VideoAnalysisPage(tk.Frame):
                 radius=request_radius,
             )
 
+    def _schedule_playback_buffer_refill(self):
+        if not self.state.is_playing or self._playback_buffer_after_id is not None:
+            return
+        self._playback_buffer_after_id = self.after_idle(self._refill_playback_buffers)
+
+    def _refill_playback_buffers(self):
+        self._playback_buffer_after_id = None
+        if not self.state.is_playing:
+            return
+        active_slots = self._active_video_indices()
+        if not active_slots or self.state.frame_count <= 0:
+            return
+        center = int(self.state.current_raw_frame)
+        end = min(int(self.state.frame_count) - 1, center + PLAYBACK_BUFFER_AHEAD)
+        for slot_index in active_slots:
+            filled = 0
+            buffer = self._playback_buffers[slot_index]
+            self._trim_playback_buffer(slot_index, center)
+            for frame_index in range(center + 1, end + 1):
+                if frame_index in buffer or self._frame_cache.contains(slot_index, frame_index):
+                    continue
+                frame = self._read_frame(slot_index, frame_index)
+                if frame is None:
+                    break
+                buffer[frame_index] = frame
+                self._frame_cache.set(slot_index, frame_index, frame, active_slots, trim_center=center)
+                filled += 1
+                if filled >= PLAYBACK_BUFFER_REFILL_BATCH:
+                    break
+        if self.state.is_playing and any(
+            any(frame_index not in self._playback_buffers[slot] and not self._frame_cache.contains(slot, frame_index)
+                for frame_index in range(center + 1, end + 1))
+            for slot in active_slots
+        ):
+            self._playback_buffer_after_id = self.after_idle(self._refill_playback_buffers)
+
+    def _trim_playback_buffer(self, slot_index, center_frame):
+        center = int(center_frame)
+        keep_start = center
+        keep_end = center + PLAYBACK_BUFFER_AHEAD
+        buffer = self._playback_buffers[int(slot_index)]
+        for frame_index in list(buffer):
+            if frame_index < keep_start or frame_index > keep_end:
+                buffer.pop(frame_index, None)
+
+    def _reset_playback_buffers(self):
+        self._cancel_playback_buffer_refill()
+        for buffer in self._playback_buffers:
+            buffer.clear()
+
+    def _clear_playback_buffer(self, slot_index):
+        self._playback_buffers[int(slot_index)].clear()
+
+    def _cancel_playback_buffer_refill(self):
+        if self._playback_buffer_after_id is not None:
+            try:
+                self.after_cancel(self._playback_buffer_after_id)
+            except Exception:
+                pass
+            self._playback_buffer_after_id = None
+
     def _read_frame_cached(self, index, frame_index):
+        if self.state.is_playing:
+            buffered = self._playback_buffers[int(index)].pop(int(frame_index), None)
+            if buffered is not None:
+                return buffered
         cached = self._frame_cache.get(index, frame_index)
         if cached is not None:
             return cached
@@ -813,6 +887,7 @@ class VideoAnalysisPage(tk.Frame):
 
     def _reset_capture_positions(self):
         self._capture_next_frames = [None] * MAX_VIDEOS
+        self._reset_playback_buffers()
 
     def _frame_to_photo(self, frame, viewer, size=None):
         cv2 = _load_cv2()

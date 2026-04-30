@@ -30,6 +30,7 @@
 - 수동 frame step 이동 후에는 현재 frame 기준 ±20 raw frame, keyframe/first/last seek 후에는 ±50 raw frame을 background prefetch로 준비한다.
 - 재생 중 prefetch는 기본 OFF로 둔다. 현재 자동재생은 순차 read 최적화 경로를 우선한다.
 - 순차 재생 중에는 가능한 경우 매 frame `capture.set(CAP_PROP_POS_FRAMES)`를 호출하지 않고 현재 capture 위치에서 `read()`를 이어간다. seek/timeline/key step은 capture 위치를 reset한다.
+- 자동재생은 별도 worker/capture prefetch 대신 UI capture의 순차 read-ahead buffer를 사용한다. 기본 buffer는 현재 frame 이후 +12 frame이고, idle refill은 한 번에 최대 3 frame씩 채운다.
 - slot별 `FramePrefetchManager`를 추가했다. worker는 UI capture와 별도 `VideoCapture`를 소유하고 현재 frame 주변 raw frame을 `FrameCache`에 미리 채운다.
 - full 양방향 prefetch worker 옵션은 x1.0 체감 저하 가능성이 있어 기본 OFF(`_prefetch_enabled = False`)로 둔다.
 - worker는 Tk widget/PhotoImage를 만들지 않는다. UI update와 image object 생성은 계속 main thread에서 수행한다.
