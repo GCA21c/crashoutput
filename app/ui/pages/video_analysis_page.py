@@ -15,7 +15,8 @@ from app.ui.styles import HEADER_FONT, MUTED_FG, PAGE_BG, TEXT_FG
 PAGE_TITLE = "VIDEO ANALYSIS"
 MAX_VIDEOS = 2
 MAX_CHANNELS = 3
-MANUAL_PREFETCH_RADIUS = 20
+STEP_PREFETCH_RADIUS = 20
+SEEK_PREFETCH_RADIUS = 50
 
 
 def _load_cv2():
@@ -50,7 +51,7 @@ class VideoAnalysisPage(tk.Frame):
         self._refresh_after_id = None
         self._timeline_seek_after_id = None
         self._pending_timeline_seek_ms = None
-        self._frame_cache = FrameCache(radius=MANUAL_PREFETCH_RADIUS, max_items=96)
+        self._frame_cache = FrameCache(radius=SEEK_PREFETCH_RADIUS, max_items=220)
         self._frame_prefetcher = FramePrefetchManager(self._frame_cache, radius=8)
         self._prefetch_enabled = False
         self._pulse_base_snapshot = []
@@ -351,7 +352,7 @@ class VideoAnalysisPage(tk.Frame):
         self.state.set_frame(raw_frame)
         self._reset_capture_positions()
         self._refresh_all()
-        self._request_manual_frame_prefetch()
+        self._request_manual_frame_prefetch(SEEK_PREFETCH_RADIUS)
 
     def _cancel_pending_timeline_seek(self):
         if self._timeline_seek_after_id is not None:
@@ -369,7 +370,7 @@ class VideoAnalysisPage(tk.Frame):
         self.state.step_frame(delta)
         self._reset_capture_positions()
         self._schedule_refresh()
-        self._request_manual_frame_prefetch()
+        self._request_manual_frame_prefetch(STEP_PREFETCH_RADIUS)
 
     def _start_key_hold(self, key_name, delta):
         if not self._is_active_page():
@@ -430,7 +431,7 @@ class VideoAnalysisPage(tk.Frame):
         self.state.set_frame(0)
         self._reset_capture_positions()
         self._schedule_refresh()
-        self._request_manual_frame_prefetch()
+        self._request_manual_frame_prefetch(SEEK_PREFETCH_RADIUS)
 
     def last_frame(self):
         self._cancel_pending_timeline_seek()
@@ -438,7 +439,7 @@ class VideoAnalysisPage(tk.Frame):
         self.state.set_frame(max(0, self.state.frame_count - 1))
         self._reset_capture_positions()
         self._schedule_refresh()
-        self._request_manual_frame_prefetch()
+        self._request_manual_frame_prefetch(SEEK_PREFETCH_RADIUS)
 
     def toggle_play(self):
         if self.state.is_playing:
@@ -770,18 +771,19 @@ class VideoAnalysisPage(tk.Frame):
         for index in active_slots:
             self._frame_prefetcher.request(index, center, self.state.frame_count, active_slots)
 
-    def _request_manual_frame_prefetch(self):
+    def _request_manual_frame_prefetch(self, radius):
         active_slots = self._active_video_indices()
         if not active_slots or self.state.frame_count <= 0:
             return
         center = int(self.state.current_raw_frame)
+        request_radius = max(0, int(radius or 0))
         for index in active_slots:
             self._frame_prefetcher.request(
                 index,
                 center,
                 self.state.frame_count,
                 active_slots,
-                radius=MANUAL_PREFETCH_RADIUS,
+                radius=request_radius,
             )
 
     def _read_frame_cached(self, index, frame_index):

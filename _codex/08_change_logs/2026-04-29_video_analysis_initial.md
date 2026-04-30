@@ -37,7 +37,7 @@
 - Pulse View 1/2는 curve/peak/T0/background static layer를 유지하고, frame 이동 시 current cursor/time/legend value만 `pulse_dynamic` layer로 갱신한다.
 - 재생 중에는 video/status/pulse/keyframe timeline을 즉시 갱신한다.
 - keyframe timeline drag는 cursor marker만 즉시 갱신하고, video seek는 33ms throttle로 마지막 drag 위치를 반영한다. drag release 시에는 최종 위치를 즉시 반영한다.
-- 수동 frame 이동과 keyframe seek 후 현재 frame 기준 ±20 raw frame을 background prefetch로 준비한다. 재생 중 prefetch는 기존처럼 기본 OFF를 유지한다.
+- 수동 frame step 이동은 현재 frame 기준 ±20 raw frame, keyframe/first/last seek는 ±50 raw frame을 background prefetch로 준비한다. 재생 중 prefetch는 기존처럼 기본 OFF를 유지한다.
 - 단독 video layout에서는 현재 보이는 viewer만 pulse overlay를 갱신하고, 숨겨진 viewer의 placeholder redraw를 피한다.
 - 다음 최적화 방향은 `_codex/04_modules/video_analysis.md`의 `Next optimization work`에 정리했다.
 

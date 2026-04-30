@@ -27,7 +27,7 @@
 - 데이터 pulse는 기존 dataset time 기준으로 `0ms`부터 시작하며, graph/timeline은 음수 offset만큼 데이터 앞 구간을 열어 표시한다.
 - frame 이동 성능을 위해 현재 주변 frame만 메모리 cache에 유지한다.
 - frame cache는 `app/core/video/frame_cache.py`의 `FrameCache`로 분리했다.
-- 수동 frame 이동, keyframe seek, first/last 이동 후에는 현재 frame 기준 ±20 raw frame을 background prefetch로 준비한다. 재생 중 prefetch는 기본 OFF를 유지한다.
+- 수동 frame step 이동 후에는 현재 frame 기준 ±20 raw frame, keyframe/first/last seek 후에는 ±50 raw frame을 background prefetch로 준비한다. 재생 중 prefetch는 기본 OFF를 유지한다.
 - 순차 재생 중에는 가능한 경우 매 frame `capture.set(CAP_PROP_POS_FRAMES)`를 호출하지 않고 현재 capture 위치에서 `read()`를 이어간다. seek/timeline/key step은 capture 위치를 reset한다.
 - slot별 `FramePrefetchManager`를 추가했다. worker는 UI capture와 별도 `VideoCapture`를 소유하고 현재 frame 주변 raw frame을 `FrameCache`에 미리 채운다.
 - prefetch worker는 x1.0 체감 저하 가능성이 있어 기본 OFF(`_prefetch_enabled = False`)로 둔다. 코드 확장점은 유지하되 기본 재생 경로는 1차 리팩토링(`FrameCache + 순차 read + frame skip`)을 사용한다.
