@@ -31,10 +31,11 @@ class FrameCache:
         with self._lock:
             return (int(slot_index), int(frame_index)) in self._frames
 
-    def set(self, slot_index: int, frame_index: int, frame, active_slots=None) -> None:
+    def set(self, slot_index: int, frame_index: int, frame, active_slots=None, trim_center=None) -> None:
         with self._lock:
             self._frames[(int(slot_index), int(frame_index))] = frame
-            self.trim(int(frame_index), active_slots)
+            center = int(frame_index if trim_center is None else trim_center)
+            self.trim(center, active_slots)
 
     def trim(self, center_frame: int, active_slots=None) -> None:
         with self._lock:

@@ -27,10 +27,11 @@
 - 데이터 pulse는 기존 dataset time 기준으로 `0ms`부터 시작하며, graph/timeline은 음수 offset만큼 데이터 앞 구간을 열어 표시한다.
 - frame 이동 성능을 위해 현재 주변 frame만 메모리 cache에 유지한다.
 - frame cache는 `app/core/video/frame_cache.py`의 `FrameCache`로 분리했다.
-- 수동 frame step 이동 후에는 현재 frame 기준 ±20 raw frame, keyframe/first/last seek 후에는 ±50 raw frame을 background prefetch로 준비한다. 재생 중 prefetch는 기본 OFF를 유지한다.
+- 수동 frame step 이동 후에는 현재 frame 기준 ±20 raw frame, keyframe/first/last seek 후에는 ±50 raw frame을 background prefetch로 준비한다.
+- 재생 중에는 3 frame마다 현재 frame 기준 앞쪽 +12 raw frame만 가볍게 prefetch한다. 기존 full 양방향 playback prefetch 옵션(`_prefetch_enabled`)은 기본 OFF를 유지한다.
 - 순차 재생 중에는 가능한 경우 매 frame `capture.set(CAP_PROP_POS_FRAMES)`를 호출하지 않고 현재 capture 위치에서 `read()`를 이어간다. seek/timeline/key step은 capture 위치를 reset한다.
 - slot별 `FramePrefetchManager`를 추가했다. worker는 UI capture와 별도 `VideoCapture`를 소유하고 현재 frame 주변 raw frame을 `FrameCache`에 미리 채운다.
-- prefetch worker는 x1.0 체감 저하 가능성이 있어 기본 OFF(`_prefetch_enabled = False`)로 둔다. 코드 확장점은 유지하되 기본 재생 경로는 1차 리팩토링(`FrameCache + 순차 read + frame skip`)을 사용한다.
+- full 양방향 prefetch worker 옵션은 x1.0 체감 저하 가능성이 있어 기본 OFF(`_prefetch_enabled = False`)로 둔다. 대신 playback 중 forward-only lightweight prefetch를 사용한다.
 - worker는 Tk widget/PhotoImage를 만들지 않는다. UI update와 image object 생성은 계속 main thread에서 수행한다.
 - Pulse View 1/2는 channel 변경/zoom/pan 시 static pulse layer를 다시 그리고, frame 이동 시에는 current cursor/time/legend value만 갱신한다.
 - Left/Right key를 누르고 있으면 초기 1-frame 이동 후 반복 이동은 2-frame step으로 가속한다.
@@ -81,7 +82,6 @@
   - raw frame cache와 별도로 slot/frame/image size/zoom 기준 PhotoImage cache를 추가했다.
   - zoom 변경, layout resize, clear/reset/load 시 관련 cache를 무효화한다.
   - Tk PhotoImage 객체 생성은 여전히 main thread에서 수행한다.
-  - 수동 frame 이동/keyframe seek 후에는 표시 중인 video slot 기준 ±5 frame의 PhotoImage를 `after_idle`에서 1장씩 prebuild한다. 효과가 없거나 UI를 막으면 제거 후보로 본다.
 - Canvas redraw 최적화:
   - video background/image canvas item은 유지하고, frame 변경 시 `itemconfigure(image=...)`와 `coords(...)`로 갱신한다.
   - placeholder 전환은 잔상 방지를 위해 전체 delete를 유지한다.

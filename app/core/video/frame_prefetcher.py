@@ -26,11 +26,27 @@ class FramePrefetchManager:
         for slot in list(self._workers):
             self.stop_slot(slot)
 
-    def request(self, slot_index: int, center_frame: int, frame_count: int, active_slots=None, radius=None) -> None:
+    def request(
+        self,
+        slot_index: int,
+        center_frame: int,
+        frame_count: int,
+        active_slots=None,
+        radius=None,
+        before_radius=None,
+        after_radius=None,
+    ) -> None:
         worker = self._workers.get(int(slot_index))
         if worker is None:
             return
-        worker.request(center_frame, frame_count, active_slots, radius=radius)
+        worker.request(
+            center_frame,
+            frame_count,
+            active_slots,
+            radius=radius,
+            before_radius=before_radius,
+            after_radius=after_radius,
+        )
 
 
 class _FramePrefetchWorker:
@@ -54,14 +70,17 @@ class _FramePrefetchWorker:
         if self._thread.is_alive():
             self._thread.join(timeout=0.8)
 
-    def request(self, center_frame: int, frame_count: int, active_slots=None, radius=None) -> None:
+    def request(self, center_frame: int, frame_count: int, active_slots=None, radius=None, before_radius=None, after_radius=None) -> None:
         request_radius = self.radius if radius is None else max(0, int(radius))
+        before = request_radius if before_radius is None else max(0, int(before_radius))
+        after = request_radius if after_radius is None else max(0, int(after_radius))
         with self._lock:
             self._request = (
                 int(center_frame),
                 int(frame_count or 0),
                 tuple(int(slot) for slot in (active_slots or (self.slot_index,))),
-                request_radius,
+                before,
+                after,
             )
         self._request_event.set()
 
@@ -88,11 +107,11 @@ class _FramePrefetchWorker:
                 request = self._take_request()
                 if request is None:
                     continue
-                center_frame, frame_count, active_slots, radius = request
+                center_frame, frame_count, active_slots, before, after = request
                 if frame_count <= 0:
                     continue
-                start = max(0, center_frame - radius)
-                end = min(frame_count - 1, center_frame + radius)
+                start = max(0, center_frame - before)
+                end = min(frame_count - 1, center_frame + after)
                 capture.set(cv2.CAP_PROP_POS_FRAMES, start)
                 for frame_index in range(start, end + 1):
                     if self._stop_event.is_set() or self._request_event.is_set():
@@ -103,6 +122,6 @@ class _FramePrefetchWorker:
                     ok, frame = capture.read()
                     if not ok:
                         break
-                    self.frame_cache.set(self.slot_index, frame_index, frame, active_slots)
+                    self.frame_cache.set(self.slot_index, frame_index, frame, active_slots, trim_center=center_frame)
         finally:
             capture.release()

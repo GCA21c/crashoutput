@@ -30,15 +30,16 @@
 - playback speed selector를 추가했다. `x1.0`, `x1.5`, `x2`, `x3` 배율은 frame advance delta에 반영하며 frame/time 기준은 유지한다.
 - video playback 1차 리팩토링을 적용했다. Frame cache를 `FrameCache`로 분리하고, 순차 재생 중 가능한 경우 `capture.set()` seek 없이 `read()`를 이어가며, x2/x3는 frame skip 방식으로 체감 배속을 높인다.
 - video playback 2차 리팩토링을 적용했다. slot별 background prefetch worker가 별도 `VideoCapture`로 주변 raw frame을 `FrameCache`에 미리 채우고, Tk UI thread는 cache 조회와 표시를 담당한다.
-- x1.0 체감 저하 가능성 때문에 background prefetch worker는 기본 OFF로 두고, 기본 재생 경로는 1차 리팩토링 상태를 유지한다.
+- x1.0 체감 저하 가능성 때문에 full 양방향 background prefetch는 기본 OFF로 두고, 재생 중에는 forward-only lightweight prefetch를 사용한다.
 - pulse channel base snapshot을 추가해 frame 이동 중 overlay payload 전체 재구성을 줄였다.
 - slot/frame/image size/zoom 기준 PhotoImage cache를 추가해 같은 표시 조건에서 RGB 변환/resize/PhotoImage 재생성을 줄였다.
 - video canvas item을 재사용하도록 변경했다. frame 이동 시 전체 canvas delete 대신 video image item을 갱신한다.
 - Pulse View 1/2는 curve/peak/T0/background static layer를 유지하고, frame 이동 시 current cursor/time/legend value만 `pulse_dynamic` layer로 갱신한다.
 - 재생 중에는 video/status/pulse/keyframe timeline을 즉시 갱신한다.
 - keyframe timeline drag는 cursor marker만 즉시 갱신하고, video seek는 33ms throttle로 마지막 drag 위치를 반영한다. drag release 시에는 최종 위치를 즉시 반영한다.
-- 수동 frame step 이동은 현재 frame 기준 ±20 raw frame, keyframe/first/last seek는 ±50 raw frame을 background prefetch로 준비한다. 재생 중 prefetch는 기존처럼 기본 OFF를 유지한다.
-- 수동 frame 이동/keyframe seek 후 표시 중인 video slot의 ±5 frame PhotoImage를 `after_idle`에서 1장씩 prebuild한다. 효과가 없거나 UI를 막으면 제거 후보로 본다.
+- 수동 frame step 이동은 현재 frame 기준 ±20 raw frame, keyframe/first/last seek는 ±50 raw frame을 background prefetch로 준비한다.
+- 재생 중에는 3 frame마다 현재 frame 기준 앞쪽 +12 raw frame만 가볍게 prefetch한다.
+- PhotoImage idle prebuild는 체감 효과가 낮아 제거했다.
 - 단독 video layout에서는 현재 보이는 viewer만 pulse overlay를 갱신하고, 숨겨진 viewer의 placeholder redraw를 피한다.
 - 다음 최적화 방향은 `_codex/04_modules/video_analysis.md`의 `Next optimization work`에 정리했다.
 
