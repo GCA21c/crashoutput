@@ -112,16 +112,30 @@ class _FramePrefetchWorker:
                     continue
                 start = max(0, center_frame - before)
                 end = min(frame_count - 1, center_frame + after)
-                capture.set(cv2.CAP_PROP_POS_FRAMES, start)
-                for frame_index in range(start, end + 1):
+                ranges = ((center_frame, end), (start, center_frame - 1))
+                for range_start, range_end in ranges:
+                    if range_end < range_start:
+                        continue
+                    capture.set(cv2.CAP_PROP_POS_FRAMES, range_start)
+                    for frame_index in range(range_start, range_end + 1):
+                        if self._stop_event.is_set() or self._request_event.is_set():
+                            break
+                        if self.frame_cache.contains(self.slot_index, frame_index):
+                            capture.grab()
+                            continue
+                        ok, frame = capture.read()
+                        if not ok:
+                            break
+                        self.frame_cache.set(
+                            self.slot_index,
+                            frame_index,
+                            frame,
+                            active_slots,
+                            trim_center=center_frame,
+                            trim_before=before,
+                            trim_after=after,
+                        )
                     if self._stop_event.is_set() or self._request_event.is_set():
                         break
-                    if self.frame_cache.contains(self.slot_index, frame_index):
-                        capture.grab()
-                        continue
-                    ok, frame = capture.read()
-                    if not ok:
-                        break
-                    self.frame_cache.set(self.slot_index, frame_index, frame, active_slots, trim_center=center_frame)
         finally:
             capture.release()

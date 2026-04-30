@@ -38,7 +38,8 @@
 - 재생 중에는 video/status/pulse/keyframe timeline을 즉시 갱신한다.
 - keyframe timeline drag는 cursor marker만 즉시 갱신하고, video seek는 33ms throttle로 마지막 drag 위치를 반영한다. drag release 시에는 최종 위치를 즉시 반영한다.
 - keyframe timeline drag/label/seek 값을 `1 frame = 1 ms` 기준의 정수 ms로 snap한다.
-- 수동 frame step 이동은 현재 frame 기준 ±20 raw frame, keyframe/first/last seek는 ±50 raw frame을 background prefetch로 준비한다.
+- 공통 RAM segment buffer를 현재 frame 기준 뒤쪽 50ms, 앞쪽 200ms로 정리했다. 수동 frame step/keyframe/first/last seek와 자동재생이 같은 raw frame cache를 우선 사용한다.
+- segment prefetch는 현재 frame 이후 구간을 먼저 채우고, 그 다음 뒤쪽 구간을 채운다.
 - 재생 중 forward prefetch는 체감상 방해 가능성이 있어 제거했다. 자동재생은 순차 read 최적화 경로를 우선한다.
 - 자동재생용 순차 read-ahead buffer를 추가했다. 별도 worker/capture를 쓰지 않고 UI capture로 현재 frame 이후 +12 frame을 idle에서 최대 3 frame씩 채운다.
 - PhotoImage idle prebuild는 체감 효과가 낮아 제거했다.

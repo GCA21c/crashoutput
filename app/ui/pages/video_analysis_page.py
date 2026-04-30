@@ -15,8 +15,9 @@ from app.ui.styles import HEADER_FONT, MUTED_FG, PAGE_BG, TEXT_FG
 PAGE_TITLE = "VIDEO ANALYSIS"
 MAX_VIDEOS = 2
 MAX_CHANNELS = 3
-STEP_PREFETCH_RADIUS = 20
-SEEK_PREFETCH_RADIUS = 50
+SEGMENT_BACKWARD_MS = 50
+SEGMENT_FORWARD_MS = 200
+SEGMENT_CACHE_MAX_ITEMS = 560
 PLAYBACK_BUFFER_AHEAD = 12
 PLAYBACK_BUFFER_REFILL_BATCH = 3
 
@@ -53,7 +54,12 @@ class VideoAnalysisPage(tk.Frame):
         self._refresh_after_id = None
         self._timeline_seek_after_id = None
         self._pending_timeline_seek_ms = None
-        self._frame_cache = FrameCache(radius=SEEK_PREFETCH_RADIUS, max_items=220)
+        self._frame_cache = FrameCache(
+            radius=SEGMENT_FORWARD_MS,
+            max_items=SEGMENT_CACHE_MAX_ITEMS,
+            before_radius=SEGMENT_BACKWARD_MS,
+            after_radius=SEGMENT_FORWARD_MS,
+        )
         self._frame_prefetcher = FramePrefetchManager(self._frame_cache, radius=8)
         self._prefetch_enabled = False
         self._pulse_base_snapshot = []
@@ -358,7 +364,7 @@ class VideoAnalysisPage(tk.Frame):
         self.state.set_frame(raw_frame)
         self._reset_capture_positions()
         self._refresh_all()
-        self._request_manual_frame_prefetch(SEEK_PREFETCH_RADIUS)
+        self._request_segment_frame_prefetch()
 
     def _cancel_pending_timeline_seek(self):
         if self._timeline_seek_after_id is not None:
@@ -376,7 +382,7 @@ class VideoAnalysisPage(tk.Frame):
         self.state.step_frame(delta)
         self._reset_capture_positions()
         self._schedule_refresh()
-        self._request_manual_frame_prefetch(STEP_PREFETCH_RADIUS)
+        self._request_segment_frame_prefetch()
 
     def _start_key_hold(self, key_name, delta):
         if not self._is_active_page():
@@ -437,7 +443,7 @@ class VideoAnalysisPage(tk.Frame):
         self.state.set_frame(0)
         self._reset_capture_positions()
         self._schedule_refresh()
-        self._request_manual_frame_prefetch(SEEK_PREFETCH_RADIUS)
+        self._request_segment_frame_prefetch()
 
     def last_frame(self):
         self._cancel_pending_timeline_seek()
@@ -445,7 +451,7 @@ class VideoAnalysisPage(tk.Frame):
         self.state.set_frame(max(0, self.state.frame_count - 1))
         self._reset_capture_positions()
         self._schedule_refresh()
-        self._request_manual_frame_prefetch(SEEK_PREFETCH_RADIUS)
+        self._request_segment_frame_prefetch()
 
     def toggle_play(self):
         if self.state.is_playing:
@@ -780,19 +786,19 @@ class VideoAnalysisPage(tk.Frame):
         for index in active_slots:
             self._frame_prefetcher.request(index, center, self.state.frame_count, active_slots)
 
-    def _request_manual_frame_prefetch(self, radius):
+    def _request_segment_frame_prefetch(self):
         active_slots = self._active_video_indices()
         if not active_slots or self.state.frame_count <= 0:
             return
         center = int(self.state.current_raw_frame)
-        request_radius = max(0, int(radius or 0))
         for index in active_slots:
             self._frame_prefetcher.request(
                 index,
                 center,
                 self.state.frame_count,
                 active_slots,
-                radius=request_radius,
+                before_radius=SEGMENT_BACKWARD_MS,
+                after_radius=SEGMENT_FORWARD_MS,
             )
 
     def _schedule_playback_buffer_refill(self):
@@ -820,7 +826,15 @@ class VideoAnalysisPage(tk.Frame):
                 if frame is None:
                     break
                 buffer[frame_index] = frame
-                self._frame_cache.set(slot_index, frame_index, frame, active_slots, trim_center=center)
+                self._frame_cache.set(
+                    slot_index,
+                    frame_index,
+                    frame,
+                    active_slots,
+                    trim_center=center,
+                    trim_before=SEGMENT_BACKWARD_MS,
+                    trim_after=SEGMENT_FORWARD_MS,
+                )
                 filled += 1
                 if filled >= PLAYBACK_BUFFER_REFILL_BATCH:
                     break
