@@ -29,6 +29,7 @@
 - frame cache는 `app/core/video/frame_cache.py`의 `FrameCache`로 분리했다.
 - 순차 재생 중에는 가능한 경우 매 frame `capture.set(CAP_PROP_POS_FRAMES)`를 호출하지 않고 현재 capture 위치에서 `read()`를 이어간다. seek/timeline/key step은 capture 위치를 reset한다.
 - slot별 `FramePrefetchManager`를 추가했다. worker는 UI capture와 별도 `VideoCapture`를 소유하고 현재 frame 주변 raw frame을 `FrameCache`에 미리 채운다.
+- prefetch worker는 x1.0 체감 저하 가능성이 있어 기본 OFF(`_prefetch_enabled = False`)로 둔다. 코드 확장점은 유지하되 기본 재생 경로는 1차 리팩토링(`FrameCache + 순차 read + frame skip`)을 사용한다.
 - worker는 Tk widget/PhotoImage를 만들지 않는다. UI update와 image object 생성은 계속 main thread에서 수행한다.
 - pulse graph는 channel 변경 시 전체 redraw하고, frame 이동 시에는 vertical cursor만 갱신한다.
 - Left/Right key를 누르고 있으면 초기 1-frame 이동 후 반복 이동은 2-frame step으로 가속한다.
@@ -79,6 +80,7 @@
 - Pulse rendering 최적화:
   - channel 추가/zoom/pan 때만 pulse curve points를 재계산하고, frame 이동 때는 current cursor/time/legend value만 갱신하는 방향으로 분리한다.
   - 큰 DAT channel에서는 downsampling/window sampling을 view range 기준으로 캐시한다.
+  - 1차로 pulse channel base snapshot을 분리해 frame 이동 시 channel payload 전체 재구성을 줄인다.
 - Video zoom/pan 품질:
   - 현재 zoom은 viewer canvas 크기 기준 image thumbnail을 다시 만드는 방식이다.
   - 고해상도 영상에서 더 부드럽게 하려면 raw frame crop/resize 방식 또는 cached resized levels를 검토한다.

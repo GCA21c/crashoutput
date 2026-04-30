@@ -49,6 +49,8 @@ class VideoAnalysisPage(tk.Frame):
         self._refresh_after_id = None
         self._frame_cache = FrameCache(radius=4, max_items=40)
         self._frame_prefetcher = FramePrefetchManager(self._frame_cache, radius=8)
+        self._prefetch_enabled = False
+        self._pulse_base_snapshot = []
         self._capture_next_frames = [None] * MAX_VIDEOS
         self._playback_frame_accumulator = 0.0
         self._held_key = None
@@ -292,6 +294,7 @@ class VideoAnalysisPage(tk.Frame):
             "peak_time_ms": peak[0],
             "peak_value": peak[1],
         })
+        self._rebuild_pulse_base_snapshot()
         self.pulse_timeline.set_channels(self.channel_data)
         self._refresh_channel_options()
         self._refresh_pulse()
@@ -299,6 +302,7 @@ class VideoAnalysisPage(tk.Frame):
     def clear_channels(self):
         self.state.selected_channels.clear()
         self.channel_data.clear()
+        self._rebuild_pulse_base_snapshot()
         self.pulse_timeline.set_channels([])
         self._refresh_channel_options()
         self._refresh_pulse()
@@ -547,7 +551,8 @@ class VideoAnalysisPage(tk.Frame):
 
     def _refresh_all(self):
         self._refresh_status()
-        self._request_frame_prefetch()
+        if self._prefetch_enabled:
+            self._request_frame_prefetch()
         self._refresh_video_frames()
         self._refresh_pulse()
         self._refresh_keyframe()
@@ -572,7 +577,8 @@ class VideoAnalysisPage(tk.Frame):
     def _overlay_channel_snapshot(self):
         current_ms = float(self.state.synced_time_ms)
         out = []
-        for item in self.channel_data:
+        source_items = self._pulse_base_snapshot if self._pulse_base_snapshot else self.channel_data
+        for item in source_items:
             data = dict(item)
             time_values = np.asarray(data.get("time_ms") if data.get("time_ms") is not None else [], dtype=float)
             signal_values = np.asarray(data.get("values") if data.get("values") is not None else [], dtype=float)
@@ -594,6 +600,13 @@ class VideoAnalysisPage(tk.Frame):
                 data["peak_value"] = peak_value
             out.append(data)
         return out
+
+    def _rebuild_pulse_base_snapshot(self):
+        self._pulse_base_snapshot = []
+        for item in self.channel_data:
+            data = dict(item)
+            data["current_value"] = None
+            self._pulse_base_snapshot.append(data)
 
     @staticmethod
     def _channel_abs_peak(time_values, signal_values):
@@ -732,6 +745,7 @@ class VideoAnalysisPage(tk.Frame):
         self.captures = [None] * MAX_VIDEOS
         self.video_infos = [None] * MAX_VIDEOS
         self.channel_data = []
+        self._rebuild_pulse_base_snapshot()
         self._frame_prefetcher.stop_all()
         self._frame_cache.clear()
         self._reset_capture_positions()
