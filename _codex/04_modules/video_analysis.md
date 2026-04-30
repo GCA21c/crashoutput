@@ -28,6 +28,8 @@
 - frame 이동 성능을 위해 현재 주변 frame만 메모리 cache에 유지한다.
 - frame cache는 `app/core/video/frame_cache.py`의 `FrameCache`로 분리했다.
 - 순차 재생 중에는 가능한 경우 매 frame `capture.set(CAP_PROP_POS_FRAMES)`를 호출하지 않고 현재 capture 위치에서 `read()`를 이어간다. seek/timeline/key step은 capture 위치를 reset한다.
+- slot별 `FramePrefetchManager`를 추가했다. worker는 UI capture와 별도 `VideoCapture`를 소유하고 현재 frame 주변 raw frame을 `FrameCache`에 미리 채운다.
+- worker는 Tk widget/PhotoImage를 만들지 않는다. UI update와 image object 생성은 계속 main thread에서 수행한다.
 - pulse graph는 channel 변경 시 전체 redraw하고, frame 이동 시에는 vertical cursor만 갱신한다.
 - Left/Right key를 누르고 있으면 초기 1-frame 이동 후 반복 이동은 2-frame step으로 가속한다.
 - playback speed selector는 `x1.0`, `x1.5`, `x2`, `x3`를 제공한다. 배율은 timer delay가 아니라 frame advance delta에 반영해 x2/x3에서 frame skip으로 체감 속도를 높인다. frame/time 계산은 기존 `1 frame = 1 ms` 기준을 유지한다.
@@ -66,11 +68,14 @@
 ## Next optimization work
 - Frame decode/cache 최적화:
   - 1차로 `FrameCache` 분리와 순차 read 최적화, frame-skip 배속을 적용했다.
-  - 다음 단계는 주변 frame prefetch cache 또는 worker thread decode queue를 검토한다.
+  - 2차로 slot별 background prefetch worker를 적용했다.
   - 단, Tk widget 업데이트는 main thread에서만 수행한다.
 - Playback responsiveness:
   - play loop와 redraw loop를 분리해서 frame read 지연이 UI event loop를 막지 않게 한다.
   - video frame image update와 pulse cursor update를 가능한 한 분리한다.
+- PhotoImage conversion 최적화:
+  - 현재 raw frame cache는 worker로 보강했지만 RGB 변환, resize, PhotoImage 생성은 main thread에 남아 있다.
+  - 다음 병목이 남으면 zoom level/canvas size 기준 resized image cache를 별도로 검토한다.
 - Pulse rendering 최적화:
   - channel 추가/zoom/pan 때만 pulse curve points를 재계산하고, frame 이동 때는 current cursor/time/legend value만 갱신하는 방향으로 분리한다.
   - 큰 DAT channel에서는 downsampling/window sampling을 view range 기준으로 캐시한다.

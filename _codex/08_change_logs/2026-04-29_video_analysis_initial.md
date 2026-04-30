@@ -29,6 +29,7 @@
 - View 3 redraw 부하를 줄이기 위해 view range별 sampled pulse point cache를 추가했다.
 - playback speed selector를 추가했다. `x1.0`, `x1.5`, `x2`, `x3` 배율은 UI playback delay에만 반영하고 frame/time 기준은 유지한다.
 - video playback 1차 리팩토링을 적용했다. Frame cache를 `FrameCache`로 분리하고, 순차 재생 중 가능한 경우 `capture.set()` seek 없이 `read()`를 이어가며, x2/x3는 frame skip 방식으로 체감 배속을 높인다.
+- video playback 2차 리팩토링을 적용했다. slot별 background prefetch worker가 별도 `VideoCapture`로 주변 raw frame을 `FrameCache`에 미리 채우고, Tk UI thread는 cache 조회와 표시를 담당한다.
 - 다음 최적화 방향은 `_codex/04_modules/video_analysis.md`의 `Next optimization work`에 정리했다.
 
 ## Files

@@ -5,6 +5,7 @@ from tkinter import filedialog, messagebox, simpledialog, ttk
 import numpy as np
 
 from app.core.video.frame_cache import FrameCache
+from app.core.video.frame_prefetcher import FramePrefetchManager
 from app.core.video.video_sync import VideoAnalysisState
 from app.ui.components.pulse_timeline import PulseTimeline
 from app.ui.components.video_viewer import KeyframeTimeline, VideoSlotViewer
@@ -47,6 +48,7 @@ class VideoAnalysisPage(tk.Frame):
         self._play_after_id = None
         self._refresh_after_id = None
         self._frame_cache = FrameCache(radius=4, max_items=40)
+        self._frame_prefetcher = FramePrefetchManager(self._frame_cache, radius=8)
         self._capture_next_frames = [None] * MAX_VIDEOS
         self._playback_frame_accumulator = 0.0
         self._held_key = None
@@ -208,6 +210,7 @@ class VideoAnalysisPage(tk.Frame):
             self.captures[slot_index] = capture
             self.video_infos[slot_index] = {"path": str(path), "fps": fps, "frame_count": frame_count, "duration_ms": duration_ms}
             self._capture_next_frames[slot_index] = None
+            self._frame_prefetcher.start_slot(slot_index, str(path))
             assigned += 1
 
         if assigned <= 0:
@@ -239,6 +242,7 @@ class VideoAnalysisPage(tk.Frame):
             pass
         self.captures[index] = None
         self.video_infos[index] = None
+        self._frame_prefetcher.stop_slot(index)
         self._frame_cache.clear_slot(index)
         self._capture_next_frames[index] = None
         self.video_left.reset_zoom()
@@ -543,6 +547,7 @@ class VideoAnalysisPage(tk.Frame):
 
     def _refresh_all(self):
         self._refresh_status()
+        self._request_frame_prefetch()
         self._refresh_video_frames()
         self._refresh_pulse()
         self._refresh_keyframe()
@@ -646,6 +651,14 @@ class VideoAnalysisPage(tk.Frame):
                 continue
             viewer.show_frame(self._frame_to_photo(frame, viewer))
 
+    def _request_frame_prefetch(self):
+        active_slots = self._active_video_indices()
+        if not active_slots or self.state.frame_count <= 0:
+            return
+        center = int(self.state.current_raw_frame)
+        for index in active_slots:
+            self._frame_prefetcher.request(index, center, self.state.frame_count, active_slots)
+
     def _read_frame_cached(self, index, frame_index):
         cached = self._frame_cache.get(index, frame_index)
         if cached is not None:
@@ -719,6 +732,7 @@ class VideoAnalysisPage(tk.Frame):
         self.captures = [None] * MAX_VIDEOS
         self.video_infos = [None] * MAX_VIDEOS
         self.channel_data = []
+        self._frame_prefetcher.stop_all()
         self._frame_cache.clear()
         self._reset_capture_positions()
         self._playback_frame_accumulator = 0.0
