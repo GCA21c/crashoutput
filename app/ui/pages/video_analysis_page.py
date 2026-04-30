@@ -606,8 +606,7 @@ class VideoAnalysisPage(tk.Frame):
             self._request_frame_prefetch()
         self._refresh_video_frames()
         self._refresh_pulse()
-        if self._playback_ui_frame_counter % 4 == 0:
-            self._refresh_keyframe()
+        self._refresh_keyframe()
 
     def _refresh_status(self):
         self.time_var.set(f"Time : {self.state.synced_time_ms:.1f}ms")
