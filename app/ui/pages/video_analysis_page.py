@@ -41,6 +41,7 @@ class VideoAnalysisPage(tk.Frame):
         self.channel_data = []
         self.channel_select_var = tk.StringVar()
         self.pulse_view_mode_var = tk.IntVar(value=2)
+        self._layout_refresh_after_id = None
         self._play_after_id = None
         self._refresh_after_id = None
         self._frame_cache = {}
@@ -250,13 +251,18 @@ class VideoAnalysisPage(tk.Frame):
         time_s = viewer.get_numeric_column(viewer.time_column)
         values = viewer.get_numeric_column(selected)
         unit = str((getattr(viewer, "external_units", {}) or {}).get(selected) or "").strip()
+        time_ms = np.asarray(time_s, dtype=float) * 1000.0
+        signal_values = np.asarray(values, dtype=float)
+        peak = self._channel_abs_peak(time_ms, signal_values)
         self.state.selected_channels.append(selected)
         self.channel_data.append({
             "name": selected,
             "isocode": selected,
             "unit": unit,
-            "time_ms": np.asarray(time_s, dtype=float) * 1000.0,
-            "values": np.asarray(values, dtype=float),
+            "time_ms": time_ms,
+            "values": signal_values,
+            "peak_time_ms": peak[0],
+            "peak_value": peak[1],
         })
         self.pulse_timeline.set_channels(self.channel_data)
         self._refresh_channel_options()
@@ -437,9 +443,26 @@ class VideoAnalysisPage(tk.Frame):
         self.video_right.pack_forget()
         if len(self.captures) <= 1:
             self.video_left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=8, pady=8)
+            self._schedule_post_layout_refresh()
             return
         self.video_left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(8, 4), pady=8)
         self.video_right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(4, 8), pady=8)
+        self._schedule_post_layout_refresh()
+
+    def _schedule_post_layout_refresh(self):
+        if self._layout_refresh_after_id is not None:
+            try:
+                self.after_cancel(self._layout_refresh_after_id)
+            except Exception:
+                pass
+        self.update_idletasks()
+        self._layout_refresh_after_id = self.after(60, self._refresh_after_layout)
+
+    def _refresh_after_layout(self):
+        self._layout_refresh_after_id = None
+        self.update_idletasks()
+        self._refresh_video_frames()
+        self._refresh_pulse()
 
     def _refresh_all(self):
         self._refresh_status()
@@ -483,8 +506,29 @@ class VideoAnalysisPage(tk.Frame):
                     data["current_value"] = None
             else:
                 data["current_value"] = None
+            if data.get("peak_time_ms") is None or data.get("peak_value") is None:
+                peak_time, peak_value = self._channel_abs_peak(time_values[:n], signal_values[:n])
+                data["peak_time_ms"] = peak_time
+                data["peak_value"] = peak_value
             out.append(data)
         return out
+
+    @staticmethod
+    def _channel_abs_peak(time_values, signal_values):
+        times = np.asarray([] if time_values is None else time_values, dtype=float)
+        values = np.asarray([] if signal_values is None else signal_values, dtype=float)
+        n = min(len(times), len(values))
+        if n <= 0:
+            return None, None
+        times = times[:n]
+        values = values[:n]
+        finite = np.isfinite(times) & np.isfinite(values)
+        if not np.any(finite):
+            return None, None
+        finite_indexes = np.flatnonzero(finite)
+        peak_pos = int(np.argmax(np.abs(values[finite])))
+        peak_index = int(finite_indexes[peak_pos])
+        return float(times[peak_index]), float(values[peak_index])
 
     def _refresh_keyframe(self):
         start_ms, end_ms = self._timeline_range_ms()

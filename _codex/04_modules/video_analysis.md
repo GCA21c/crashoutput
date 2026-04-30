@@ -35,6 +35,7 @@
 - channel add는 toolbar의 상시 combobox에서 channel을 선택한 뒤 `Add channel` 버튼으로 추가한다.
 - overlay 우측 상단에 pulse channel ISO code legend를 curve 색상과 같은 색으로 표시한다.
 - overlay legend는 현재 cursor 지점의 channel value와 unit을 `ISOCODE value [unit]` 형식으로 표시한다.
+- 선택된 각 pulse channel은 해당 채널 값의 absolute peak 지점을 계산해 pulse line과 같은 색상의 vertical dashed line으로 표시한다.
 - 별도 Pulse Overlay 목록 영역은 제거했고, pulse는 video overlay에만 표시한다.
 - 하단 안내문구 우측에 `Pulse View 1` / `Pulse View 2` 선택 버튼을 둔다.
 - `Pulse View 1`은 4면 outline이 모두 있는 semi-transparent pulse box와 semi-transparent legend background를 쓰는 graph-box 스타일이다.

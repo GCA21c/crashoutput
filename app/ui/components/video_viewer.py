@@ -31,6 +31,8 @@ class VideoSlotViewer(tk.Frame):
             bg="#0b1120",
             highlightthickness=0,
             bd=0,
+            width=640,
+            height=360,
         )
         self.canvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=8, pady=(0, 8))
         self.canvas.bind("<Configure>", lambda _event: self._redraw())
@@ -170,6 +172,26 @@ class VideoSlotViewer(tk.Frame):
                 points.extend((x, y))
             if len(points) >= 4:
                 canvas.create_line(*points, fill=colors[channel_index % len(colors)], width=1.35, smooth=True, tags=("pulse_curve", "pulse_fg"))
+
+        view_start, view_end = self._pulse_view_range()
+        for channel_index, item in enumerate(self.overlay_channels):
+            try:
+                peak_time = float(item.get("peak_time_ms"))
+            except (TypeError, ValueError):
+                continue
+            if not (view_start <= peak_time <= view_end):
+                continue
+            peak_x = x_for_time(peak_time)
+            canvas.create_line(
+                peak_x,
+                top + 2,
+                peak_x,
+                bottom - 2,
+                fill=colors[channel_index % len(colors)],
+                width=1.2,
+                dash=(2, 2),
+                tags=("pulse_peak", "pulse_fg"),
+            )
 
         t0_x = x_for_time(0.0)
         if left <= t0_x <= right:
