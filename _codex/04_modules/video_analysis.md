@@ -28,6 +28,7 @@
 - frame 이동 성능을 위해 현재 주변 frame만 메모리 cache에 유지한다.
 - pulse graph는 channel 변경 시 전체 redraw하고, frame 이동 시에는 vertical cursor만 갱신한다.
 - Left/Right key를 누르고 있으면 초기 1-frame 이동 후 반복 이동은 2-frame step으로 가속한다.
+- playback speed selector는 `x1.0`, `x1.5`, `x2`, `x3`를 제공하며 UI playback delay에만 반영한다. frame/time 계산은 기존 `1 frame = 1 ms` 기준을 유지한다.
 - key frame timeline은 drag-to-seek를 지원한다.
 - Pulse graph legend는 움직이지 않도록 우측 상단에 고정한다.
 - Pulse curve는 별도 큰 graph 영역 대신 video canvas 하단에 semi-transparent overlay로 표시한다.

@@ -41,6 +41,7 @@ class VideoAnalysisPage(tk.Frame):
         self.channel_data = []
         self.channel_select_var = tk.StringVar()
         self.pulse_view_mode_var = tk.IntVar(value=2)
+        self.playback_speed_var = tk.StringVar(value="x1.0")
         self._layout_refresh_after_id = None
         self._play_after_id = None
         self._refresh_after_id = None
@@ -79,6 +80,14 @@ class VideoAnalysisPage(tk.Frame):
         self.play_button.pack(side=tk.LEFT, padx=4)
         tk.Button(controls, text="▶▶", command=self.next_frame, width=7).pack(side=tk.LEFT, padx=4)
         tk.Button(controls, text="▶|", command=self.last_frame, width=7).pack(side=tk.LEFT, padx=4)
+        self.playback_speed_combo = ttk.Combobox(
+            controls,
+            textvariable=self.playback_speed_var,
+            values=("x1.0", "x1.5", "x2", "x3"),
+            state="readonly",
+            width=5,
+        )
+        self.playback_speed_combo.pack(side=tk.LEFT, padx=(6, 4))
 
         status = tk.Frame(toolbar, bg=PAGE_BG)
         status.pack(side=tk.RIGHT)
@@ -390,8 +399,18 @@ class VideoAnalysisPage(tk.Frame):
     def _schedule_play_step(self):
         if not self.state.is_playing:
             return
-        delay_ms = max(1, int(round(1000.0 / max(1.0, float(self.state.playback_rate_fps or 30.0)))))
+        playback_fps = max(1.0, float(self.state.playback_rate_fps or 30.0) * self._playback_speed_multiplier())
+        delay_ms = max(1, int(round(1000.0 / playback_fps)))
         self._play_after_id = self.after(delay_ms, self._play_step)
+
+    def _playback_speed_multiplier(self):
+        value = str(self.playback_speed_var.get() or "x1.0").lower().strip()
+        if value.startswith("x"):
+            value = value[1:]
+        try:
+            return max(0.1, float(value))
+        except ValueError:
+            return 1.0
 
     def _play_step(self):
         self._play_after_id = None

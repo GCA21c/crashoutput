@@ -27,6 +27,7 @@
 - video slot을 V1/V2 고정 배열로 바꿔 `Clear V1` 후에도 V2가 V1으로 당겨지지 않게 했다. 단독 video 표시 시 남아 있는 slot viewer가 전체폭을 사용한다.
 - `Pulse View 3`을 추가했다. View 2 스타일을 기반으로 현재 video time까지 pulse line을 누적 표시하고, frame cursor line 대신 peak point marker를 표시한다.
 - View 3 redraw 부하를 줄이기 위해 view range별 sampled pulse point cache를 추가했다.
+- playback speed selector를 추가했다. `x1.0`, `x1.5`, `x2`, `x3` 배율은 UI playback delay에만 반영하고 frame/time 기준은 유지한다.
 - 다음 최적화 방향은 `_codex/04_modules/video_analysis.md`의 `Next optimization work`에 정리했다.
 
 ## Files
