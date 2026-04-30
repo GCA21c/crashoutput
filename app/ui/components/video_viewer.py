@@ -528,6 +528,8 @@ class KeyframeTimeline(tk.Frame):
         self.keyframes = []
         self.on_seek = on_seek
         self._dragging = False
+        self._cursor_item_ids = []
+        self._track_geometry = None
         self.canvas = tk.Canvas(self, height=42, bg="#f8fafc", highlightthickness=1, highlightbackground="#cbd5e1")
         self.canvas.pack(fill=tk.X, expand=True)
         self.canvas.bind("<Configure>", lambda _event: self._draw())
@@ -549,6 +551,7 @@ class KeyframeTimeline(tk.Frame):
     def _draw(self):
         canvas = self.canvas
         canvas.delete("all")
+        self._cursor_item_ids = []
         width = max(1, int(canvas.winfo_width()))
         height = max(1, int(canvas.winfo_height()))
         canvas.create_rectangle(0, 0, width, height, fill="#0f172a", outline="")
@@ -557,6 +560,7 @@ class KeyframeTimeline(tk.Frame):
         track_top = 14
         track_bottom = 26
         track_mid = (track_top + track_bottom) / 2
+        self._track_geometry = (left, right, track_top, track_bottom, track_mid, height)
         canvas.create_rectangle(left, track_top, right, track_bottom, fill="#1e293b", outline="#334155")
         canvas.create_line(left, track_mid, right, track_mid, fill="#64748b", width=1)
         for index in range(11):
@@ -588,15 +592,35 @@ class KeyframeTimeline(tk.Frame):
                 outline="#fef3c7",
             )
 
-        cursor_x = x_for_time(self.cursor_ms)
-        canvas.create_rectangle(left, track_top, cursor_x, track_bottom, fill="#2563eb", outline="")
-        canvas.create_line(cursor_x, 6, cursor_x, height - 6, fill="#f8fafc", width=2)
-        canvas.create_oval(cursor_x - 5, track_mid - 5, cursor_x + 5, track_mid + 5, fill="#f8fafc", outline="#38bdf8", width=2)
+        self._draw_cursor()
+
+    def _draw_cursor(self):
+        canvas = self.canvas
+        for item_id in self._cursor_item_ids:
+            try:
+                canvas.delete(item_id)
+            except Exception:
+                pass
+        self._cursor_item_ids = []
+        if self._track_geometry is None:
+            return
+        left, right, track_top, track_bottom, track_mid, height = self._track_geometry
+        cursor_x = self._x_for_time(self.cursor_ms, left, right)
+        self._cursor_item_ids.append(canvas.create_rectangle(left, track_top, cursor_x, track_bottom, fill="#2563eb", outline=""))
+        self._cursor_item_ids.append(canvas.create_line(cursor_x, 6, cursor_x, height - 6, fill="#f8fafc", width=2))
+        self._cursor_item_ids.append(canvas.create_oval(cursor_x - 5, track_mid - 5, cursor_x + 5, track_mid + 5, fill="#f8fafc", outline="#38bdf8", width=2))
         label = f"{self.cursor_ms:.1f}ms"
         label_width = max(54, len(label) * 7 + 14)
+        width = max(1, int(canvas.winfo_width()))
         label_left = max(4, min(cursor_x + 8, width - label_width - 4))
-        canvas.create_rectangle(label_left, 3, label_left + label_width, 18, fill="#e0f2fe", outline="#38bdf8")
-        canvas.create_text(label_left + label_width / 2, 10.5, text=label, fill="#0f172a", font=("Arial", 8, "bold"))
+        self._cursor_item_ids.append(canvas.create_rectangle(label_left, 3, label_left + label_width, 18, fill="#e0f2fe", outline="#38bdf8"))
+        self._cursor_item_ids.append(canvas.create_text(label_left + label_width / 2, 10.5, text=label, fill="#0f172a", font=("Arial", 8, "bold")))
+
+    def _x_for_time(self, value_ms, left, right):
+        if self.duration_ms <= 0.0:
+            return left
+        ratio = max(0.0, min((float(value_ms) - self.start_ms) / self.duration_ms, 1.0))
+        return left + ratio * (right - left)
 
     def _time_for_x(self, x):
         width = max(1, int(self.canvas.winfo_width()))
@@ -610,9 +634,9 @@ class KeyframeTimeline(tk.Frame):
     def _seek_event(self, event):
         value_ms = self._time_for_x(event.x)
         self.cursor_ms = value_ms
-        self._draw()
+        self._draw_cursor()
         if callable(self.on_seek):
-            self.on_seek(value_ms)
+            self.on_seek(value_ms, final=False)
 
     def _on_press(self, event):
         self._dragging = True
@@ -625,4 +649,8 @@ class KeyframeTimeline(tk.Frame):
     def _on_release(self, event):
         if self._dragging:
             self._dragging = False
-            self._seek_event(event)
+            value_ms = self._time_for_x(event.x)
+            self.cursor_ms = value_ms
+            self._draw_cursor()
+            if callable(self.on_seek):
+                self.on_seek(value_ms, final=True)

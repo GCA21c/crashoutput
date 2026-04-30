@@ -73,7 +73,8 @@
   - 단, Tk widget 업데이트는 main thread에서만 수행한다.
 - Playback responsiveness:
   - 재생 중에는 video/status/pulse/keyframe timeline을 즉시 갱신한다.
-  - keyframe timeline drag는 마우스 이벤트마다 무거운 video seek를 실행하지 않고, 12ms throttle로 마지막 drag 위치를 반영한다.
+  - keyframe timeline drag는 cursor marker만 즉시 갱신하고, video seek는 33ms throttle로 마지막 drag 위치를 반영한다.
+  - keyframe timeline drag release 시에는 pending seek를 취소하고 최종 위치를 즉시 반영한다.
   - 현재 화면에 보이는 video viewer만 pulse overlay를 갱신한다. 숨겨진 V1/V2 viewer는 재생 중 불필요한 placeholder/pulse redraw를 피한다.
 - PhotoImage conversion 최적화:
   - raw frame cache와 별도로 slot/frame/image size/zoom 기준 PhotoImage cache를 추가했다.

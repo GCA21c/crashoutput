@@ -325,11 +325,20 @@ class VideoAnalysisPage(tk.Frame):
         self.state.set_sync_offset(value)
         self._schedule_refresh()
 
-    def _seek_timeline_ms(self, value_ms):
+    def _seek_timeline_ms(self, value_ms, final=False):
         self.pause()
         self._pending_timeline_seek_ms = float(value_ms or 0.0)
+        if final:
+            if self._timeline_seek_after_id is not None:
+                try:
+                    self.after_cancel(self._timeline_seek_after_id)
+                except Exception:
+                    pass
+                self._timeline_seek_after_id = None
+            self._apply_pending_timeline_seek()
+            return
         if self._timeline_seek_after_id is None:
-            self._timeline_seek_after_id = self.after(12, self._apply_pending_timeline_seek)
+            self._timeline_seek_after_id = self.after(33, self._apply_pending_timeline_seek)
 
     def _apply_pending_timeline_seek(self):
         self._timeline_seek_after_id = None
