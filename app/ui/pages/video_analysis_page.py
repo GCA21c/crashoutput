@@ -47,7 +47,8 @@ class VideoAnalysisPage(tk.Frame):
         self._layout_refresh_after_id = None
         self._play_after_id = None
         self._refresh_after_id = None
-        self._playback_refresh_after_id = None
+        self._timeline_seek_after_id = None
+        self._pending_timeline_seek_ms = None
         self._frame_cache = FrameCache(radius=4, max_items=40)
         self._frame_prefetcher = FramePrefetchManager(self._frame_cache, radius=8)
         self._prefetch_enabled = False
@@ -326,12 +327,32 @@ class VideoAnalysisPage(tk.Frame):
 
     def _seek_timeline_ms(self, value_ms):
         self.pause()
-        raw_frame = int(round(float(value_ms or 0.0) - float(self.state.sync_frame_offset)))
+        self._pending_timeline_seek_ms = float(value_ms or 0.0)
+        if self._timeline_seek_after_id is None:
+            self._timeline_seek_after_id = self.after(12, self._apply_pending_timeline_seek)
+
+    def _apply_pending_timeline_seek(self):
+        self._timeline_seek_after_id = None
+        value_ms = self._pending_timeline_seek_ms
+        self._pending_timeline_seek_ms = None
+        if value_ms is None:
+            return
+        raw_frame = int(round(float(value_ms) - float(self.state.sync_frame_offset)))
         self.state.set_frame(raw_frame)
         self._reset_capture_positions()
-        self._schedule_refresh()
+        self._refresh_all()
+
+    def _cancel_pending_timeline_seek(self):
+        if self._timeline_seek_after_id is not None:
+            try:
+                self.after_cancel(self._timeline_seek_after_id)
+            except Exception:
+                pass
+            self._timeline_seek_after_id = None
+        self._pending_timeline_seek_ms = None
 
     def _step_frame(self, delta, pause=True):
+        self._cancel_pending_timeline_seek()
         if pause:
             self.pause()
         self.state.step_frame(delta)
@@ -385,15 +406,6 @@ class VideoAnalysisPage(tk.Frame):
         self._refresh_after_id = None
         self._refresh_all()
 
-    def _schedule_playback_refresh(self):
-        if self._playback_refresh_after_id is not None:
-            return
-        self._playback_refresh_after_id = self.after_idle(self._refresh_playback_view_scheduled)
-
-    def _refresh_playback_view_scheduled(self):
-        self._playback_refresh_after_id = None
-        self._refresh_playback_view()
-
     def prev_frame(self):
         self._step_frame(-1)
 
@@ -401,12 +413,14 @@ class VideoAnalysisPage(tk.Frame):
         self._step_frame(1)
 
     def first_frame(self):
+        self._cancel_pending_timeline_seek()
         self.pause()
         self.state.set_frame(0)
         self._reset_capture_positions()
         self._schedule_refresh()
 
     def last_frame(self):
+        self._cancel_pending_timeline_seek()
         self.pause()
         self.state.set_frame(max(0, self.state.frame_count - 1))
         self._reset_capture_positions()
@@ -422,6 +436,7 @@ class VideoAnalysisPage(tk.Frame):
     def play(self):
         if not self._active_video_indices() or self.state.frame_count <= 0:
             return
+        self._cancel_pending_timeline_seek()
         self._playback_frame_accumulator = 0.0
         self._playback_ui_frame_counter = 0
         self.state.is_playing = True
@@ -437,12 +452,6 @@ class VideoAnalysisPage(tk.Frame):
             except Exception:
                 pass
             self._play_after_id = None
-        if self._playback_refresh_after_id is not None:
-            try:
-                self.after_cancel(self._playback_refresh_after_id)
-            except Exception:
-                pass
-            self._playback_refresh_after_id = None
         self._held_key = None
         self._playback_frame_accumulator = 0.0
         self._playback_ui_frame_counter = 0
@@ -491,7 +500,7 @@ class VideoAnalysisPage(tk.Frame):
             self._schedule_refresh()
             return
         self.state.step_frame(min(self._playback_frame_delta(), last_frame - int(self.state.current_raw_frame)))
-        self._schedule_playback_refresh()
+        self._refresh_playback_view()
         self._schedule_play_step()
 
     def _on_space(self, event):
@@ -811,6 +820,7 @@ class VideoAnalysisPage(tk.Frame):
 
     def reset_session_state(self):
         self.pause()
+        self._cancel_pending_timeline_seek()
         for capture in self.captures:
             if capture is None:
                 continue
