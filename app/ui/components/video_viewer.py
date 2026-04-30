@@ -129,7 +129,7 @@ class VideoSlotViewer(tk.Frame):
             canvas.create_rectangle(left, top, right, bottom, fill="#020617", outline="#38bdf8", stipple="gray50", tags=("pulse_bg",))
         else:
             canvas.create_line(left, bottom, right, bottom, fill="#38bdf8", width=1, tags=("pulse_bg",))
-        colors = ("#0000ff", "#f97316", "#a3e635")
+        colors = ("#ffffff", "#f97316", "#a3e635")
 
         def x_for_time(value):
             view_start, view_end = self._pulse_view_range()
@@ -205,12 +205,21 @@ class VideoSlotViewer(tk.Frame):
             time_fill = "#f8fafc"
         else:
             time_fill = "#e5e7eb"
-        canvas.create_text(left + 8, bottom - 8, text=time_text, anchor="sw", fill=time_fill, font=("Arial", 8, "bold"), tags=("pulse_fg",))
+        canvas.create_text(
+            left + 8,
+            bottom - 8,
+            text=time_text,
+            anchor="sw",
+            fill=time_fill,
+            font=("Arial", 8, "bold"),
+            tags=("pulse_fg", "pulse_time_text"),
+        )
 
         cursor_x = x_for_time(self.overlay_cursor_ms)
         canvas.create_line(cursor_x, top - 5, cursor_x, bottom + 5, fill="#00ff00", width=1, tags=("pulse_fg",))
         self._draw_overlay_legend(left, right, top, colors)
         canvas.tag_raise("pulse_fg")
+        canvas.tag_raise("pulse_time_text")
         canvas.tag_raise("pulse_legend_text")
 
     def _pulse_view_range(self):
