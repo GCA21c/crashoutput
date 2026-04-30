@@ -17,8 +17,6 @@ MAX_VIDEOS = 2
 MAX_CHANNELS = 3
 STEP_PREFETCH_RADIUS = 20
 SEEK_PREFETCH_RADIUS = 50
-PLAYBACK_PREFETCH_AHEAD = 12
-PLAYBACK_PREFETCH_INTERVAL = 3
 
 
 def _load_cv2():
@@ -331,7 +329,7 @@ class VideoAnalysisPage(tk.Frame):
 
     def _seek_timeline_ms(self, value_ms, final=False):
         self.pause()
-        self._pending_timeline_seek_ms = float(value_ms or 0.0)
+        self._pending_timeline_seek_ms = float(int(round(float(value_ms or 0.0))))
         if final:
             if self._timeline_seek_after_id is not None:
                 try:
@@ -621,8 +619,6 @@ class VideoAnalysisPage(tk.Frame):
         self._refresh_status()
         if self._prefetch_enabled:
             self._request_frame_prefetch()
-        if self._playback_ui_frame_counter % PLAYBACK_PREFETCH_INTERVAL == 0:
-            self._request_playback_frame_prefetch()
         self._refresh_video_frames()
         self._refresh_pulse()
         self._refresh_keyframe()
@@ -788,21 +784,6 @@ class VideoAnalysisPage(tk.Frame):
                 self.state.frame_count,
                 active_slots,
                 radius=request_radius,
-            )
-
-    def _request_playback_frame_prefetch(self):
-        active_slots = self._active_video_indices()
-        if not active_slots or self.state.frame_count <= 0:
-            return
-        center = int(self.state.current_raw_frame)
-        for index in active_slots:
-            self._frame_prefetcher.request(
-                index,
-                center,
-                self.state.frame_count,
-                active_slots,
-                before_radius=0,
-                after_radius=PLAYBACK_PREFETCH_AHEAD,
             )
 
     def _read_frame_cached(self, index, frame_index):

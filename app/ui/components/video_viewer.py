@@ -544,7 +544,7 @@ class KeyframeTimeline(tk.Frame):
         else:
             self.end_ms = max(self.start_ms, float(end_ms or 0.0))
         self.duration_ms = max(0.0, self.end_ms - self.start_ms)
-        self.cursor_ms = float(cursor_ms or 0.0)
+        self.cursor_ms = self._snap_time_ms(cursor_ms)
         self.keyframes = list(keyframes or [])
         self._draw()
 
@@ -609,7 +609,7 @@ class KeyframeTimeline(tk.Frame):
         self._cursor_item_ids.append(canvas.create_rectangle(left, track_top, cursor_x, track_bottom, fill="#2563eb", outline=""))
         self._cursor_item_ids.append(canvas.create_line(cursor_x, 6, cursor_x, height - 6, fill="#f8fafc", width=2))
         self._cursor_item_ids.append(canvas.create_oval(cursor_x - 5, track_mid - 5, cursor_x + 5, track_mid + 5, fill="#f8fafc", outline="#38bdf8", width=2))
-        label = f"{self.cursor_ms:.1f}ms"
+        label = f"{int(round(self.cursor_ms))}ms"
         label_width = max(54, len(label) * 7 + 14)
         width = max(1, int(canvas.winfo_width()))
         label_left = max(4, min(cursor_x + 8, width - label_width - 4))
@@ -627,9 +627,17 @@ class KeyframeTimeline(tk.Frame):
         left = 18
         right = width - 18
         if right <= left or self.duration_ms <= 0.0:
-            return self.start_ms
+            return self._snap_time_ms(self.start_ms)
         ratio = max(0.0, min((float(x) - left) / float(right - left), 1.0))
-        return self.start_ms + ratio * self.duration_ms
+        return self._snap_time_ms(self.start_ms + ratio * self.duration_ms)
+
+    def _snap_time_ms(self, value_ms):
+        value = int(round(float(value_ms or 0.0)))
+        start = int(round(float(self.start_ms or 0.0)))
+        end = int(round(float(self.end_ms or start)))
+        if end < start:
+            end = start
+        return float(max(start, min(value, end)))
 
     def _seek_event(self, event):
         value_ms = self._time_for_x(event.x)

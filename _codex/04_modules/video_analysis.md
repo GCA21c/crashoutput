@@ -28,15 +28,16 @@
 - frame 이동 성능을 위해 현재 주변 frame만 메모리 cache에 유지한다.
 - frame cache는 `app/core/video/frame_cache.py`의 `FrameCache`로 분리했다.
 - 수동 frame step 이동 후에는 현재 frame 기준 ±20 raw frame, keyframe/first/last seek 후에는 ±50 raw frame을 background prefetch로 준비한다.
-- 재생 중에는 3 frame마다 현재 frame 기준 앞쪽 +12 raw frame만 가볍게 prefetch한다. 기존 full 양방향 playback prefetch 옵션(`_prefetch_enabled`)은 기본 OFF를 유지한다.
+- 재생 중 prefetch는 기본 OFF로 둔다. 현재 자동재생은 순차 read 최적화 경로를 우선한다.
 - 순차 재생 중에는 가능한 경우 매 frame `capture.set(CAP_PROP_POS_FRAMES)`를 호출하지 않고 현재 capture 위치에서 `read()`를 이어간다. seek/timeline/key step은 capture 위치를 reset한다.
 - slot별 `FramePrefetchManager`를 추가했다. worker는 UI capture와 별도 `VideoCapture`를 소유하고 현재 frame 주변 raw frame을 `FrameCache`에 미리 채운다.
-- full 양방향 prefetch worker 옵션은 x1.0 체감 저하 가능성이 있어 기본 OFF(`_prefetch_enabled = False`)로 둔다. 대신 playback 중 forward-only lightweight prefetch를 사용한다.
+- full 양방향 prefetch worker 옵션은 x1.0 체감 저하 가능성이 있어 기본 OFF(`_prefetch_enabled = False`)로 둔다.
 - worker는 Tk widget/PhotoImage를 만들지 않는다. UI update와 image object 생성은 계속 main thread에서 수행한다.
 - Pulse View 1/2는 channel 변경/zoom/pan 시 static pulse layer를 다시 그리고, frame 이동 시에는 current cursor/time/legend value만 갱신한다.
 - Left/Right key를 누르고 있으면 초기 1-frame 이동 후 반복 이동은 2-frame step으로 가속한다.
 - playback speed selector는 `x1.0`, `x1.5`, `x2`, `x3`를 제공한다. 배율은 timer delay가 아니라 frame advance delta에 반영해 x2/x3에서 frame skip으로 체감 속도를 높인다. frame/time 계산은 기존 `1 frame = 1 ms` 기준을 유지한다.
 - key frame timeline은 drag-to-seek를 지원한다.
+- key frame timeline drag/label/seek 값은 `1 frame = 1 ms` 기준에 맞춰 정수 ms로 snap한다.
 - Pulse graph legend는 움직이지 않도록 우측 상단에 고정한다.
 - Pulse curve는 별도 큰 graph 영역 대신 video canvas 하단에 semi-transparent overlay로 표시한다.
 - `Clear V1`, `Clear V2`로 각 video slot을 개별 제거할 수 있다.
