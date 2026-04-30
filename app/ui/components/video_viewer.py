@@ -372,13 +372,16 @@ class VideoSlotViewer(tk.Frame):
         if not self.overlay_channels:
             return
         canvas = self.canvas
-        labels = [self._legend_label(item) for item in self.overlay_channels]
+        legend_items = [self._legend_parts(item) for item in self.overlay_channels]
         overlay_width = max(1, right - left)
-        legend_width = min(max(150, max(len(label) for label in labels) * 7 + 18), max(150, overlay_width - 12))
+        name_width = max(90, max(len(name) for name, _value in legend_items) * 7)
+        value_width = max(74, max(len(value) for _name, value in legend_items) * 7)
+        legend_width = min(max(150, name_width + value_width + 28), max(150, overlay_width - 12))
         line_height = 18
-        legend_height = 10 + line_height * len(labels)
+        legend_height = 10 + line_height * len(legend_items)
         legend_left = max(left + 6, right - legend_width - 6)
         legend_top = top + 6
+        value_x = legend_left + legend_width - 9
         legend_options = {
             "fill": "#020617",
             "outline": "#334155" if self.pulse_view_mode == 1 else "#38bdf8",
@@ -393,21 +396,30 @@ class VideoSlotViewer(tk.Frame):
             legend_top + legend_height,
             **legend_options,
         )
-        for index, label in enumerate(labels):
+        for index, (name, value) in enumerate(legend_items):
             y = legend_top + 9 + index * line_height
             color = colors[index % len(colors)]
             canvas.create_text(
                 legend_left + 9,
                 y,
-                text=label,
+                text=name,
                 anchor="w",
+                fill=color,
+                font=("Arial", 8, "bold"),
+                tags=("pulse", "pulse_dynamic", "pulse_fg", "pulse_legend_text"),
+            )
+            canvas.create_text(
+                value_x,
+                y,
+                text=value,
+                anchor="e",
                 fill=color,
                 font=("Arial", 8, "bold"),
                 tags=("pulse", "pulse_dynamic", "pulse_fg", "pulse_legend_text"),
             )
         canvas.tag_raise("pulse_legend_text")
 
-    def _legend_label(self, item):
+    def _legend_parts(self, item):
         item = dict(item or {})
         label = str(item.get("isocode") or item.get("name") or "-")
         value = item.get("current_value")
@@ -416,7 +428,7 @@ class VideoSlotViewer(tk.Frame):
             value_text = f"{float(value):.4g}"
         except (TypeError, ValueError):
             value_text = "-"
-        return f"{label}  {value_text} [{unit or '-'}]"
+        return label, f"{value_text} [{unit or '-'}]"
 
     def _on_mouse_wheel(self, event):
         direction = 1

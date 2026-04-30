@@ -67,7 +67,6 @@ class VideoAnalysisPage(tk.Frame):
         self._capture_next_frames = [None] * MAX_VIDEOS
         self._playback_buffers = [dict() for _ in range(MAX_VIDEOS)]
         self._playback_buffer_after_id = None
-        self._playback_frame_accumulator = 0.0
         self._playback_ui_frame_counter = 0
         self._held_key = None
         self._key_hold_after_id = None
@@ -102,15 +101,6 @@ class VideoAnalysisPage(tk.Frame):
         self.channel_combo.pack(side=tk.LEFT, padx=(8, 0))
         tk.Button(toolbar, text="Add channel", command=self.add_channel, width=13).pack(side=tk.LEFT, padx=(8, 0))
 
-        controls = tk.Frame(toolbar, bg=PAGE_BG)
-        controls.pack(side=tk.LEFT, expand=True)
-        tk.Button(controls, text="|◀", command=self.first_frame, width=7).pack(side=tk.LEFT, padx=4)
-        tk.Button(controls, text="◀◀", command=self.prev_frame, width=7).pack(side=tk.LEFT, padx=4)
-        self.play_button = tk.Button(controls, text="▶", command=self.toggle_play, width=7)
-        self.play_button.pack(side=tk.LEFT, padx=4)
-        tk.Button(controls, text="▶▶", command=self.next_frame, width=7).pack(side=tk.LEFT, padx=4)
-        tk.Button(controls, text="▶|", command=self.last_frame, width=7).pack(side=tk.LEFT, padx=4)
-
         status = tk.Frame(toolbar, bg=PAGE_BG)
         status.pack(side=tk.RIGHT)
         self.time_var = tk.StringVar(value="Time : 000ms")
@@ -139,7 +129,7 @@ class VideoAnalysisPage(tk.Frame):
         speed_box = tk.Frame(footer, bg=PAGE_BG)
         speed_box.pack(side=tk.LEFT)
         tk.Label(speed_box, text="Speed", bg=PAGE_BG, fg=MUTED_FG).pack(side=tk.LEFT, padx=(0, 4))
-        for value in ("x1.0", "x1.5", "x2", "x3"):
+        for value in ("x0.5", "x1.0", "x2.0"):
             tk.Radiobutton(
                 speed_box,
                 text=value,
@@ -154,6 +144,16 @@ class VideoAnalysisPage(tk.Frame):
                 bd=1,
                 relief=tk.RIDGE,
             ).pack(side=tk.LEFT, padx=(3, 0))
+
+        controls = tk.Frame(footer, bg=PAGE_BG)
+        controls.pack(side=tk.LEFT, expand=True)
+        tk.Button(controls, text="|◀", command=self.first_frame, width=7).pack(side=tk.LEFT, padx=4)
+        tk.Button(controls, text="◀◀", command=self.prev_frame, width=7).pack(side=tk.LEFT, padx=4)
+        self.play_button = tk.Button(controls, text="▶", command=self.toggle_play, width=7)
+        self.play_button.pack(side=tk.LEFT, padx=4)
+        tk.Button(controls, text="▶▶", command=self.next_frame, width=7).pack(side=tk.LEFT, padx=4)
+        tk.Button(controls, text="▶|", command=self.last_frame, width=7).pack(side=tk.LEFT, padx=4)
+
         pulse_view_box = tk.Frame(footer, bg=PAGE_BG)
         pulse_view_box.pack(side=tk.RIGHT)
         tk.Label(pulse_view_box, text="Pulse", bg=PAGE_BG, fg=MUTED_FG).pack(side=tk.LEFT, padx=(0, 4))
@@ -464,7 +464,6 @@ class VideoAnalysisPage(tk.Frame):
         if not self._active_video_indices() or self.state.frame_count <= 0:
             return
         self._cancel_pending_timeline_seek()
-        self._playback_frame_accumulator = 0.0
         self._playback_ui_frame_counter = 0
         self._reset_playback_buffers()
         self.state.is_playing = True
@@ -481,14 +480,13 @@ class VideoAnalysisPage(tk.Frame):
                 pass
             self._play_after_id = None
         self._held_key = None
-        self._playback_frame_accumulator = 0.0
         self._playback_ui_frame_counter = 0
         self._cancel_playback_buffer_refill()
 
     def _schedule_play_step(self):
         if not self.state.is_playing:
             return
-        playback_fps = max(1.0, float(self.state.playback_rate_fps or 30.0))
+        playback_fps = max(1.0, float(self.state.playback_rate_fps or 30.0) * self._playback_speed_multiplier())
         delay_ms = max(1, int(round(1000.0 / playback_fps)))
         self._play_after_id = self.after(delay_ms, self._play_step)
 
@@ -501,12 +499,6 @@ class VideoAnalysisPage(tk.Frame):
         except ValueError:
             return 1.0
 
-    def _playback_frame_delta(self):
-        self._playback_frame_accumulator += self._playback_speed_multiplier()
-        delta = max(1, int(self._playback_frame_accumulator))
-        self._playback_frame_accumulator -= float(delta)
-        return delta
-
     def _on_playback_speed_changed(self, _event=None):
         if not self.state.is_playing:
             return
@@ -516,7 +508,6 @@ class VideoAnalysisPage(tk.Frame):
             except Exception:
                 pass
             self._play_after_id = None
-        self._playback_frame_accumulator = 0.0
         self._schedule_play_step()
 
     def _play_step(self):
@@ -528,7 +519,7 @@ class VideoAnalysisPage(tk.Frame):
             self.pause()
             self._schedule_refresh()
             return
-        self.state.step_frame(min(self._playback_frame_delta(), last_frame - int(self.state.current_raw_frame)))
+        self.state.step_frame(1)
         self._refresh_playback_view()
         self._schedule_play_step()
 
@@ -954,7 +945,6 @@ class VideoAnalysisPage(tk.Frame):
         self._frame_cache.clear()
         self._photo_cache.clear()
         self._reset_capture_positions()
-        self._playback_frame_accumulator = 0.0
         self._playback_ui_frame_counter = 0
         self.state = VideoAnalysisState()
         self.video_left.show_placeholder()
