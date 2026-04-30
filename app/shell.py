@@ -17,6 +17,7 @@ from app.ui.pages.injury_page import InjuryPage
 from app.ui.pages.test_setup_page import TestSetupPage
 from app.ui.pages.report_summary_page import ReportSummaryPage
 from app.ui.pages.report_ploting_page import ReportPlotingPage
+from app.ui.pages.video_analysis_page import VideoAnalysisPage
 from app.ui.styles import (
     APP_BG,
     APP_TITLE_FONT,
@@ -185,6 +186,8 @@ class CrashAnalysisWorkbench(tk.Frame):
         self._add_nav_section("POST-PROCESSING")
         self._build_injury_nav_group()
         self._build_report_nav_group()
+        self._add_nav_section("ANALYSIS")
+        self._add_nav_button("video_analysis", "VIDEO ANALYSIS", indent=18)
 
         quick = tk.LabelFrame(self.sidebar, text="Quick Guide", bg=SIDEBAR_BG)
         quick.pack(fill=tk.X, padx=12, pady=(16, 8))
@@ -228,6 +231,7 @@ class CrashAnalysisWorkbench(tk.Frame):
         self.pages["report_summary"] = ReportSummaryPage(self.page_host, self)
         # Internal key/class spelling is kept for compatibility; user-facing text says PLOTTING.
         self.pages["report_ploting"] = ReportPlotingPage(self.page_host, self)
+        self.pages["video_analysis"] = VideoAnalysisPage(self.page_host, self)
         self._apply_injury_mode_nav()
 
     def _render_top_status_shimmer(self):
