@@ -129,7 +129,7 @@ class VideoAnalysisPage(tk.Frame):
         speed_box = tk.Frame(footer, bg=PAGE_BG)
         speed_box.pack(side=tk.LEFT)
         tk.Label(speed_box, text="Speed", bg=PAGE_BG, fg=MUTED_FG).pack(side=tk.LEFT, padx=(0, 4))
-        for value in ("x0.5", "x1.0", "x2.0"):
+        for value in ("x0.3", "x1.0", "x2.5"):
             tk.Radiobutton(
                 speed_box,
                 text=value,

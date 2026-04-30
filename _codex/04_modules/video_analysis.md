@@ -38,7 +38,7 @@
 - worker는 Tk widget/PhotoImage를 만들지 않는다. UI update와 image object 생성은 계속 main thread에서 수행한다.
 - Pulse View 1/2는 channel 변경/zoom/pan 시 static pulse layer를 다시 그리고, frame 이동 시에는 current cursor/time/legend value만 갱신한다.
 - Left/Right key를 누르고 있으면 초기 1-frame 이동 후 반복 이동은 2-frame step으로 가속한다.
-- playback speed selector는 `x0.5`, `x1.0`, `x2.0`를 제공한다. 배율은 frame skip이 아니라 timer delay에 반영하며, 각 tick은 1 frame씩 진행한다. frame/time 계산은 기존 `1 frame = 1 ms` 기준을 유지한다.
+- playback speed selector는 `x0.3`, `x1.0`, `x2.5`를 제공한다. 배율은 frame skip이 아니라 timer delay에 반영하며, 각 tick은 1 frame씩 진행한다. frame/time 계산은 기존 `1 frame = 1 ms` 기준을 유지한다.
 - key frame timeline은 drag-to-seek를 지원한다.
 - key frame timeline drag/label/seek 값은 `1 frame = 1 ms` 기준에 맞춰 정수 ms로 snap한다.
 - Pulse graph legend는 움직이지 않도록 우측 상단에 고정한다.

@@ -425,7 +425,7 @@ class VideoSlotViewer(tk.Frame):
         value = item.get("current_value")
         unit = str(item.get("unit") or "").strip()
         try:
-            value_text = f"{float(value):.4g}"
+            value_text = f"{float(value):.4f}"
         except (TypeError, ValueError):
             value_text = "-"
         return label, f"{value_text} [{unit or '-'}]"
