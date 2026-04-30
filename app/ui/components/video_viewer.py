@@ -25,6 +25,9 @@ class VideoSlotViewer(tk.Frame):
         self._drag_mode = None
         self._drag_last_x = 0
         self._drag_last_y = 0
+        self._canvas_bg_id = None
+        self._canvas_image_id = None
+        self._placeholder_ids = []
         self.header = tk.Label(self, text=self.title, bg="#111827", fg="#e5e7eb", anchor="w", padx=10, pady=5)
         self.header.pack(side=tk.TOP, fill=tk.X)
         self.canvas = tk.Canvas(
@@ -104,12 +107,15 @@ class VideoSlotViewer(tk.Frame):
 
     def _redraw(self):
         canvas = self.canvas
-        canvas.delete("all")
         width = max(1, int(canvas.winfo_width()))
         height = max(1, int(canvas.winfo_height()))
         if self._photo is None:
-            canvas.create_rectangle(0, 0, width, height, fill="#0b1120", outline="")
-            canvas.create_text(
+            canvas.delete("all")
+            self._canvas_bg_id = None
+            self._canvas_image_id = None
+            self._placeholder_ids = []
+            self._placeholder_ids.append(canvas.create_rectangle(0, 0, width, height, fill="#0b1120", outline=""))
+            self._placeholder_ids.append(canvas.create_text(
                 width / 2,
                 height / 2,
                 text=self._placeholder_text,
@@ -117,11 +123,26 @@ class VideoSlotViewer(tk.Frame):
                 justify="center",
                 anchor="center",
                 font=("Arial", 12, "bold"),
-            )
+            ))
             return
-        canvas.create_rectangle(0, 0, width, height, fill="#000000", outline="")
+        if self._placeholder_ids:
+            canvas.delete("all")
+            self._canvas_bg_id = None
+            self._canvas_image_id = None
+            self._placeholder_ids = []
+        if self._canvas_bg_id is None:
+            self._canvas_bg_id = canvas.create_rectangle(0, 0, width, height, fill="#000000", outline="", tags=("video_bg",))
+        else:
+            canvas.coords(self._canvas_bg_id, 0, 0, width, height)
         self._clamp_pan(width, height)
-        canvas.create_image(width / 2 + self.pan_x, height / 2 + self.pan_y, image=self._photo, anchor="center")
+        image_x = width / 2 + self.pan_x
+        image_y = height / 2 + self.pan_y
+        if self._canvas_image_id is None:
+            self._canvas_image_id = canvas.create_image(image_x, image_y, image=self._photo, anchor="center", tags=("video_image",))
+        else:
+            canvas.coords(self._canvas_image_id, image_x, image_y)
+            canvas.itemconfigure(self._canvas_image_id, image=self._photo)
+        canvas.delete("pulse")
         self._draw_pulse_overlay(width, height)
 
     def _draw_pulse_overlay(self, width, height):
@@ -134,9 +155,9 @@ class VideoSlotViewer(tk.Frame):
         self._pulse_box = (left, top, right, bottom)
         canvas = self.canvas
         if self.pulse_view_mode == 1:
-            canvas.create_rectangle(left, top, right, bottom, fill="#020617", outline="#38bdf8", stipple="gray50", tags=("pulse_bg",))
+            canvas.create_rectangle(left, top, right, bottom, fill="#020617", outline="#38bdf8", stipple="gray50", tags=("pulse", "pulse_bg"))
         else:
-            canvas.create_line(left, bottom, right, bottom, fill="#38bdf8", width=1, tags=("pulse_bg",))
+            canvas.create_line(left, bottom, right, bottom, fill="#38bdf8", width=1, tags=("pulse", "pulse_bg"))
         colors = ("#ffffff", "#f97316", "#a3e635")
 
         def x_for_time(value):
@@ -166,7 +187,7 @@ class VideoSlotViewer(tk.Frame):
                 y = bottom - 6 - y_ratio * max(1, (bottom - top - 12))
                 points.extend((x, y))
             if len(points) >= 4:
-                canvas.create_line(*points, fill=colors[channel_index % len(colors)], width=1.40, smooth=True, tags=("pulse_curve", "pulse_fg"))
+                canvas.create_line(*points, fill=colors[channel_index % len(colors)], width=1.40, smooth=True, tags=("pulse", "pulse_curve", "pulse_fg"))
             channel_draw_cache.append((pairs, v_min, v_span, colors[channel_index % len(colors)]))
 
         for channel_index, item in enumerate(self.overlay_channels):
@@ -191,7 +212,7 @@ class VideoSlotViewer(tk.Frame):
                     continue
                 y_ratio = (peak_value - v_min) / max(1e-9, v_span)
                 peak_y = bottom - 6 - y_ratio * max(1, (bottom - top - 12))
-                canvas.create_oval(peak_x - 3, peak_y - 3, peak_x + 3, peak_y + 3, fill=color, outline="", tags=("pulse_peak", "pulse_fg"))
+                canvas.create_oval(peak_x - 3, peak_y - 3, peak_x + 3, peak_y + 3, fill=color, outline="", tags=("pulse", "pulse_peak", "pulse_fg"))
             else:
                 canvas.create_line(
                     peak_x,
@@ -200,19 +221,19 @@ class VideoSlotViewer(tk.Frame):
                     bottom - 2,
                     fill=colors[channel_index % len(colors)],
                     width=1.2,
-                    tags=("pulse_peak", "pulse_fg"),
+                    tags=("pulse", "pulse_peak", "pulse_fg"),
                 )
 
         t0_x = x_for_time(0.0)
         if left <= t0_x <= right:
             dash_top = top + 2
             dash_bottom = bottom - 2
-            canvas.create_line(t0_x, dash_top, t0_x, dash_bottom, fill="#ef4444", width=1.4, dash=(4, 3), tags=("pulse_fg",))
+            canvas.create_line(t0_x, dash_top, t0_x, dash_bottom, fill="#ef4444", width=1.4, dash=(4, 3), tags=("pulse", "pulse_fg"))
 
         time_text = f"Time: {self.overlay_cursor_ms:.0f}ms"
         if self.pulse_view_mode in (2, 3):
             time_box_right = left + 88
-            canvas.create_rectangle(left + 4, bottom - 23, time_box_right, bottom - 4, fill="#020617", outline="#334155", tags=("pulse_fg",))
+            canvas.create_rectangle(left + 4, bottom - 23, time_box_right, bottom - 4, fill="#020617", outline="#334155", tags=("pulse", "pulse_fg"))
             time_fill = "#f8fafc"
         else:
             time_fill = "#e5e7eb"
@@ -223,12 +244,12 @@ class VideoSlotViewer(tk.Frame):
             anchor="sw",
             fill=time_fill,
             font=("Arial", 8, "bold"),
-            tags=("pulse_fg", "pulse_time_text"),
+            tags=("pulse", "pulse_fg", "pulse_time_text"),
         )
 
         cursor_x = x_for_time(self.overlay_cursor_ms)
         if self.pulse_view_mode != 3:
-            canvas.create_line(cursor_x, top - 5, cursor_x, bottom + 5, fill="#00ff00", width=1, tags=("pulse_fg",))
+            canvas.create_line(cursor_x, top - 5, cursor_x, bottom + 5, fill="#00ff00", width=1, tags=("pulse", "pulse_fg"))
         self._draw_overlay_legend(left, right, top, colors)
         canvas.tag_raise("pulse_fg")
         canvas.tag_raise("pulse_time_text")
@@ -303,7 +324,7 @@ class VideoSlotViewer(tk.Frame):
         legend_options = {
             "fill": "#020617",
             "outline": "#334155" if self.pulse_view_mode == 1 else "#38bdf8",
-            "tags": ("pulse_fg", "pulse_legend_bg"),
+            "tags": ("pulse", "pulse_fg", "pulse_legend_bg"),
         }
         if self.pulse_view_mode == 1:
             legend_options["stipple"] = "gray50"
@@ -324,7 +345,7 @@ class VideoSlotViewer(tk.Frame):
                 anchor="w",
                 fill=color,
                 font=("Arial", 8, "bold"),
-                tags=("pulse_fg", "pulse_legend_text"),
+                tags=("pulse", "pulse_fg", "pulse_legend_text"),
             )
         canvas.tag_raise("pulse_legend_text")
 
