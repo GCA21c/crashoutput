@@ -4,6 +4,7 @@ from tkinter import filedialog, messagebox, simpledialog, ttk
 
 import numpy as np
 
+from app.core.video.frame_cache import FrameCache
 from app.core.video.video_sync import VideoAnalysisState
 from app.ui.components.pulse_timeline import PulseTimeline
 from app.ui.components.video_viewer import KeyframeTimeline, VideoSlotViewer
@@ -45,7 +46,9 @@ class VideoAnalysisPage(tk.Frame):
         self._layout_refresh_after_id = None
         self._play_after_id = None
         self._refresh_after_id = None
-        self._frame_cache = {}
+        self._frame_cache = FrameCache(radius=4, max_items=40)
+        self._capture_next_frames = [None] * MAX_VIDEOS
+        self._playback_frame_accumulator = 0.0
         self._held_key = None
         self._key_hold_after_id = None
         self._key_hold_started = False
@@ -204,6 +207,7 @@ class VideoAnalysisPage(tk.Frame):
             slot_index = free_slots[assigned]
             self.captures[slot_index] = capture
             self.video_infos[slot_index] = {"path": str(path), "fps": fps, "frame_count": frame_count, "duration_ms": duration_ms}
+            self._capture_next_frames[slot_index] = None
             assigned += 1
 
         if assigned <= 0:
@@ -235,7 +239,8 @@ class VideoAnalysisPage(tk.Frame):
             pass
         self.captures[index] = None
         self.video_infos[index] = None
-        self._frame_cache.clear()
+        self._frame_cache.clear_slot(index)
+        self._capture_next_frames[index] = None
         self.video_left.reset_zoom()
         self.video_right.reset_zoom()
         active_infos = self._active_video_infos()
@@ -310,12 +315,14 @@ class VideoAnalysisPage(tk.Frame):
         self.pause()
         raw_frame = int(round(float(value_ms or 0.0) - float(self.state.sync_frame_offset)))
         self.state.set_frame(raw_frame)
+        self._reset_capture_positions()
         self._schedule_refresh()
 
     def _step_frame(self, delta, pause=True):
         if pause:
             self.pause()
         self.state.step_frame(delta)
+        self._reset_capture_positions()
         self._schedule_refresh()
 
     def _start_key_hold(self, key_name, delta):
@@ -374,11 +381,13 @@ class VideoAnalysisPage(tk.Frame):
     def first_frame(self):
         self.pause()
         self.state.set_frame(0)
+        self._reset_capture_positions()
         self._schedule_refresh()
 
     def last_frame(self):
         self.pause()
         self.state.set_frame(max(0, self.state.frame_count - 1))
+        self._reset_capture_positions()
         self._schedule_refresh()
 
     def toggle_play(self):
@@ -390,6 +399,7 @@ class VideoAnalysisPage(tk.Frame):
     def play(self):
         if not self._active_video_indices() or self.state.frame_count <= 0:
             return
+        self._playback_frame_accumulator = 0.0
         self.state.is_playing = True
         self.play_button.configure(text="❚❚")
         self._schedule_play_step()
@@ -404,11 +414,12 @@ class VideoAnalysisPage(tk.Frame):
                 pass
             self._play_after_id = None
         self._held_key = None
+        self._playback_frame_accumulator = 0.0
 
     def _schedule_play_step(self):
         if not self.state.is_playing:
             return
-        playback_fps = max(1.0, float(self.state.playback_rate_fps or 30.0) * self._playback_speed_multiplier())
+        playback_fps = max(1.0, float(self.state.playback_rate_fps or 30.0))
         delay_ms = max(1, int(round(1000.0 / playback_fps)))
         self._play_after_id = self.after(delay_ms, self._play_step)
 
@@ -421,6 +432,12 @@ class VideoAnalysisPage(tk.Frame):
         except ValueError:
             return 1.0
 
+    def _playback_frame_delta(self):
+        self._playback_frame_accumulator += self._playback_speed_multiplier()
+        delta = max(1, int(self._playback_frame_accumulator))
+        self._playback_frame_accumulator -= float(delta)
+        return delta
+
     def _on_playback_speed_changed(self, _event=None):
         if not self.state.is_playing:
             return
@@ -430,16 +447,18 @@ class VideoAnalysisPage(tk.Frame):
             except Exception:
                 pass
             self._play_after_id = None
+        self._playback_frame_accumulator = 0.0
         self._schedule_play_step()
 
     def _play_step(self):
         self._play_after_id = None
         if not self.state.is_playing:
             return
-        if self.state.current_raw_frame >= max(0, self.state.frame_count - 1):
+        last_frame = max(0, self.state.frame_count - 1)
+        if self.state.current_raw_frame >= last_frame:
             self.pause()
             return
-        self.state.step_frame(1)
+        self.state.step_frame(min(self._playback_frame_delta(), last_frame - int(self.state.current_raw_frame)))
         self._schedule_refresh()
         self._schedule_play_step()
 
@@ -628,23 +647,13 @@ class VideoAnalysisPage(tk.Frame):
             viewer.show_frame(self._frame_to_photo(frame, viewer))
 
     def _read_frame_cached(self, index, frame_index):
-        key = (int(index), int(frame_index))
-        cached = self._frame_cache.get(key)
+        cached = self._frame_cache.get(index, frame_index)
         if cached is not None:
             return cached
         frame = self._read_frame(index, frame_index)
         if frame is None:
             return None
-        self._frame_cache[key] = frame
-        current = int(frame_index)
-        keep = {
-            (int(index), current + delta)
-            for index in self._active_video_indices()
-            for delta in range(-3, 4)
-        }
-        for cache_key in list(self._frame_cache.keys()):
-            if cache_key not in keep:
-                self._frame_cache.pop(cache_key, None)
+        self._frame_cache.set(index, frame_index, frame, self._active_video_indices())
         return frame
 
     def _read_frame(self, index, frame_index):
@@ -652,11 +661,18 @@ class VideoAnalysisPage(tk.Frame):
         if cv2 is None or index < 0 or index >= MAX_VIDEOS or self.captures[index] is None:
             return None
         capture = self.captures[index]
-        capture.set(cv2.CAP_PROP_POS_FRAMES, int(frame_index))
+        target_frame = int(frame_index)
+        if self._capture_next_frames[index] != target_frame:
+            capture.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
         ok, frame = capture.read()
         if not ok:
+            self._capture_next_frames[index] = None
             return None
+        self._capture_next_frames[index] = target_frame + 1
         return frame
+
+    def _reset_capture_positions(self):
+        self._capture_next_frames = [None] * MAX_VIDEOS
 
     def _frame_to_photo(self, frame, viewer):
         cv2 = _load_cv2()
@@ -704,6 +720,8 @@ class VideoAnalysisPage(tk.Frame):
         self.video_infos = [None] * MAX_VIDEOS
         self.channel_data = []
         self._frame_cache.clear()
+        self._reset_capture_positions()
+        self._playback_frame_accumulator = 0.0
         self.state = VideoAnalysisState()
         self.video_left.show_placeholder()
         self.video_right.show_placeholder()

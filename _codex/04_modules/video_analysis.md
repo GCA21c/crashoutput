@@ -26,9 +26,11 @@
 - 예: offset `-50`이면 raw frame 0을 `-50ms`로 표시하고, raw frame 50이 test T0 / `0ms`가 된다.
 - 데이터 pulse는 기존 dataset time 기준으로 `0ms`부터 시작하며, graph/timeline은 음수 offset만큼 데이터 앞 구간을 열어 표시한다.
 - frame 이동 성능을 위해 현재 주변 frame만 메모리 cache에 유지한다.
+- frame cache는 `app/core/video/frame_cache.py`의 `FrameCache`로 분리했다.
+- 순차 재생 중에는 가능한 경우 매 frame `capture.set(CAP_PROP_POS_FRAMES)`를 호출하지 않고 현재 capture 위치에서 `read()`를 이어간다. seek/timeline/key step은 capture 위치를 reset한다.
 - pulse graph는 channel 변경 시 전체 redraw하고, frame 이동 시에는 vertical cursor만 갱신한다.
 - Left/Right key를 누르고 있으면 초기 1-frame 이동 후 반복 이동은 2-frame step으로 가속한다.
-- playback speed selector는 `x1.0`, `x1.5`, `x2`, `x3`를 제공하며 UI playback delay에만 반영한다. frame/time 계산은 기존 `1 frame = 1 ms` 기준을 유지한다.
+- playback speed selector는 `x1.0`, `x1.5`, `x2`, `x3`를 제공한다. 배율은 timer delay가 아니라 frame advance delta에 반영해 x2/x3에서 frame skip으로 체감 속도를 높인다. frame/time 계산은 기존 `1 frame = 1 ms` 기준을 유지한다.
 - key frame timeline은 drag-to-seek를 지원한다.
 - Pulse graph legend는 움직이지 않도록 우측 상단에 고정한다.
 - Pulse curve는 별도 큰 graph 영역 대신 video canvas 하단에 semi-transparent overlay로 표시한다.
@@ -63,8 +65,8 @@
 
 ## Next optimization work
 - Frame decode/cache 최적화:
-  - 현재는 `VideoCapture.set(CAP_PROP_POS_FRAMES)` 기반 seek/read 구조다.
-  - 키보드 연속 이동, play, timeline drag가 더 부드러워지려면 주변 frame prefetch cache 또는 worker thread decode queue를 검토한다.
+  - 1차로 `FrameCache` 분리와 순차 read 최적화, frame-skip 배속을 적용했다.
+  - 다음 단계는 주변 frame prefetch cache 또는 worker thread decode queue를 검토한다.
   - 단, Tk widget 업데이트는 main thread에서만 수행한다.
 - Playback responsiveness:
   - play loop와 redraw loop를 분리해서 frame read 지연이 UI event loop를 막지 않게 한다.
