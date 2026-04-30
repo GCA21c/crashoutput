@@ -14,7 +14,6 @@
 ## Current implementation
 - 동영상은 최대 2개까지 로드한다.
 - video slot은 V1/V2 고정 슬롯으로 관리한다. V1을 clear해도 V2는 V1으로 당겨지지 않는다.
-- 다중 video 선택 후에는 load order 확인 창에서 Up/Down으로 V1/V2 투입 순서를 조정할 수 있다.
 - Reset 버튼은 Yes/No 확인 후 동영상, pulse channel, sync/keyframe 상태를 초기화한다.
 - OpenCV `VideoCapture`로 현재 frame만 seek/read 한다.
 - 두 영상은 첫 번째 영상 fps를 master metadata로 사용한다.

@@ -25,7 +25,6 @@
 - video slot layout 변경 직후 실제 canvas size가 확정된 다음 frame을 다시 렌더링하도록 post-layout refresh를 추가했다. 2개 video 동시 load 시 V2가 초기 작은 크기로 표시되는 현상을 방지한다.
 - selected pulse channel별 absolute peak 위치를 계산하고, pulse line과 같은 색상의 vertical dashed line으로 overlay에 표시한다.
 - video slot을 V1/V2 고정 배열로 바꿔 `Clear V1` 후에도 V2가 V1으로 당겨지지 않게 했다. 단독 video 표시 시 남아 있는 slot viewer가 전체폭을 사용한다.
-- 다중 video 선택 후 load order 확인 창을 추가해 파일명 정렬 결과가 아닌 사용자가 정한 순서로 빈 slot에 넣을 수 있게 했다.
 - 다음 최적화 방향은 `_codex/04_modules/video_analysis.md`의 `Next optimization work`에 정리했다.
 
 ## Files

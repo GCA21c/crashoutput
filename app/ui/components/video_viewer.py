@@ -129,7 +129,7 @@ class VideoSlotViewer(tk.Frame):
             canvas.create_rectangle(left, top, right, bottom, fill="#020617", outline="#38bdf8", stipple="gray50", tags=("pulse_bg",))
         else:
             canvas.create_line(left, bottom, right, bottom, fill="#38bdf8", width=1, tags=("pulse_bg",))
-        colors = ("#ff4fd8", "#f97316", "#a3e635")
+        colors = ("#0000ff", "#f97316", "#a3e635")
 
         def x_for_time(value):
             view_start, view_end = self._pulse_view_range()
@@ -171,7 +171,7 @@ class VideoSlotViewer(tk.Frame):
                 y = bottom - 6 - y_ratio * max(1, (bottom - top - 12))
                 points.extend((x, y))
             if len(points) >= 4:
-                canvas.create_line(*points, fill=colors[channel_index % len(colors)], width=1.55, smooth=True, tags=("pulse_curve", "pulse_fg"))
+                canvas.create_line(*points, fill=colors[channel_index % len(colors)], width=1.40, smooth=True, tags=("pulse_curve", "pulse_fg"))
 
         view_start, view_end = self._pulse_view_range()
         for channel_index, item in enumerate(self.overlay_channels):

@@ -1,5 +1,4 @@
 import tkinter as tk
-from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
 import numpy as np
@@ -165,11 +164,8 @@ class VideoAnalysisPage(tk.Frame):
         )
         if not paths:
             return
-        ordered_paths = self._confirm_video_load_order(list(paths))
-        if not ordered_paths:
-            return
-        selected = ordered_paths[:len(free_slots)]
-        if len(ordered_paths) > len(free_slots):
+        selected = list(paths)[:len(free_slots)]
+        if len(paths) > len(free_slots):
             messagebox.showinfo("VIDEO ANALYSIS", "동영상은 최대 2개까지만 추가합니다.")
 
         assigned = 0
@@ -209,71 +205,6 @@ class VideoAnalysisPage(tk.Frame):
         self.state.set_video_master([info["path"] for info in active_infos], master_fps, frame_count)
         self._refresh_video_layout()
         self._refresh_all()
-
-    def _confirm_video_load_order(self, paths):
-        ordered = [str(path) for path in paths]
-        if len(ordered) <= 1:
-            return ordered
-
-        result = {"paths": None}
-        dialog = tk.Toplevel(self)
-        dialog.title("Video load order")
-        dialog.transient(self.winfo_toplevel())
-        dialog.grab_set()
-        dialog.resizable(False, False)
-        dialog.configure(bg=PAGE_BG)
-
-        tk.Label(
-            dialog,
-            text="로드 순서를 확인해. 위에서부터 빈 video slot에 들어간다.",
-            bg=PAGE_BG,
-            fg=TEXT_FG,
-            anchor="w",
-        ).pack(fill=tk.X, padx=12, pady=(12, 6))
-
-        listbox = tk.Listbox(dialog, width=64, height=min(6, len(ordered)), exportselection=False)
-        listbox.pack(fill=tk.BOTH, expand=True, padx=12, pady=(0, 8))
-
-        def refresh_listbox(selection=0):
-            listbox.delete(0, tk.END)
-            for path in ordered:
-                listbox.insert(tk.END, Path(path).name)
-            if ordered:
-                selection = max(0, min(int(selection or 0), len(ordered) - 1))
-                listbox.selection_set(selection)
-                listbox.activate(selection)
-
-        def selected_index():
-            selection = listbox.curselection()
-            return int(selection[0]) if selection else 0
-
-        def move(delta):
-            index = selected_index()
-            next_index = index + int(delta)
-            if next_index < 0 or next_index >= len(ordered):
-                return
-            ordered[index], ordered[next_index] = ordered[next_index], ordered[index]
-            refresh_listbox(next_index)
-
-        def accept():
-            result["paths"] = list(ordered)
-            dialog.destroy()
-
-        def cancel():
-            result["paths"] = None
-            dialog.destroy()
-
-        buttons = tk.Frame(dialog, bg=PAGE_BG)
-        buttons.pack(fill=tk.X, padx=12, pady=(0, 12))
-        tk.Button(buttons, text="Up", command=lambda: move(-1), width=10).pack(side=tk.LEFT)
-        tk.Button(buttons, text="Down", command=lambda: move(1), width=10).pack(side=tk.LEFT, padx=(6, 0))
-        tk.Button(buttons, text="Cancel", command=cancel, width=10).pack(side=tk.RIGHT)
-        tk.Button(buttons, text="OK", command=accept, width=10).pack(side=tk.RIGHT, padx=(0, 6))
-
-        refresh_listbox()
-        dialog.protocol("WM_DELETE_WINDOW", cancel)
-        self.wait_window(dialog)
-        return result["paths"]
 
     def clear_video(self, index):
         if index < 0 or index >= MAX_VIDEOS or self.captures[index] is None:
