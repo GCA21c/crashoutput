@@ -59,6 +59,13 @@ class VideoAnalysisPage(tk.Frame):
         header = tk.Frame(outer, bg=PAGE_BG)
         header.pack(fill=tk.X, pady=(0, 10))
         tk.Label(header, text=PAGE_TITLE, font=HEADER_FONT, bg=PAGE_BG).pack(side=tk.LEFT)
+        tk.Label(
+            header,
+            text="Space: Play/Pause | Left/Right: 1 frame 이동 | Sync offset은 frame 단위이며 음수 frame/time 표시를 허용한다.",
+            bg=PAGE_BG,
+            fg=MUTED_FG,
+            anchor="w",
+        ).pack(side=tk.LEFT, padx=(12, 0))
 
         toolbar = tk.Frame(outer, bg=PAGE_BG)
         toolbar.pack(fill=tk.X, pady=(0, 10))
@@ -80,14 +87,6 @@ class VideoAnalysisPage(tk.Frame):
         self.play_button.pack(side=tk.LEFT, padx=4)
         tk.Button(controls, text="▶▶", command=self.next_frame, width=7).pack(side=tk.LEFT, padx=4)
         tk.Button(controls, text="▶|", command=self.last_frame, width=7).pack(side=tk.LEFT, padx=4)
-        self.playback_speed_combo = ttk.Combobox(
-            controls,
-            textvariable=self.playback_speed_var,
-            values=("x1.0", "x1.5", "x2", "x3"),
-            state="readonly",
-            width=5,
-        )
-        self.playback_speed_combo.pack(side=tk.LEFT, padx=(6, 4))
 
         status = tk.Frame(toolbar, bg=PAGE_BG)
         status.pack(side=tk.RIGHT)
@@ -114,14 +113,24 @@ class VideoAnalysisPage(tk.Frame):
 
         footer = tk.Frame(outer, bg=PAGE_BG)
         footer.pack(fill=tk.X, pady=(8, 0))
-        note = tk.Label(
-            footer,
-            text="Space: Play/Pause | Left/Right: 1 frame 이동 | Sync offset은 frame 단위이며 음수 frame/time 표시를 허용한다.",
-            bg=PAGE_BG,
-            fg=MUTED_FG,
-            anchor="w",
-        )
-        note.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        speed_box = tk.Frame(footer, bg=PAGE_BG)
+        speed_box.pack(side=tk.LEFT)
+        tk.Label(speed_box, text="Speed", bg=PAGE_BG, fg=MUTED_FG).pack(side=tk.LEFT, padx=(0, 4))
+        for value in ("x1.0", "x1.5", "x2", "x3"):
+            tk.Radiobutton(
+                speed_box,
+                text=value,
+                value=value,
+                variable=self.playback_speed_var,
+                command=self._on_playback_speed_changed,
+                bg=PAGE_BG,
+                fg=MUTED_FG,
+                selectcolor=PAGE_BG,
+                indicatoron=False,
+                width=6,
+                bd=1,
+                relief=tk.RIDGE,
+            ).pack(side=tk.LEFT, padx=(3, 0))
         pulse_view_box = tk.Frame(footer, bg=PAGE_BG)
         pulse_view_box.pack(side=tk.RIGHT)
         tk.Label(pulse_view_box, text="Pulse", bg=PAGE_BG, fg=MUTED_FG).pack(side=tk.LEFT, padx=(0, 4))
@@ -411,6 +420,17 @@ class VideoAnalysisPage(tk.Frame):
             return max(0.1, float(value))
         except ValueError:
             return 1.0
+
+    def _on_playback_speed_changed(self, _event=None):
+        if not self.state.is_playing:
+            return
+        if self._play_after_id is not None:
+            try:
+                self.after_cancel(self._play_after_id)
+            except Exception:
+                pass
+            self._play_after_id = None
+        self._schedule_play_step()
 
     def _play_step(self):
         self._play_after_id = None
