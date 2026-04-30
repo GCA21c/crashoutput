@@ -32,6 +32,7 @@
 - video playback 2차 리팩토링을 적용했다. slot별 background prefetch worker가 별도 `VideoCapture`로 주변 raw frame을 `FrameCache`에 미리 채우고, Tk UI thread는 cache 조회와 표시를 담당한다.
 - x1.0 체감 저하 가능성 때문에 background prefetch worker는 기본 OFF로 두고, 기본 재생 경로는 1차 리팩토링 상태를 유지한다.
 - pulse channel base snapshot을 추가해 frame 이동 중 overlay payload 전체 재구성을 줄였다.
+- slot/frame/image size/zoom 기준 PhotoImage cache를 추가해 같은 표시 조건에서 RGB 변환/resize/PhotoImage 재생성을 줄였다.
 - 다음 최적화 방향은 `_codex/04_modules/video_analysis.md`의 `Next optimization work`에 정리했다.
 
 ## Files

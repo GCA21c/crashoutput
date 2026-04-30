@@ -75,8 +75,9 @@
   - play loop와 redraw loop를 분리해서 frame read 지연이 UI event loop를 막지 않게 한다.
   - video frame image update와 pulse cursor update를 가능한 한 분리한다.
 - PhotoImage conversion 최적화:
-  - 현재 raw frame cache는 worker로 보강했지만 RGB 변환, resize, PhotoImage 생성은 main thread에 남아 있다.
-  - 다음 병목이 남으면 zoom level/canvas size 기준 resized image cache를 별도로 검토한다.
+  - raw frame cache와 별도로 slot/frame/image size/zoom 기준 PhotoImage cache를 추가했다.
+  - zoom 변경, layout resize, clear/reset/load 시 관련 cache를 무효화한다.
+  - Tk PhotoImage 객체 생성은 여전히 main thread에서 수행한다.
 - Pulse rendering 최적화:
   - channel 추가/zoom/pan 때만 pulse curve points를 재계산하고, frame 이동 때는 current cursor/time/legend value만 갱신하는 방향으로 분리한다.
   - 큰 DAT channel에서는 downsampling/window sampling을 view range 기준으로 캐시한다.

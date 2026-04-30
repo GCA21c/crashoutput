@@ -51,6 +51,7 @@ class VideoAnalysisPage(tk.Frame):
         self._frame_prefetcher = FramePrefetchManager(self._frame_cache, radius=8)
         self._prefetch_enabled = False
         self._pulse_base_snapshot = []
+        self._photo_cache = {}
         self._capture_next_frames = [None] * MAX_VIDEOS
         self._playback_frame_accumulator = 0.0
         self._held_key = None
@@ -108,8 +109,8 @@ class VideoAnalysisPage(tk.Frame):
         self.video_left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(8, 4), pady=8)
         self.video_right = VideoSlotViewer(video_box, "VIDEO 2")
         self.video_right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(4, 8), pady=8)
-        self.video_left.set_zoom_callback(lambda _scale=None, _center=None: self._schedule_refresh())
-        self.video_right.set_zoom_callback(lambda _scale=None, _center=None: self._schedule_refresh())
+        self.video_left.set_zoom_callback(lambda _scale=None, _center=None: self._on_viewer_zoom_changed(0))
+        self.video_right.set_zoom_callback(lambda _scale=None, _center=None: self._on_viewer_zoom_changed(1))
 
         self.pulse_timeline = PulseTimeline(outer)
 
@@ -219,6 +220,7 @@ class VideoAnalysisPage(tk.Frame):
             return
 
         self._frame_cache.clear()
+        self._photo_cache.clear()
         self.video_left.reset_zoom()
         self.video_right.reset_zoom()
         active_infos = self._active_video_infos()
@@ -246,6 +248,7 @@ class VideoAnalysisPage(tk.Frame):
         self.video_infos[index] = None
         self._frame_prefetcher.stop_slot(index)
         self._frame_cache.clear_slot(index)
+        self._clear_photo_cache_slot(index)
         self._capture_next_frames[index] = None
         self.video_left.reset_zoom()
         self.video_right.reset_zoom()
@@ -546,6 +549,7 @@ class VideoAnalysisPage(tk.Frame):
     def _refresh_after_layout(self):
         self._layout_refresh_after_id = None
         self.update_idletasks()
+        self._photo_cache.clear()
         self._refresh_video_frames()
         self._refresh_pulse()
 
@@ -662,7 +666,39 @@ class VideoAnalysisPage(tk.Frame):
             if frame is None:
                 viewer.show_placeholder("Frame read failed")
                 continue
-            viewer.show_frame(self._frame_to_photo(frame, viewer))
+            viewer.show_frame(self._frame_to_photo_cached(index, self.state.current_raw_frame, frame, viewer))
+
+    def _frame_to_photo_cached(self, slot_index, frame_index, frame, viewer):
+        size = viewer.image_size()
+        key = (int(slot_index), int(frame_index), int(size[0]), int(size[1]), round(float(viewer.zoom_scale or 1.0), 3))
+        photo = self._photo_cache.get(key)
+        if photo is not None:
+            return photo
+        photo = self._frame_to_photo(frame, viewer, size=size)
+        if photo is None:
+            return None
+        if len(self._photo_cache) > 48:
+            self._trim_photo_cache(int(frame_index))
+        self._photo_cache[key] = photo
+        return photo
+
+    def _trim_photo_cache(self, center_frame):
+        center = int(center_frame)
+        active_slots = set(self._active_video_indices())
+        for key in list(self._photo_cache):
+            slot, frame, _width, _height, _zoom = key
+            if slot not in active_slots or abs(int(frame) - center) > 4:
+                self._photo_cache.pop(key, None)
+
+    def _clear_photo_cache_slot(self, slot_index):
+        slot = int(slot_index)
+        for key in list(self._photo_cache):
+            if key[0] == slot:
+                self._photo_cache.pop(key, None)
+
+    def _on_viewer_zoom_changed(self, slot_index):
+        self._clear_photo_cache_slot(slot_index)
+        self._schedule_refresh()
 
     def _request_frame_prefetch(self):
         active_slots = self._active_video_indices()
@@ -700,13 +736,13 @@ class VideoAnalysisPage(tk.Frame):
     def _reset_capture_positions(self):
         self._capture_next_frames = [None] * MAX_VIDEOS
 
-    def _frame_to_photo(self, frame, viewer):
+    def _frame_to_photo(self, frame, viewer, size=None):
         cv2 = _load_cv2()
         Image, ImageTk = _load_pillow()
         if cv2 is None:
             return None
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        max_width, max_height = viewer.image_size()
+        max_width, max_height = size or viewer.image_size()
         if Image is not None and ImageTk is not None:
             image = Image.fromarray(rgb)
             image.thumbnail((max_width, max_height))
@@ -748,6 +784,7 @@ class VideoAnalysisPage(tk.Frame):
         self._rebuild_pulse_base_snapshot()
         self._frame_prefetcher.stop_all()
         self._frame_cache.clear()
+        self._photo_cache.clear()
         self._reset_capture_positions()
         self._playback_frame_accumulator = 0.0
         self.state = VideoAnalysisState()
