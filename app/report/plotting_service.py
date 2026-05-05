@@ -521,9 +521,9 @@ def _iliac_force_summary_lines(context):
         peak_detail = dict(detail.get("abs_peak") or {})
         return [
             title,
-            f"  Max(Tension) : {fmt_value(max_detail.get('value'), 'N', unit_style='suffix')} at {fmt_time_ms(max_detail.get('time_s'))}",
-            f"  Min(Compression) : {fmt_value(min_detail.get('value'), 'N', unit_style='suffix')} at {fmt_time_ms(min_detail.get('time_s'))}",
-            f"  Abs Peak : {fmt_value(peak_detail.get('value'), 'N', unit_style='suffix')} at {fmt_time_ms(peak_detail.get('time_s'))}",
+            f"  MAX(Tension): {fmt_value(max_detail.get('value'), 'N', unit_style='suffix')} at {fmt_time_ms(max_detail.get('time_s'))}",
+            f"  MIN(Compression): {fmt_value(min_detail.get('value'), 'N', unit_style='suffix')} at {fmt_time_ms(min_detail.get('time_s'))}",
+            f"  Abs Peak: {fmt_value(peak_detail.get('value'), 'N', unit_style='suffix')} at {fmt_time_ms(peak_detail.get('time_s'))}",
         ]
 
     lines = ["ILIAC FORCE"]
@@ -544,9 +544,9 @@ def _iliac_moment_summary_lines(context):
         peak_detail = dict(detail.get("abs_peak") or {})
         return [
             title,
-            f"  Max : {fmt_value(max_detail.get('value'), 'Nm', unit_style='suffix')} at {fmt_time_ms(max_detail.get('time_s'))}",
-            f"  Min : {fmt_value(min_detail.get('value'), 'Nm', unit_style='suffix')} at {fmt_time_ms(min_detail.get('time_s'))}",
-            f"  Abs Peak : {fmt_value(peak_detail.get('value'), 'Nm', unit_style='suffix')} at {fmt_time_ms(peak_detail.get('time_s'))}",
+            f"  Max: {fmt_value(max_detail.get('value'), 'Nm', unit_style='suffix')} at {fmt_time_ms(max_detail.get('time_s'))}",
+            f"  Min: {fmt_value(min_detail.get('value'), 'Nm', unit_style='suffix')} at {fmt_time_ms(min_detail.get('time_s'))}",
+            f"  Abs Peak: {fmt_value(peak_detail.get('value'), 'Nm', unit_style='suffix')} at {fmt_time_ms(peak_detail.get('time_s'))}",
         ]
 
     lines = ["ILIAC MOMENT"]

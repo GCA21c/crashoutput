@@ -457,9 +457,15 @@ class InjuryPage(tk.Frame):
             return {
                 'left_compression_force_n': self._safe_metric_float(left.get('compression_force_n')),
                 'left_tension_force_n': self._safe_metric_float(left.get('tension_force_n')),
+                'left_peak_force_n': self._safe_metric_float(left.get('peak_force_n')),
+                'left_max_moment_nm': self._safe_metric_float(left.get('max_moment_nm')),
+                'left_min_moment_nm': self._safe_metric_float(left.get('min_moment_nm')),
                 'left_peak_moment_nm': self._safe_metric_float(left.get('peak_moment_nm')),
                 'right_compression_force_n': self._safe_metric_float(right.get('compression_force_n')),
                 'right_tension_force_n': self._safe_metric_float(right.get('tension_force_n')),
+                'right_peak_force_n': self._safe_metric_float(right.get('peak_force_n')),
+                'right_max_moment_nm': self._safe_metric_float(right.get('max_moment_nm')),
+                'right_min_moment_nm': self._safe_metric_float(right.get('min_moment_nm')),
                 'right_peak_moment_nm': self._safe_metric_float(right.get('peak_moment_nm')),
             }
         if self.initial_mode == 'tibia':
