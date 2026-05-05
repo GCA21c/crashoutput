@@ -61,7 +61,6 @@ Preferred read order:
   - `KNEE Combined`
   - `ILIAC Force`
   - `ILIAC Moment`
-  - `ILIAC Fx-My`
 - deferred:
   - `TIBIA`
 

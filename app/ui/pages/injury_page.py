@@ -215,7 +215,7 @@ class InjuryPage(tk.Frame):
         self.iliac_right_fx_var = tk.StringVar()
         self.iliac_right_my_var = tk.StringVar()
         self.iliac_dummy_var = tk.StringVar(value=ILIAC_PROFILE_OPTIONS[0] if ILIAC_PROFILE_OPTIONS else "Thor_50%M")
-        self.iliac_guidance_var = tk.StringVar(value="THOR 계열 iliac wing(ASIS) Fx/My 좌우 채널로 side별 peak 하중/모멘트와 Fx-My 응답을 계산합니다.")
+        self.iliac_guidance_var = tk.StringVar(value="Iliac wing(ASIS) 좌/우 Fx, My 채널로 side별 force/moment peak를 계산합니다.")
         self.tibia_left_knee_clevis_inner_fz_var = tk.StringVar()
         self.tibia_left_knee_clevis_outer_fz_var = tk.StringVar()
         self.tibia_left_upper_fx_var = tk.StringVar()
@@ -3862,7 +3862,7 @@ class InjuryPage(tk.Frame):
         box.pack(fill=tk.BOTH, expand=True)
         tk.Label(
             box,
-            text="THOR 계열 iliac wing(ASIS) 좌/우 Fx, My 채널을 선택하면 side별 peak compression/tension, peak |My|와 Fx-My 응답을 계산합니다.",
+            text="Iliac wing(ASIS) 좌/우 Fx, My 채널을 선택하면 side별 force/moment peak를 계산합니다.",
             bg="#ffffff",
             justify="left",
             anchor="w",
@@ -3952,7 +3952,7 @@ class InjuryPage(tk.Frame):
         if self.initial_mode == 'knee':
             return [('combined', 'Knee Slider')]
         if self.initial_mode == 'iliac':
-            return [('force', 'Force'), ('moment', 'Moment'), ('crossplot', 'Fx-My')]
+            return [('force', 'Force'), ('moment', 'Moment')]
         if self.initial_mode == 'tibia':
             return [('tibia_index', 'Tibia Index'), ('axial_force', 'Axial Force'), ('moment_resultant', 'Moment')]
         return [('left', 'Left'), ('right', 'Right'), ('combined', 'Combined')]
@@ -4007,7 +4007,7 @@ class InjuryPage(tk.Frame):
         self.pelvis_guidance_var.set("\uace8\ubc18 XYZ \uac00\uc18d\ub3c4\ub85c Resultant \ubc0f 3ms \uc9c0\ud45c\ub97c \uacc4\uc0b0\ud569\ub2c8\ub2e4.")
         self.femur_guidance_var.set("\ub300\ud1f4\ubd80 \ucd95\ub825\uc740 CFC600 \uacbd\ub85c\ub97c \uae30\uc900\uc73c\ub85c \uacc4\uc0b0\ud569\ub2c8\ub2e4.")
         self.knee_guidance_var.set("Hybrid III knee slider 채널의 좌/우 peak displacement와 발생 시점을 계산합니다.")
-        self.iliac_guidance_var.set("THOR 계열 iliac wing(ASIS) Fx/My 좌우 채널로 side별 peak 하중/모멘트와 Fx-My 응답을 계산합니다.")
+        self.iliac_guidance_var.set("Iliac wing(ASIS) 좌/우 Fx, My 채널로 side별 force/moment peak를 계산합니다.")
         self.tibia_guidance_var.set("좌/우 knee clevis, upper/lower tibia의 Fx/Fz/Mx/My 채널을 모두 저장하고, 현재 계산은 upper/lower Fz, Mx, My 기반 Tibia Index와 compression, bending resultant를 사용합니다.")
         self.nij_guidance_var.set('Fx/Fy/Fz \uad8c\uc7a5 CFC1000 | Mx/My/Mz \uad8c\uc7a5 CFC600')
 
@@ -5198,6 +5198,8 @@ class InjuryPage(tk.Frame):
                     right_fx_unit=self._unit_text(right_fx_ch),
                     right_my_unit=self._unit_text(right_my_ch),
                     criterion_key=state.get('dummy_profile') or self.iliac_dummy_var.get(),
+                    dummy_name=state.get('dummy_name') or '',
+                    channels=channels,
                 )
                 state['iliac_metrics'] = result['metrics']
                 if not state.get('iliac_saved_payload'):
@@ -5495,6 +5497,8 @@ class InjuryPage(tk.Frame):
         try:
             st = self.slot_states[slot]
             criterion_key = (self.multi_dummy_panel.profile_var(slot).get().strip() or self.iliac_dummy_var.get().strip() or 'THOR_50M_ASIS')
+            dummy_name = self.multi_dummy_panel.name_var(slot).get().strip()
+            channels = {'left_fx': left_fx_ch, 'left_my': left_my_ch, 'right_fx': right_fx_ch, 'right_my': right_my_ch}
             result = calculate_iliac_injury_bundle(
                 time=self._get_time(),
                 left_fx=np.asarray(viewer.get_numeric_column(left_fx_ch), dtype=float),
@@ -5506,11 +5510,13 @@ class InjuryPage(tk.Frame):
                 right_fx_unit=self._unit_text(right_fx_ch),
                 right_my_unit=self._unit_text(right_my_ch),
                 criterion_key=criterion_key,
+                dummy_name=dummy_name,
+                channels=channels,
             )
             metrics = result['metrics']
-            st['dummy_name'] = self.multi_dummy_panel.name_var(slot).get().strip()
+            st['dummy_name'] = dummy_name
             st['dummy_profile'] = criterion_key
-            st['channels'] = {'left_fx': left_fx_ch, 'left_my': left_my_ch, 'right_fx': right_fx_ch, 'right_my': right_my_ch}
+            st['channels'] = dict(channels)
             st['neg_flags'] = {}
             st['summary_text'] = result['summary_text']
             st['result_uid'] = st.get('result_uid') or self._injury_result_uid(slot)
@@ -5707,8 +5713,6 @@ class InjuryPage(tk.Frame):
             return
         if mode == 'moment':
             self._plot_iliac_moment(metrics, slot)
-        elif mode == 'crossplot':
-            self._plot_iliac_crossplot(metrics, slot)
         else:
             self._plot_iliac_force(metrics, slot)
             mode = 'force'
@@ -5744,15 +5748,13 @@ class InjuryPage(tk.Frame):
         for label, arr, width in (
             ('LEFT Fx', np.asarray(metrics.get('left_fx_n', []), dtype=float), 1.4),
             ('RIGHT Fx', np.asarray(metrics.get('right_fx_n', []), dtype=float), 1.4),
-            ('LEFT √(Fx²+My²)', np.asarray(metrics.get('left_fx_my_resultant', []), dtype=float), 1.2),
-            ('RIGHT √(Fx²+My²)', np.asarray(metrics.get('right_fx_my_resultant', []), dtype=float), 1.2),
         ):
             valid, t_plot, v_plot = self._time_value_valid_mask_ms(t, arr)
             if np.any(valid):
                 self.ax.plot(t_plot[valid], v_plot[valid], linewidth=width, label=label)
         self.ax.set_title(f"INJURY - ILIAC FORCE ({self._graph_subject_label(slot)})")
         self.ax.set_xlabel(self._x_axis_label())
-        self.ax.set_ylabel(f"Force / Combined ({metrics.get('plot_force_unit') or 'N'})")
+        self.ax.set_ylabel(f"Force ({metrics.get('plot_force_unit') or 'N'})")
         self.ax.grid(True)
         self.ax.legend(loc='best', fontsize=9)
         self.last_plot_title = f'{slot}_Iliac_Force_graph'
@@ -5847,29 +5849,6 @@ class InjuryPage(tk.Frame):
         self.ax.grid(True)
         self.ax.legend(loc='best', fontsize=9)
         self.last_plot_title = f'{slot}_Iliac_Moment_graph'
-        self.figure.tight_layout()
-        self.canvas.draw_idle()
-
-    def _plot_iliac_crossplot(self, metrics, slot):
-        self.ax.clear()
-        left_fx = np.asarray(metrics.get('left_fx_n', []), dtype=float)
-        left_my = np.asarray(metrics.get('left_my_nm', []), dtype=float)
-        right_fx = np.asarray(metrics.get('right_fx_n', []), dtype=float)
-        right_my = np.asarray(metrics.get('right_my_nm', []), dtype=float)
-        left_valid = np.isfinite(left_fx) & np.isfinite(left_my)
-        right_valid = np.isfinite(right_fx) & np.isfinite(right_my)
-        if np.any(left_valid):
-            self.ax.plot(left_fx[left_valid], left_my[left_valid], linewidth=1.2, label='LEFT Fx-My')
-        if np.any(right_valid):
-            self.ax.plot(right_fx[right_valid], right_my[right_valid], linewidth=1.2, label='RIGHT Fx-My')
-        self.ax.axhline(0.0, color='#9ca3af', linewidth=0.8)
-        self.ax.axvline(0.0, color='#9ca3af', linewidth=0.8)
-        self.ax.set_title(f"INJURY - ILIAC Fx-My ({self._graph_subject_label(slot)})")
-        self.ax.set_xlabel(f"Fx ({metrics.get('plot_force_unit') or 'N'})")
-        self.ax.set_ylabel(f"My ({metrics.get('plot_moment_unit') or 'Nm'})")
-        self.ax.grid(True)
-        self.ax.legend(loc='best', fontsize=9)
-        self.last_plot_title = f'{slot}_Iliac_FxMy_graph'
         self.figure.tight_layout()
         self.canvas.draw_idle()
 

@@ -514,21 +514,22 @@ def _iliac_force_summary_lines(context):
     left_fx = _canonical_metric_detail(context, "force", "left_fx")
     right_fx = _canonical_metric_detail(context, "force", "right_fx")
 
-    def _extrema_block(title, detail, unit):
+    def _force_block(title, detail):
         detail = dict(detail or {})
         max_detail = dict(detail.get("max") or {})
         min_detail = dict(detail.get("min") or {})
+        peak_detail = dict(detail.get("abs_peak") or {})
         return [
             title,
-            f"  Max : {fmt_value(max_detail.get('value'), unit, unit_style='suffix')} at {fmt_time_ms(max_detail.get('time_s'))}",
-            f"  Min : {fmt_value(min_detail.get('value'), unit, unit_style='suffix')} at {fmt_time_ms(min_detail.get('time_s'))}",
+            f"  Max(Tension) : {fmt_value(max_detail.get('value'), 'N', unit_style='suffix')} at {fmt_time_ms(max_detail.get('time_s'))}",
+            f"  Min(Compression) : {fmt_value(min_detail.get('value'), 'N', unit_style='suffix')} at {fmt_time_ms(min_detail.get('time_s'))}",
+            f"  Abs Peak : {fmt_value(peak_detail.get('value'), 'N', unit_style='suffix')} at {fmt_time_ms(peak_detail.get('time_s'))}",
         ]
 
-    lines = ["ILIAC - LEFT"]
-    lines.extend(_extrema_block(f"Fx - {str(left_fx.get('channel') or '-').strip() or '-'}", left_fx, "N"))
+    lines = ["ILIAC FORCE"]
+    lines.extend(_force_block(f"LEFT Fx - {str(left_fx.get('channel') or '-').strip() or '-'}", left_fx))
     lines.append("")
-    lines.append("ILIAC - RIGHT")
-    lines.extend(_extrema_block(f"Fx - {str(right_fx.get('channel') or '-').strip() or '-'}", right_fx, "N"))
+    lines.extend(_force_block(f"RIGHT Fx - {str(right_fx.get('channel') or '-').strip() or '-'}", right_fx))
     return lines
 
 
@@ -536,49 +537,22 @@ def _iliac_moment_summary_lines(context):
     left_my = _canonical_metric_detail(context, "moment", "left_my")
     right_my = _canonical_metric_detail(context, "moment", "right_my")
 
-    def _extrema_block(title, detail, unit):
+    def _moment_block(title, detail):
         detail = dict(detail or {})
         max_detail = dict(detail.get("max") or {})
         min_detail = dict(detail.get("min") or {})
+        peak_detail = dict(detail.get("abs_peak") or {})
         return [
             title,
-            f"  Max : {fmt_value(max_detail.get('value'), unit, unit_style='suffix')} at {fmt_time_ms(max_detail.get('time_s'))}",
-            f"  Min : {fmt_value(min_detail.get('value'), unit, unit_style='suffix')} at {fmt_time_ms(min_detail.get('time_s'))}",
+            f"  Max : {fmt_value(max_detail.get('value'), 'Nm', unit_style='suffix')} at {fmt_time_ms(max_detail.get('time_s'))}",
+            f"  Min : {fmt_value(min_detail.get('value'), 'Nm', unit_style='suffix')} at {fmt_time_ms(min_detail.get('time_s'))}",
+            f"  Abs Peak : {fmt_value(peak_detail.get('value'), 'Nm', unit_style='suffix')} at {fmt_time_ms(peak_detail.get('time_s'))}",
         ]
 
-    lines = ["ILIAC - LEFT"]
-    lines.extend(_extrema_block(f"My - {str(left_my.get('channel') or '-').strip() or '-'}", left_my, "Nm"))
+    lines = ["ILIAC MOMENT"]
+    lines.extend(_moment_block(f"LEFT My - {str(left_my.get('channel') or '-').strip() or '-'}", left_my))
     lines.append("")
-    lines.append("ILIAC - RIGHT")
-    lines.extend(_extrema_block(f"My - {str(right_my.get('channel') or '-').strip() or '-'}", right_my, "Nm"))
-    return lines
-
-
-def _iliac_crossplot_summary_lines(context):
-    left_fx = _canonical_metric_detail(context, "force", "left_fx")
-    right_fx = _canonical_metric_detail(context, "force", "right_fx")
-    left_my = _canonical_metric_detail(context, "moment", "left_my")
-    right_my = _canonical_metric_detail(context, "moment", "right_my")
-
-    def _extrema_block(title, detail, unit):
-        detail = dict(detail or {})
-        max_detail = dict(detail.get("max") or {})
-        min_detail = dict(detail.get("min") or {})
-        return [
-            title,
-            f"  Max : {fmt_value(max_detail.get('value'), unit, unit_style='suffix')} at {fmt_time_ms(max_detail.get('time_s'))}",
-            f"  Min : {fmt_value(min_detail.get('value'), unit, unit_style='suffix')} at {fmt_time_ms(min_detail.get('time_s'))}",
-        ]
-
-    lines = ["ILIAC - LEFT"]
-    lines.extend(_extrema_block(f"Fx - {str(left_fx.get('channel') or '-').strip() or '-'}", left_fx, "N"))
-    lines.append("")
-    lines.extend(_extrema_block(f"My - {str(left_my.get('channel') or '-').strip() or '-'}", left_my, "Nm"))
-    lines.append("")
-    lines.append("ILIAC - RIGHT")
-    lines.extend(_extrema_block(f"Fx - {str(right_fx.get('channel') or '-').strip() or '-'}", right_fx, "N"))
-    lines.append("")
-    lines.extend(_extrema_block(f"My - {str(right_my.get('channel') or '-').strip() or '-'}", right_my, "Nm"))
+    lines.extend(_moment_block(f"RIGHT My - {str(right_my.get('channel') or '-').strip() or '-'}", right_my))
     return lines
 
 
@@ -777,8 +751,6 @@ def build_plotting_auto_text(item):
         lines.extend(_iliac_force_summary_lines(context))
     elif template == "iliac_moment_summary":
         lines.extend(_iliac_moment_summary_lines(context))
-    elif template == "iliac_crossplot_summary":
-        lines.extend(_iliac_crossplot_summary_lines(context))
     while lines and str(lines[-1] or "").strip() == "":
         lines.pop()
     text = "\n".join(line for line in lines if line is not None)

@@ -88,36 +88,27 @@ def _peak_min(values, time):
     return {'value': float(arr[idx]), 'time_s': float(t[idx]), 'index': idx}
 
 
-def _resultant(force_n, moment_nm):
-    force_n = np.asarray(force_n, dtype=float)
-    moment_nm = np.asarray(moment_nm, dtype=float)
-    n = min(force_n.size, moment_nm.size)
-    if n <= 0:
-        return np.asarray([], dtype=float)
-    return np.sqrt(np.square(force_n[:n]) + np.square(moment_nm[:n]))
-
-
 def _side_summary(side_label, force_n, moment_nm, time_s):
     comp = _peak_min(force_n, time_s)
     tens = _peak_max(force_n, time_s)
+    force = _peak_abs(force_n, time_s)
     moment_max = _peak_max(moment_nm, time_s)
     moment_min = _peak_min(moment_nm, time_s)
     moment = _peak_abs(moment_nm, time_s)
-    resultant = _peak_abs(_resultant(force_n, moment_nm), time_s)
     return {
         'side': side_label,
         'compression_force_n': comp['value'],
         'compression_time_s': comp['time_s'],
         'tension_force_n': tens['value'],
         'tension_time_s': tens['time_s'],
+        'peak_force_n': force['value'],
+        'peak_force_time_s': force['time_s'],
         'max_moment_nm': moment_max['value'],
         'max_moment_time_s': moment_max['time_s'],
         'min_moment_nm': moment_min['value'],
         'min_moment_time_s': moment_min['time_s'],
         'peak_moment_nm': moment['value'],
         'peak_moment_time_s': moment['time_s'],
-        'combined_resultant': resultant['value'],
-        'combined_resultant_time_s': resultant['time_s'],
     }
 
 
@@ -133,9 +124,13 @@ def calculate_iliac_injury_bundle(
     right_fx_unit='N',
     right_my_unit='Nm',
     criterion_key='Thor_50%M',
+    dummy_name='',
+    channels=None,
 ):
-    profile = get_iliac_dummy_profile(criterion_key)
+    get_iliac_dummy_profile(criterion_key)
     time_s = np.asarray(time, dtype=float)
+    channels = dict(channels or {})
+    dummy_label = str(dummy_name or criterion_key or '').strip() or '-'
 
     left_force_n = _convert_force_to_n(left_fx, left_fx_unit)
     left_moment_nm = _convert_moment_to_nm(left_my, left_my_unit)
@@ -145,17 +140,33 @@ def calculate_iliac_injury_bundle(
     left_summary = _side_summary('LEFT', left_force_n, left_moment_nm, time_s)
     right_summary = _side_summary('RIGHT', right_force_n, right_moment_nm, time_s)
 
+    def _force_block(side, channel, summary):
+        return [
+            f"{side} Fx - {str(channel or '-').strip() or '-'}",
+            f"MAX(Tension): {fmt_value(summary['tension_force_n'], 'N')} at {fmt_time_ms(summary['tension_time_s'], 1)}",
+            f"MIN(Compression): {fmt_value(summary['compression_force_n'], 'N')} at {fmt_time_ms(summary['compression_time_s'], 1)}",
+            f"Abs Peak: {fmt_value(summary['peak_force_n'], 'N')} at {fmt_time_ms(summary['peak_force_time_s'], 1)}",
+        ]
+
+    def _moment_block(side, channel, summary):
+        return [
+            f"{side} My - {str(channel or '-').strip() or '-'}",
+            f"Max: {fmt_value(summary['max_moment_nm'], 'Nm')} at {fmt_time_ms(summary['max_moment_time_s'], 1)}",
+            f"Min: {fmt_value(summary['min_moment_nm'], 'Nm')} at {fmt_time_ms(summary['min_moment_time_s'], 1)}",
+            f"Abs Peak: {fmt_value(summary['peak_moment_nm'], 'Nm')} at {fmt_time_ms(summary['peak_moment_time_s'], 1)}",
+        ]
+
     summary_lines = [
-        f"ILIAC / ASIS ({profile.get('label')})",
-        f"- LEFT Fx compression: {fmt_value(left_summary['compression_force_n'], 1)} N @ {fmt_time_ms(left_summary['compression_time_s'], 1)}",
-        f"- LEFT Fx tension: {fmt_value(left_summary['tension_force_n'], 1)} N @ {fmt_time_ms(left_summary['tension_time_s'], 1)}",
-        f"- LEFT |My| peak: {fmt_value(left_summary['peak_moment_nm'], 2)} Nm @ {fmt_time_ms(left_summary['peak_moment_time_s'], 1)}",
-        f"- LEFT combined √(Fx²+My²): {fmt_value(left_summary['combined_resultant'], 2)} @ {fmt_time_ms(left_summary['combined_resultant_time_s'], 1)}",
-        f"- RIGHT Fx compression: {fmt_value(right_summary['compression_force_n'], 1)} N @ {fmt_time_ms(right_summary['compression_time_s'], 1)}",
-        f"- RIGHT Fx tension: {fmt_value(right_summary['tension_force_n'], 1)} N @ {fmt_time_ms(right_summary['tension_time_s'], 1)}",
-        f"- RIGHT |My| peak: {fmt_value(right_summary['peak_moment_nm'], 2)} Nm @ {fmt_time_ms(right_summary['peak_moment_time_s'], 1)}",
-        f"- RIGHT combined √(Fx²+My²): {fmt_value(right_summary['combined_resultant'], 2)} @ {fmt_time_ms(right_summary['combined_resultant_time_s'], 1)}",
-        f"- Reference: {profile.get('source')}",
+        dummy_label,
+        "ILIAC FORCE",
+        *_force_block('LEFT', channels.get('left_fx'), left_summary),
+        "",
+        *_force_block('RIGHT', channels.get('right_fx'), right_summary),
+        "",
+        "ILIAC MOMENT",
+        *_moment_block('LEFT', channels.get('left_my'), left_summary),
+        "",
+        *_moment_block('RIGHT', channels.get('right_my'), right_summary),
     ]
 
     metrics = {
@@ -164,15 +175,12 @@ def calculate_iliac_injury_bundle(
         'left_my_nm': left_moment_nm,
         'right_fx_n': right_force_n,
         'right_my_nm': right_moment_nm,
-        'left_fx_my_resultant': _resultant(left_force_n, left_moment_nm),
-        'right_fx_my_resultant': _resultant(right_force_n, right_moment_nm),
         'left_summary': left_summary,
         'right_summary': right_summary,
         'plot_force_unit': 'N',
         'plot_moment_unit': 'Nm',
         'criterion_key': criterion_key,
-        'criterion_label': profile.get('label'),
-        'criterion_source': profile.get('source'),
+        'dummy_name': dummy_label,
     }
 
     return {

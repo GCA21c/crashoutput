@@ -116,9 +116,6 @@ PLOTTING_GRAPH_TEXT_RULES = {
     ("iliac", "moment"): {
         "template": "iliac_moment_summary",
     },
-    ("iliac", "crossplot"): {
-        "template": "iliac_crossplot_summary",
-    },
     ("neck", "fo"): {
         "template": "neck_force_axes",
         "axis_keys": ("Fx", "Fy", "Fz"),

@@ -40,14 +40,17 @@ def _range(value=None, start_time_s=None, end_time_s=None, unit=""):
     }
 
 
-def _extrema(max_value=None, max_time_s=None, min_value=None, min_time_s=None, unit="", channel="", display_name=""):
-    return {
+def _extrema(max_value=None, max_time_s=None, min_value=None, min_time_s=None, unit="", channel="", display_name="", abs_peak_value=None, abs_peak_time_s=None):
+    result = {
         "channel": _text(channel),
         "display_name": _text(display_name),
         "unit": _text(unit),
         "max": _point(max_value, max_time_s, unit=unit),
         "min": _point(min_value, min_time_s, unit=unit),
     }
+    if abs_peak_value is not None or abs_peak_time_s is not None:
+        result["abs_peak"] = _point(abs_peak_value, abs_peak_time_s, unit=unit)
+    return result
 
 
 def _channel_input_entry(channel_name="", *, axis=None, role=None, unit=None):
@@ -370,6 +373,8 @@ def _iliac_canonical(payload, metrics):
                 unit="N",
                 channel=_text(channels.get("left_fx")),
                 display_name="Fx",
+                abs_peak_value=left.get("peak_force_n"),
+                abs_peak_time_s=left.get("peak_force_time_s"),
             ),
             "right_fx": _extrema(
                 right.get("tension_force_n"),
@@ -379,6 +384,8 @@ def _iliac_canonical(payload, metrics):
                 unit="N",
                 channel=_text(channels.get("right_fx")),
                 display_name="Fx",
+                abs_peak_value=right.get("peak_force_n"),
+                abs_peak_time_s=right.get("peak_force_time_s"),
             ),
         },
         "moment": {
@@ -390,6 +397,8 @@ def _iliac_canonical(payload, metrics):
                 unit="Nm",
                 channel=_text(channels.get("left_my")),
                 display_name="My",
+                abs_peak_value=left.get("peak_moment_nm"),
+                abs_peak_time_s=left.get("peak_moment_time_s"),
             ),
             "right_my": _extrema(
                 right.get("max_moment_nm"),
@@ -399,11 +408,9 @@ def _iliac_canonical(payload, metrics):
                 unit="Nm",
                 channel=_text(channels.get("right_my")),
                 display_name="My",
+                abs_peak_value=right.get("peak_moment_nm"),
+                abs_peak_time_s=right.get("peak_moment_time_s"),
             ),
-        },
-        "injury": {
-            "left_resultant": _point(left.get("combined_resultant"), left.get("combined_resultant_time_s")),
-            "right_resultant": _point(right.get("combined_resultant"), right.get("combined_resultant_time_s")),
         },
     }
 
@@ -640,7 +647,7 @@ def _iliac_context(payload, metrics, state):
     channels = dict(payload.get("channels") or state.get("channels") or {})
     return {
         "engine_key": "iliac_injury_bundle_v1",
-        "rule_key": "iliac_fx_my",
+        "rule_key": "iliac_force_moment",
         "section": "iliac",
         "slot": _text(payload.get("slot") or state.get("slot")),
         "dummy_profile": _text(payload.get("dummy_profile") or state.get("dummy_profile")),
@@ -860,7 +867,6 @@ def build_canonical_graphs(section_key):
         return {
             "force": {"graph_type": "overlay", "series_refs": ("metrics.force.left_fx", "metrics.force.right_fx"), "annotations": tuple()},
             "moment": {"graph_type": "overlay", "series_refs": ("metrics.moment.left_my", "metrics.moment.right_my"), "annotations": tuple()},
-            "crossplot": {"graph_type": "crossplot", "series_refs": ("metrics.force.left_fx", "metrics.moment.left_my", "metrics.force.right_fx", "metrics.moment.right_my"), "annotations": ("metrics.injury.left_resultant", "metrics.injury.right_resultant")},
         }
     if section == "tibia":
         return {
