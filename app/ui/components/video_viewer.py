@@ -183,7 +183,7 @@ class VideoSlotViewer(tk.Frame):
         bottom = max(42, height - 16)
         top = max(10, bottom - max(56, int(height * 0.22)))
         self._pulse_box = (left, top, right, bottom)
-        colors = ("#6ec7ff", "#f97316", "#a3e635")
+        colors = ("#ffff00", "#f97316", "#a3e635")
 
         def x_for_time(value):
             view_start, view_end = self._pulse_view_range()
@@ -279,7 +279,7 @@ class VideoSlotViewer(tk.Frame):
         time_text = f"Time: {self.overlay_cursor_ms:.0f}ms"
         if self.pulse_background_enabled:
             time_box_right = left + 88
-            self._draw_textured_box(left + 4, bottom - 23, time_box_right, bottom - 4, outline="#334155")
+            self._draw_textured_box(left + 4, bottom - 23, time_box_right, bottom - 4, outline=self._background_box_outline())
             time_fill = "#f8fafc"
         else:
             time_fill = "#e5e7eb"
@@ -402,6 +402,9 @@ class VideoSlotViewer(tk.Frame):
             return
         canvas.create_rectangle(left, top, right, bottom, fill="#020617", outline=outline, tags=tags)
 
+    def _background_box_outline(self):
+        return "#9ca3af" if str(self.pulse_background_theme or "dark").lower() == "light" else "#334155"
+
     def _sample_pulse_pairs(self, item, view_start, view_end):
         time_source = item.get("time_ms")
         signal_source = item.get("values")
@@ -477,7 +480,7 @@ class VideoSlotViewer(tk.Frame):
                 legend_top,
                 legend_left + legend_width,
                 legend_top + legend_height,
-                outline="#334155",
+                outline=self._background_box_outline(),
                 extra_tags=("pulse_legend_bg",),
             )
         for index, (name, value) in enumerate(legend_items):
