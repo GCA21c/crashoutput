@@ -172,7 +172,7 @@ class VideoSlotViewer(tk.Frame):
         bottom = max(42, height - 16)
         top = max(10, bottom - max(56, int(height * 0.22)))
         self._pulse_box = (left, top, right, bottom)
-        colors = ("#ffffff", "#f97316", "#a3e635")
+        colors = ("#6ec7ff", "#f97316", "#a3e635")
 
         def x_for_time(value):
             view_start, view_end = self._pulse_view_range()
@@ -194,7 +194,7 @@ class VideoSlotViewer(tk.Frame):
             if bg_image is not None:
                 canvas.create_image(left, top, image=bg_image, anchor="nw", tags=("pulse", "pulse_bg"))
             else:
-                canvas.create_rectangle(left, top, right, bottom, fill="#020617", outline="", stipple="gray50", tags=("pulse", "pulse_bg"))
+                canvas.create_rectangle(left, top, right, bottom, fill="#020617", outline="", tags=("pulse", "pulse_bg"))
             canvas.create_rectangle(left, top, right, bottom, fill="", outline="#38bdf8", width=1, tags=("pulse", "pulse_bg"))
         else:
             canvas.create_line(left, bottom, right, bottom, fill="#38bdf8", width=1, tags=("pulse", "pulse_bg"))
@@ -268,15 +268,7 @@ class VideoSlotViewer(tk.Frame):
         time_text = f"Time: {self.overlay_cursor_ms:.0f}ms"
         if self.pulse_background_enabled:
             time_box_right = left + 88
-            canvas.create_rectangle(
-                left + 4,
-                bottom - 23,
-                time_box_right,
-                bottom - 4,
-                fill="#020617",
-                outline="#334155",
-                tags=("pulse", "pulse_dynamic", "pulse_fg"),
-            )
+            self._draw_textured_box(left + 4, bottom - 23, time_box_right, bottom - 4, outline="#334155")
             time_fill = "#f8fafc"
         else:
             time_fill = "#e5e7eb"
@@ -381,6 +373,18 @@ class VideoSlotViewer(tk.Frame):
         self._pulse_bg_sized_images[key] = image
         return image
 
+    def _draw_textured_box(self, left, top, right, bottom, outline="#334155", extra_tags=()):
+        canvas = self.canvas
+        width = max(1, int(right - left))
+        height = max(1, int(bottom - top))
+        tags = ("pulse", "pulse_dynamic", "pulse_fg", *tuple(extra_tags or ()))
+        bg_image = self._pulse_bg_image_for_size(width, height)
+        if bg_image is not None:
+            canvas.create_image(left, top, image=bg_image, anchor="nw", tags=tags)
+            canvas.create_rectangle(left, top, right, bottom, fill="", outline=outline, tags=tags)
+            return
+        canvas.create_rectangle(left, top, right, bottom, fill="#020617", outline=outline, tags=tags)
+
     def _sample_pulse_pairs(self, item, view_start, view_end):
         time_source = item.get("time_ms")
         signal_source = item.get("values")
@@ -451,18 +455,13 @@ class VideoSlotViewer(tk.Frame):
         legend_top = top + 6
         value_x = legend_left + legend_width - 9
         if self.pulse_background_enabled:
-            legend_options = {
-                "fill": "#020617",
-                "outline": "#334155",
-                "tags": ("pulse", "pulse_dynamic", "pulse_fg", "pulse_legend_bg"),
-            }
-            legend_options["stipple"] = "gray50"
-            canvas.create_rectangle(
+            self._draw_textured_box(
                 legend_left,
                 legend_top,
                 legend_left + legend_width,
                 legend_top + legend_height,
-                **legend_options,
+                outline="#334155",
+                extra_tags=("pulse_legend_bg",),
             )
         for index, (name, value) in enumerate(legend_items):
             y = legend_top + 9 + index * line_height
