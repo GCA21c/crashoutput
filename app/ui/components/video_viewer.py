@@ -21,7 +21,8 @@ class VideoSlotViewer(tk.Frame):
         self.overlay_cursor_ms = 0.0
         self.pulse_view_mode = 1
         self.pulse_background_enabled = True
-        self._pulse_bg_texture = None
+        self.pulse_background_theme = "dark"
+        self._pulse_bg_textures = {}
         self._pulse_bg_sized_images = {}
         self._pulse_sample_cache = {}
         self._pulse_box = None
@@ -99,6 +100,16 @@ class VideoSlotViewer(tk.Frame):
         if self.pulse_background_enabled == next_enabled:
             return
         self.pulse_background_enabled = next_enabled
+        self._pulse_static_signature = None
+        self._redraw()
+
+    def set_pulse_background_theme(self, theme):
+        next_theme = str(theme or "dark").lower()
+        if next_theme not in ("dark", "light"):
+            next_theme = "dark"
+        if self.pulse_background_theme == next_theme:
+            return
+        self.pulse_background_theme = next_theme
         self._pulse_static_signature = None
         self._redraw()
 
@@ -326,14 +337,20 @@ class VideoSlotViewer(tk.Frame):
         )
 
     def _load_pulse_bg_texture(self):
-        if self._pulse_bg_texture is not None:
-            return self._pulse_bg_texture
-        texture_path = Path(__file__).resolve().parents[3] / "resources" / "video" / "pulse_overlay_bg.png"
+        theme = str(self.pulse_background_theme or "dark").lower()
+        if theme not in ("dark", "light"):
+            theme = "dark"
+        cached = self._pulse_bg_textures.get(theme)
+        if cached is not None:
+            return cached if cached is not False else None
+        filename = "pulse_overlay_bg_light.png" if theme == "light" else "pulse_overlay_bg.png"
+        texture_path = Path(__file__).resolve().parents[3] / "resources" / "video" / filename
         try:
-            self._pulse_bg_texture = tk.PhotoImage(file=str(texture_path))
+            self._pulse_bg_textures[theme] = tk.PhotoImage(file=str(texture_path))
         except Exception:
-            self._pulse_bg_texture = False
-        return self._pulse_bg_texture if self._pulse_bg_texture is not False else None
+            self._pulse_bg_textures[theme] = False
+        cached = self._pulse_bg_textures.get(theme)
+        return cached if cached is not False else None
 
     def _pulse_bg_image_for_size(self, width, height):
         source = self._load_pulse_bg_texture()
@@ -341,7 +358,7 @@ class VideoSlotViewer(tk.Frame):
             return None
         width = max(1, int(width))
         height = max(1, int(height))
-        key = (width, height)
+        key = (str(self.pulse_background_theme or "dark"), width, height)
         cached = self._pulse_bg_sized_images.get(key)
         if cached is not None:
             return cached

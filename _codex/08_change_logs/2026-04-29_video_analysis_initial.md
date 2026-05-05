@@ -48,6 +48,7 @@
 - Pulse View를 2개로 재정리했다. View 1은 전체 pulse 표시, View 2는 시간 진행에 따라 pulse가 생성되는 방식이다.
 - `BG ON` / `BG OFF` 버튼을 추가해 pulse box/time/legend 배경 표시를 독립 제어한다.
 - `BG ON`용 검정 반투명 texture asset을 `resources/video/pulse_overlay_bg.png`에 추가했다.
+- `Tone Dark` / `Tone Light` 버튼과 흰색 반투명 texture asset을 추가했다.
 - 다음 최적화 방향은 `_codex/04_modules/video_analysis.md`의 `Next optimization work`에 정리했다.
 
 ## Files
@@ -58,6 +59,7 @@
 - `app/core/video/video_sync.py`
 - `_codex/04_modules/video_analysis.md`
 - `resources/video/pulse_overlay_bg.png`
+- `resources/video/pulse_overlay_bg_light.png`
 
 ## Risk
 - 로컬 macOS Python에는 `_tkinter`가 없어 실제 UI 실행은 Windows/Tk 환경에서 확인해야 한다.

@@ -58,6 +58,7 @@
 - `Pulse View 2`는 현재 video time까지 pulse curve가 시간 진행에 따라 생성되는 방식이다. frame cursor line은 표시하지 않고, peak가 지나간 뒤 같은 색상의 point marker로 표시한다.
 - `BG ON` / `BG OFF` 버튼으로 pulse box, time, legend 배경 표시를 독립 제어한다.
 - `BG ON`은 `resources/video/pulse_overlay_bg.png`의 검정 반투명 texture를 pulse box 크기에 맞춰 표시한다.
+- `Tone Dark` / `Tone Light` 버튼으로 검정 반투명 계열과 흰색 반투명 계열 배경 texture를 선택한다.
 - pulse overlay layer 규칙:
   - pulse box/background는 video 위, pulse line/text 아래에 먼저 그린다.
   - `pulse_fg`, `pulse_legend_text`는 항상 앞으로 올린다.
