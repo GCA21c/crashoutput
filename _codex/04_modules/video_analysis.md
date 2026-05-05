@@ -26,7 +26,8 @@
 - 예: offset `-50`이면 raw frame 0을 `-50ms`로 표시하고, raw frame 50이 test T0 / `0ms`가 된다.
 - 데이터 pulse는 기존 dataset time 기준으로 `0ms`부터 시작하며, graph/timeline은 음수 offset만큼 데이터 앞 구간을 열어 표시한다.
 - video overlay pulse의 x-axis 표시 범위는 video time range를 기준으로 한다. 예: offset `-50`, frame_count `700`이면 overlay range는 `-50ms ~ 649ms`이고, 데이터 시간이 더 길어도 overlay 기본 범위를 늘리지 않는다.
-- key frame timeline은 전체 확인을 위해 video range와 data range를 모두 포함한다. 데이터 time 값 자체는 sync/overlay 표시를 위해 변경하지 않는다.
+- key frame timeline은 전체 확인을 위해 video range와 data range를 모두 포함한다. overlay와 visual scale은 다를 수 있지만, cursor/time 값은 동일한 `synced_time_ms`를 사용한다.
+- 데이터 time 값 자체는 sync/overlay 표시를 위해 변경하지 않는다.
 - frame 이동 성능을 위해 현재 주변 frame만 메모리 cache에 유지한다.
 - frame cache는 `app/core/video/frame_cache.py`의 `FrameCache`로 분리했다.
 - 공통 RAM segment buffer는 현재 frame 기준 뒤쪽 50ms, 앞쪽 200ms를 유지한다.
@@ -53,10 +54,10 @@
 - 선택된 각 pulse channel은 해당 채널 값의 absolute peak 지점을 계산해 View 1/2에서는 pulse line과 같은 색상의 vertical solid line으로 표시한다.
 - 별도 Pulse Overlay 목록 영역은 제거했고, pulse는 video overlay에만 표시한다.
 - 하단 안내문구 우측에 `Pulse View 1` / `Pulse View 2` 선택 버튼을 둔다.
-- `Pulse View 1`은 4면 outline이 모두 있는 semi-transparent pulse box와 semi-transparent legend background를 쓰는 graph-box 스타일이다.
-- `Pulse View 2`는 pulse box background 없이 하단 line만 표시하고, time/legend는 opaque background를 쓰는 readability 우선 스타일이다.
-- `Pulse View 3`은 View 2 스타일을 기반으로 현재 video time까지의 pulse line만 누적 표시한다. frame cursor line은 표시하지 않고, peak가 지나간 뒤 같은 색상의 point marker로 표시한다.
-- `Pulse View 3`은 view range별 sampled pulse points를 cache해 frame 진행 중 전체 pulse data 재샘플링을 줄인다.
+- `Pulse View 1`은 기존 방식처럼 선택된 pulse curve 전체를 먼저 표시하고 current frame cursor를 함께 보여준다.
+- `Pulse View 2`는 현재 video time까지 pulse curve가 시간 진행에 따라 생성되는 방식이다. frame cursor line은 표시하지 않고, peak가 지나간 뒤 같은 색상의 point marker로 표시한다.
+- `BG ON` / `BG OFF` 버튼으로 pulse box, time, legend 배경 표시를 독립 제어한다.
+- `BG ON`은 `resources/video/pulse_overlay_bg.png`의 검정 반투명 texture를 pulse box 크기에 맞춰 표시한다.
 - pulse overlay layer 규칙:
   - pulse box/background는 video 위, pulse line/text 아래에 먼저 그린다.
   - `pulse_fg`, `pulse_legend_text`는 항상 앞으로 올린다.
@@ -91,8 +92,8 @@
 - Canvas redraw 최적화:
   - video background/image canvas item은 유지하고, frame 변경 시 `itemconfigure(image=...)`와 `coords(...)`로 갱신한다.
   - placeholder 전환은 잔상 방지를 위해 전체 delete를 유지한다.
-  - Pulse View 1/2는 curve/peak/T0/background를 static layer로 유지하고, frame 이동 시 current cursor/time/legend value만 `pulse_dynamic` tag로 갱신한다.
-  - Pulse View 3은 cursor time에 따라 curve 자체가 자라므로 기존처럼 pulse overlay를 전체 갱신한다.
+  - Pulse View 1은 curve/peak/T0/background를 static layer로 유지하고, frame 이동 시 current cursor/time/legend value만 `pulse_dynamic` tag로 갱신한다.
+  - Pulse View 2는 cursor time에 따라 curve 자체가 자라므로 current cursor 변화 시 pulse overlay를 다시 그린다.
 - Pulse rendering 최적화:
   - channel 추가/zoom/pan 때만 Pulse View 1/2의 pulse curve points를 재계산하고, frame 이동 때는 current cursor/time/legend value만 갱신한다.
   - 큰 DAT channel에서는 downsampling/window sampling을 view range 기준으로 캐시한다.

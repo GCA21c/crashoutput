@@ -47,7 +47,8 @@ class VideoAnalysisPage(tk.Frame):
         self.video_infos = [None] * MAX_VIDEOS
         self.channel_data = []
         self.channel_select_var = tk.StringVar()
-        self.pulse_view_mode_var = tk.IntVar(value=2)
+        self.pulse_view_mode_var = tk.IntVar(value=1)
+        self.pulse_background_var = tk.BooleanVar(value=True)
         self.playback_speed_var = tk.StringVar(value="x1.0")
         self._layout_refresh_after_id = None
         self._play_after_id = None
@@ -156,14 +157,34 @@ class VideoAnalysisPage(tk.Frame):
 
         pulse_view_box = tk.Frame(footer, bg=PAGE_BG)
         pulse_view_box.pack(side=tk.RIGHT)
-        tk.Label(pulse_view_box, text="Pulse", bg=PAGE_BG, fg=MUTED_FG).pack(side=tk.LEFT, padx=(0, 4))
-        for value, text in ((1, "View 1"), (2, "View 2"), (3, "View 3")):
+        pulse_view_row = tk.Frame(pulse_view_box, bg=PAGE_BG)
+        pulse_view_row.pack(side=tk.TOP, anchor="e")
+        pulse_bg_row = tk.Frame(pulse_view_box, bg=PAGE_BG)
+        pulse_bg_row.pack(side=tk.TOP, anchor="e", pady=(3, 0))
+        tk.Label(pulse_view_row, text="Pulse", bg=PAGE_BG, fg=MUTED_FG).pack(side=tk.LEFT, padx=(0, 4))
+        for value, text in ((1, "View 1"), (2, "View 2")):
             tk.Radiobutton(
-                pulse_view_box,
+                pulse_view_row,
                 text=text,
                 value=value,
                 variable=self.pulse_view_mode_var,
                 command=self._apply_pulse_view_mode,
+                bg=PAGE_BG,
+                fg=MUTED_FG,
+                selectcolor=PAGE_BG,
+                indicatoron=False,
+                width=7,
+                bd=1,
+                relief=tk.RIDGE,
+            ).pack(side=tk.LEFT, padx=(3, 0))
+        tk.Label(pulse_bg_row, text="BG", bg=PAGE_BG, fg=MUTED_FG).pack(side=tk.LEFT, padx=(0, 4))
+        for value, text in ((True, "ON"), (False, "OFF")):
+            tk.Radiobutton(
+                pulse_bg_row,
+                text=text,
+                value=value,
+                variable=self.pulse_background_var,
+                command=self._apply_pulse_background,
                 bg=PAGE_BG,
                 fg=MUTED_FG,
                 selectcolor=PAGE_BG,
@@ -640,12 +661,18 @@ class VideoAnalysisPage(tk.Frame):
         overlay_channels = self._overlay_channel_snapshot()
         for viewer in self._visible_video_viewers():
             viewer.set_pulse_view_mode(self.pulse_view_mode_var.get())
+            viewer.set_pulse_background_enabled(self.pulse_background_var.get())
             viewer.set_pulse_overlay(overlay_channels, overlay_start_ms, overlay_end_ms, self.state.synced_time_ms)
 
     def _apply_pulse_view_mode(self):
         mode = self.pulse_view_mode_var.get()
         self.video_left.set_pulse_view_mode(mode)
         self.video_right.set_pulse_view_mode(mode)
+
+    def _apply_pulse_background(self):
+        enabled = self.pulse_background_var.get()
+        self.video_left.set_pulse_background_enabled(enabled)
+        self.video_right.set_pulse_background_enabled(enabled)
 
     def _overlay_channel_snapshot(self):
         current_ms = float(self.state.synced_time_ms)

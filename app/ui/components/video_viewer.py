@@ -1,4 +1,5 @@
 import tkinter as tk
+from pathlib import Path
 
 from app.ui.styles import MUTED_FG, PAGE_BG
 
@@ -18,7 +19,10 @@ class VideoSlotViewer(tk.Frame):
         self.overlay_start_ms = 0.0
         self.overlay_end_ms = 1.0
         self.overlay_cursor_ms = 0.0
-        self.pulse_view_mode = 2
+        self.pulse_view_mode = 1
+        self.pulse_background_enabled = True
+        self._pulse_bg_texture = None
+        self._pulse_bg_sized_images = {}
         self._pulse_sample_cache = {}
         self._pulse_box = None
         self._zoom_callback = None
@@ -83,11 +87,19 @@ class VideoSlotViewer(tk.Frame):
         self._zoom_callback = callback
 
     def set_pulse_view_mode(self, mode):
-        raw_mode = int(mode or 2)
-        next_mode = raw_mode if raw_mode in (1, 2, 3) else 2
+        raw_mode = int(mode or 1)
+        next_mode = raw_mode if raw_mode in (1, 2) else 1
         if self.pulse_view_mode == next_mode:
             return
         self.pulse_view_mode = next_mode
+        self._redraw()
+
+    def set_pulse_background_enabled(self, enabled):
+        next_enabled = bool(enabled)
+        if self.pulse_background_enabled == next_enabled:
+            return
+        self.pulse_background_enabled = next_enabled
+        self._pulse_static_signature = None
         self._redraw()
 
     def reset_zoom(self):
@@ -97,6 +109,7 @@ class VideoSlotViewer(tk.Frame):
         self.pulse_zoom_scale = 1.0
         self.pulse_zoom_center_ms = None
         self._pulse_sample_cache.clear()
+        self._pulse_bg_sized_images.clear()
         self._pulse_static_signature = None
         self._redraw()
 
@@ -169,15 +182,20 @@ class VideoSlotViewer(tk.Frame):
 
         view_start, view_end = self._pulse_view_range()
         static_signature = self._pulse_static_draw_signature(width, height, view_start, view_end)
-        if self.pulse_view_mode != 3 and static_signature == self._pulse_static_signature:
+        if static_signature == self._pulse_static_signature:
             canvas.delete("pulse_dynamic")
             self._draw_pulse_dynamic(left, right, top, bottom, colors, x_for_time)
             return
 
         canvas.delete("pulse")
-        self._pulse_static_signature = None if self.pulse_view_mode == 3 else static_signature
-        if self.pulse_view_mode == 1:
-            canvas.create_rectangle(left, top, right, bottom, fill="#020617", outline="#38bdf8", stipple="gray50", tags=("pulse", "pulse_bg"))
+        self._pulse_static_signature = static_signature
+        if self.pulse_background_enabled:
+            bg_image = self._pulse_bg_image_for_size(max(1, int(right - left)), max(1, int(bottom - top)))
+            if bg_image is not None:
+                canvas.create_image(left, top, image=bg_image, anchor="nw", tags=("pulse", "pulse_bg"))
+            else:
+                canvas.create_rectangle(left, top, right, bottom, fill="#020617", outline="", stipple="gray50", tags=("pulse", "pulse_bg"))
+            canvas.create_rectangle(left, top, right, bottom, fill="", outline="#38bdf8", width=1, tags=("pulse", "pulse_bg"))
         else:
             canvas.create_line(left, bottom, right, bottom, fill="#38bdf8", width=1, tags=("pulse", "pulse_bg"))
         channel_draw_cache = []
@@ -191,7 +209,7 @@ class VideoSlotViewer(tk.Frame):
             v_max = max(values)
             v_span = max(1e-9, v_max - v_min)
             draw_pairs = pairs
-            if self.pulse_view_mode == 3:
+            if self.pulse_view_mode == 2:
                 draw_pairs = [(t, v) for t, v in pairs if t <= self.overlay_cursor_ms]
             points = []
             for t, v in draw_pairs:
@@ -210,10 +228,10 @@ class VideoSlotViewer(tk.Frame):
                 continue
             if not (view_start <= peak_time <= view_end):
                 continue
-            if self.pulse_view_mode == 3 and peak_time > self.overlay_cursor_ms:
+            if self.pulse_view_mode == 2 and peak_time > self.overlay_cursor_ms:
                 continue
             peak_x = x_for_time(peak_time)
-            if self.pulse_view_mode == 3:
+            if self.pulse_view_mode == 2:
                 try:
                     peak_value = float(item.get("peak_value"))
                 except (TypeError, ValueError):
@@ -248,7 +266,7 @@ class VideoSlotViewer(tk.Frame):
     def _draw_pulse_dynamic(self, left, right, top, bottom, colors, x_for_time):
         canvas = self.canvas
         time_text = f"Time: {self.overlay_cursor_ms:.0f}ms"
-        if self.pulse_view_mode in (2, 3):
+        if self.pulse_background_enabled:
             time_box_right = left + 88
             canvas.create_rectangle(
                 left + 4,
@@ -273,7 +291,7 @@ class VideoSlotViewer(tk.Frame):
         )
 
         cursor_x = x_for_time(self.overlay_cursor_ms)
-        if self.pulse_view_mode != 3:
+        if self.pulse_view_mode == 1:
             canvas.create_line(
                 cursor_x,
                 top - 5,
@@ -310,8 +328,58 @@ class VideoSlotViewer(tk.Frame):
             round(float(view_start), 3),
             round(float(view_end), 3),
             round(float(self.pulse_zoom_scale or 1.0), 3),
+            round(float(self.overlay_cursor_ms), 3) if self.pulse_view_mode == 2 else None,
+            bool(self.pulse_background_enabled),
             tuple(channel_signature),
         )
+
+    def _load_pulse_bg_texture(self):
+        if self._pulse_bg_texture is not None:
+            return self._pulse_bg_texture
+        texture_path = Path(__file__).resolve().parents[3] / "resources" / "video" / "pulse_overlay_bg.png"
+        try:
+            self._pulse_bg_texture = tk.PhotoImage(file=str(texture_path))
+        except Exception:
+            self._pulse_bg_texture = False
+        return self._pulse_bg_texture if self._pulse_bg_texture is not False else None
+
+    def _pulse_bg_image_for_size(self, width, height):
+        source = self._load_pulse_bg_texture()
+        if source is None:
+            return None
+        width = max(1, int(width))
+        height = max(1, int(height))
+        key = (width, height)
+        cached = self._pulse_bg_sized_images.get(key)
+        if cached is not None:
+            return cached
+        try:
+            image = tk.PhotoImage(width=width, height=height)
+            source_width = max(1, int(source.width()))
+            source_height = max(1, int(source.height()))
+            for y in range(0, height, source_height):
+                copy_h = min(source_height, height - y)
+                for x in range(0, width, source_width):
+                    copy_w = min(source_width, width - x)
+                    image.tk.call(
+                        image,
+                        "copy",
+                        source,
+                        "-from",
+                        0,
+                        0,
+                        copy_w,
+                        copy_h,
+                        "-to",
+                        x,
+                        y,
+                    )
+        except Exception:
+            return None
+        if len(self._pulse_bg_sized_images) > 8:
+            self._pulse_bg_sized_images.clear()
+        self._pulse_bg_sized_images[key] = image
+        return image
 
     def _sample_pulse_pairs(self, item, view_start, view_end):
         time_source = item.get("time_ms")
@@ -382,20 +450,20 @@ class VideoSlotViewer(tk.Frame):
         legend_left = max(left + 6, right - legend_width - 6)
         legend_top = top + 6
         value_x = legend_left + legend_width - 9
-        legend_options = {
-            "fill": "#020617",
-            "outline": "#334155" if self.pulse_view_mode == 1 else "#38bdf8",
-            "tags": ("pulse", "pulse_dynamic", "pulse_fg", "pulse_legend_bg"),
-        }
-        if self.pulse_view_mode == 1:
+        if self.pulse_background_enabled:
+            legend_options = {
+                "fill": "#020617",
+                "outline": "#334155",
+                "tags": ("pulse", "pulse_dynamic", "pulse_fg", "pulse_legend_bg"),
+            }
             legend_options["stipple"] = "gray50"
-        canvas.create_rectangle(
-            legend_left,
-            legend_top,
-            legend_left + legend_width,
-            legend_top + legend_height,
-            **legend_options,
-        )
+            canvas.create_rectangle(
+                legend_left,
+                legend_top,
+                legend_left + legend_width,
+                legend_top + legend_height,
+                **legend_options,
+            )
         for index, (name, value) in enumerate(legend_items):
             y = legend_top + 9 + index * line_height
             color = colors[index % len(colors)]
