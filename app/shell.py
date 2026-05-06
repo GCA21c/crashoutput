@@ -93,6 +93,8 @@ class CrashAnalysisWorkbench(tk.Frame):
         self.history_info_var = tk.StringVar(value="History: 0")
         self.injury_test_mode_var = tk.StringVar(value="-")
         self.injury_page_keys = list(INJURY_NAV_ORDER)
+        self.injury_nav_collapsed = False
+        self._injury_toggle_button = None
         self._injury_mode_combo = None
         self._injury_nav_frame = None
         self.shared_dummy_config = self._default_shared_dummy_config()
@@ -354,21 +356,37 @@ class CrashAnalysisWorkbench(tk.Frame):
         group.pack(fill=tk.X)
         header = tk.Frame(group, bg=SIDEBAR_BG)
         header.pack(fill=tk.X)
-        tk.Label(
+        self._injury_toggle_button = tk.Button(
             header,
-            text="INJURY",
+            text="▼ INJURY",
             font=NAV_FONT_BOLD,
             bg=SIDEBAR_BG,
             fg=TEXT_FG,
             anchor="w",
-            padx=32,
+            padx=28,
             pady=6,
-        ).pack(side=tk.LEFT)
+            relief=tk.FLAT,
+            bd=0,
+            activebackground=NAV_ACTIVE_BG,
+            command=self._toggle_injury_nav,
+        )
+        self._injury_toggle_button.pack(fill=tk.X)
 
         self._injury_nav_frame = tk.Frame(group, bg=SIDEBAR_BG)
         self._injury_nav_frame.pack(fill=tk.X)
         for key in self.injury_page_keys:
             self._add_nav_button(key, INJURY_PAGE_LABELS[key], indent=34, parent=self._injury_nav_frame)
+
+    def _toggle_injury_nav(self):
+        self.injury_nav_collapsed = not self.injury_nav_collapsed
+        self._apply_injury_mode_nav()
+
+    def _refresh_injury_toggle_label(self):
+        button = self._injury_toggle_button
+        if button is None:
+            return
+        prefix = "▶" if self.injury_nav_collapsed else "▼"
+        button.configure(text=f"{prefix} INJURY")
 
     def _build_report_nav_group(self):
         group = tk.Frame(self.sidebar, bg=SIDEBAR_BG)
@@ -395,6 +413,7 @@ class CrashAnalysisWorkbench(tk.Frame):
         return tuple(INJURY_TEST_MODE_MODULES.get(mode, ()))
 
     def _apply_injury_mode_nav(self):
+        self._refresh_injury_toggle_label()
         visible_keys = set(self._available_injury_pages())
         for key in self.injury_page_keys:
             button = self.page_buttons.get(key)
@@ -407,7 +426,8 @@ class CrashAnalysisWorkbench(tk.Frame):
                 continue
             button = self.page_buttons.get(key)
             if button is not None:
-                button.pack(fill=tk.X)
+                if not self.injury_nav_collapsed:
+                    button.pack(fill=tk.X)
 
         if self.current_page_key in self.injury_page_keys and self.current_page_key not in visible_keys:
             fallback_key = next(iter(self._available_injury_pages()), None)
@@ -498,6 +518,12 @@ class CrashAnalysisWorkbench(tk.Frame):
         self._resize_after_id = self.after(self._resize_commit_delay_ms, self._finish_resize)
 
     def _refresh_nav_styles(self):
+        injury_active = self.current_page_key in self.injury_page_keys
+        if self._injury_toggle_button is not None:
+            if injury_active:
+                self._injury_toggle_button.configure(bg=NAV_ACTIVE_BG, activebackground=NAV_ACTIVE_BG, font=NAV_FONT_BOLD)
+            else:
+                self._injury_toggle_button.configure(bg=SIDEBAR_BG, activebackground=NAV_ACTIVE_BG, font=NAV_FONT_BOLD)
         for key, button in self.page_buttons.items():
             if key == self.current_page_key:
                 button.configure(bg=NAV_ACTIVE_BG, activebackground=NAV_ACTIVE_BG, font=NAV_FONT_BOLD)
