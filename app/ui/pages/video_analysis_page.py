@@ -797,7 +797,11 @@ class VideoAnalysisPage(tk.Frame):
             if frame is None:
                 viewer.show_placeholder("Frame read failed")
                 continue
-            viewer.show_frame(self._frame_to_photo_cached(index, self.state.current_raw_frame, frame, viewer))
+            photo_frame = self._frame_to_photo_cached(index, self.state.current_raw_frame, frame, viewer)
+            if isinstance(photo_frame, tuple):
+                viewer.show_frame(photo_frame[0], photo_frame[1])
+            else:
+                viewer.show_frame(photo_frame)
 
     def _frame_to_photo_cached(self, slot_index, frame_index, frame, viewer):
         size = viewer.image_size()
@@ -966,7 +970,7 @@ class VideoAnalysisPage(tk.Frame):
         if Image is not None and ImageTk is not None:
             image = Image.fromarray(rgb)
             image.thumbnail((max_width, max_height))
-            return ImageTk.PhotoImage(image)
+            return ImageTk.PhotoImage(image), image.copy()
 
         height, width = rgb.shape[:2]
         scale = min(max_width / max(1, width), max_height / max(1, height), 1.0)
@@ -976,7 +980,7 @@ class VideoAnalysisPage(tk.Frame):
         if not ok:
             return None
         try:
-            return tk.PhotoImage(data=encoded.tobytes())
+            return tk.PhotoImage(data=encoded.tobytes()), None
         except Exception:
             return None
 

@@ -1,7 +1,23 @@
 import tkinter as tk
+import sys
 from pathlib import Path
 
 from app.ui.styles import MUTED_FG, PAGE_BG
+
+
+def _app_resource_root():
+    bundle_root = getattr(sys, "_MEIPASS", None)
+    if bundle_root:
+        return Path(bundle_root)
+    return Path(__file__).resolve().parents[3]
+
+
+def _load_pillow_image_modules():
+    try:
+        from PIL import Image, ImageTk
+    except Exception:
+        return None, None
+    return Image, ImageTk
 
 
 class VideoSlotViewer(tk.Frame):
@@ -10,6 +26,10 @@ class VideoSlotViewer(tk.Frame):
         self.title = str(title)
         self._photo = None
         self._source_photo = None
+        self._source_image = None
+        self._composited_photo = None
+        self._composited_signature = None
+        self._pulse_background_precomposited = False
         self.zoom_scale = 1.0
         self.pan_x = 0.0
         self.pan_y = 0.0
@@ -57,12 +77,18 @@ class VideoSlotViewer(tk.Frame):
     def show_placeholder(self, text=None):
         self._photo = None
         self._source_photo = None
+        self._source_image = None
+        self._composited_photo = None
+        self._composited_signature = None
+        self._pulse_background_precomposited = False
         self._placeholder_text = str(text or f"{self.title}\nNo video loaded")
         self._redraw()
 
-    def show_frame(self, photo_image):
+    def show_frame(self, photo_image, source_image=None):
         self._source_photo = photo_image
         self._photo = photo_image
+        self._source_image = source_image
+        self._composited_signature = None
         if photo_image is None:
             self.show_placeholder()
             return
@@ -121,6 +147,8 @@ class VideoSlotViewer(tk.Frame):
         self.pulse_zoom_center_ms = None
         self._pulse_sample_cache.clear()
         self._pulse_bg_sized_images.clear()
+        self._composited_photo = None
+        self._composited_signature = None
         self._pulse_static_signature = None
         self._redraw()
 
@@ -164,11 +192,15 @@ class VideoSlotViewer(tk.Frame):
         self._clamp_pan(width, height)
         image_x = width / 2 + self.pan_x
         image_y = height / 2 + self.pan_y
+        display_photo = self._photo
+        if self._can_precompose_pulse_background():
+            display_photo = self._composited_video_photo(width, height, image_x, image_y) or self._photo
+        self._pulse_background_precomposited = display_photo is not self._photo
         if self._canvas_image_id is None:
-            self._canvas_image_id = canvas.create_image(image_x, image_y, image=self._photo, anchor="center", tags=("video_image",))
+            self._canvas_image_id = canvas.create_image(image_x, image_y, image=display_photo, anchor="center", tags=("video_image",))
         else:
             canvas.coords(self._canvas_image_id, image_x, image_y)
-            canvas.itemconfigure(self._canvas_image_id, image=self._photo)
+            canvas.itemconfigure(self._canvas_image_id, image=display_photo)
         self._draw_pulse_overlay(width, height)
 
     def _draw_pulse_overlay(self, width, height):
@@ -178,10 +210,7 @@ class VideoSlotViewer(tk.Frame):
             self._pulse_static_signature = None
             self._pulse_box = None
             return
-        left = 8
-        right = max(left + 1, width - 8)
-        bottom = max(42, height - 16)
-        top = max(10, bottom - max(56, int(height * 0.22)))
+        left, top, right, bottom = self._pulse_overlay_box(width, height)
         self._pulse_box = (left, top, right, bottom)
         colors = ("#ffff00", "#f97316", "#a3e635")
 
@@ -200,7 +229,9 @@ class VideoSlotViewer(tk.Frame):
 
         canvas.delete("pulse")
         self._pulse_static_signature = static_signature
-        if self.pulse_background_enabled:
+        if self.pulse_background_enabled and self._pulse_background_precomposited:
+            canvas.create_rectangle(left, top, right, bottom, fill="", outline="#38bdf8", width=1, tags=("pulse", "pulse_bg"))
+        elif self.pulse_background_enabled:
             bg_image = self._pulse_bg_image_for_size(max(1, int(right - left)), max(1, int(bottom - top)))
             if bg_image is not None:
                 canvas.create_image(left, top, image=bg_image, anchor="nw", tags=("pulse", "pulse_bg"))
@@ -342,14 +373,31 @@ class VideoSlotViewer(tk.Frame):
         cached = self._pulse_bg_textures.get(theme)
         if cached is not None:
             return cached if cached is not False else None
-        filename = "pulse_overlay_bg_light.png" if theme == "light" else "pulse_overlay_bg.png"
-        texture_path = Path(__file__).resolve().parents[3] / "resources" / "video" / filename
         try:
-            self._pulse_bg_textures[theme] = tk.PhotoImage(file=str(texture_path))
+            self._pulse_bg_textures[theme] = tk.PhotoImage(file=str(self._pulse_bg_texture_path(theme)))
         except Exception:
             self._pulse_bg_textures[theme] = False
         cached = self._pulse_bg_textures.get(theme)
         return cached if cached is not False else None
+
+    def _load_pulse_bg_pillow_source(self, theme):
+        Image, _ImageTk = _load_pillow_image_modules()
+        if Image is None:
+            return None
+        key = ("pil_source", theme)
+        cached = self._pulse_bg_textures.get(key)
+        if cached is not None:
+            return cached if cached is not False else None
+        try:
+            self._pulse_bg_textures[key] = Image.open(self._pulse_bg_texture_path(theme)).convert("RGBA")
+        except Exception:
+            self._pulse_bg_textures[key] = False
+        cached = self._pulse_bg_textures.get(key)
+        return cached if cached is not False else None
+
+    def _pulse_bg_texture_path(self, theme):
+        filename = "pulse_overlay_bg_light.png" if theme == "light" else "pulse_overlay_bg.png"
+        return _app_resource_root() / "resources" / "video" / filename
 
     def _pulse_bg_image_for_size(self, width, height):
         source = self._load_pulse_bg_texture()
@@ -394,6 +442,9 @@ class VideoSlotViewer(tk.Frame):
         width = max(1, int(right - left))
         height = max(1, int(bottom - top))
         tags = ("pulse", "pulse_dynamic", "pulse_fg", *tuple(extra_tags or ()))
+        if self._pulse_background_precomposited:
+            canvas.create_rectangle(left, top, right, bottom, fill="", outline=outline, tags=tags)
+            return
         bg_image = self._pulse_bg_image_for_size(width, height)
         if bg_image is not None:
             canvas.create_image(left, top, image=bg_image, anchor="nw", tags=tags)
@@ -403,6 +454,96 @@ class VideoSlotViewer(tk.Frame):
 
     def _background_box_outline(self):
         return "#9ca3af" if str(self.pulse_background_theme or "dark").lower() == "light" else "#334155"
+
+    def _pulse_overlay_box(self, width, height):
+        left = 8
+        right = max(left + 1, int(width) - 8)
+        bottom = max(42, int(height) - 16)
+        top = max(10, bottom - max(56, int(int(height) * 0.22)))
+        return left, top, right, bottom
+
+    def _can_precompose_pulse_background(self):
+        if not self.pulse_background_enabled or not self.overlay_channels or self._source_image is None:
+            return False
+        Image, ImageTk = _load_pillow_image_modules()
+        return Image is not None and ImageTk is not None
+
+    def _composited_video_photo(self, canvas_width, canvas_height, image_x, image_y):
+        Image, ImageTk = _load_pillow_image_modules()
+        if Image is None or ImageTk is None or self._source_image is None:
+            return None
+        theme = str(self.pulse_background_theme or "dark").lower()
+        if theme not in ("dark", "light"):
+            theme = "dark"
+        source_texture = self._load_pulse_bg_pillow_source(theme)
+        if source_texture is None:
+            return None
+        try:
+            base = self._source_image.convert("RGBA")
+        except Exception:
+            return None
+        image_width, image_height = base.size
+        image_left = float(image_x) - image_width / 2.0
+        image_top = float(image_y) - image_height / 2.0
+        pulse_box = self._pulse_overlay_box(canvas_width, canvas_height)
+        legend_box = self._legend_box(*pulse_box[:3])
+        time_box = (pulse_box[0] + 4, pulse_box[3] - 23, pulse_box[0] + 88, pulse_box[3] - 4)
+        signature = (
+            id(self._source_image),
+            int(canvas_width),
+            int(canvas_height),
+            round(float(image_x), 2),
+            round(float(image_y), 2),
+            theme,
+            tuple(self._legend_parts(item) for item in self.overlay_channels),
+            tuple(round(float(value), 2) for value in pulse_box),
+            tuple(round(float(value), 2) for value in legend_box),
+            tuple(round(float(value), 2) for value in time_box),
+        )
+        if signature == self._composited_signature and self._composited_photo is not None:
+            return self._composited_photo
+        composed = base.copy()
+        for box in (pulse_box, time_box, legend_box):
+            self._composite_texture_box(composed, source_texture, box, image_left, image_top)
+        try:
+            self._composited_photo = ImageTk.PhotoImage(composed)
+            self._composited_signature = signature
+            return self._composited_photo
+        except Exception:
+            self._composited_photo = None
+            self._composited_signature = None
+            return None
+
+    def _composite_texture_box(self, target, texture, canvas_box, image_left, image_top):
+        left, top, right, bottom = canvas_box
+        local_left = max(0, int(round(float(left) - image_left)))
+        local_top = max(0, int(round(float(top) - image_top)))
+        local_right = min(target.size[0], int(round(float(right) - image_left)))
+        local_bottom = min(target.size[1], int(round(float(bottom) - image_top)))
+        if local_right <= local_left or local_bottom <= local_top:
+            return
+        texture_width = max(1, int(texture.width))
+        texture_height = max(1, int(texture.height))
+        for y in range(local_top, local_bottom, texture_height):
+            copy_h = min(texture_height, local_bottom - y)
+            for x in range(local_left, local_right, texture_width):
+                copy_w = min(texture_width, local_right - x)
+                tile = texture.crop((0, 0, copy_w, copy_h))
+                target.paste(tile, (x, y), tile)
+
+    def _legend_box(self, left, right, top):
+        if not self.overlay_channels:
+            return left, top, left, top
+        legend_items = [self._legend_parts(item) for item in self.overlay_channels]
+        overlay_width = max(1, right - left)
+        name_width = max(90, max(len(name) for name, _value in legend_items) * 7)
+        value_width = max(74, max(len(value) for _name, value in legend_items) * 7)
+        legend_width = min(max(150, name_width + value_width + 28), max(150, overlay_width - 12))
+        line_height = 18
+        legend_height = 10 + line_height * len(legend_items)
+        legend_left = max(left + 6, right - legend_width - 6)
+        legend_top = top + 6
+        return legend_left, legend_top, legend_left + legend_width, legend_top + legend_height
 
     def _sample_pulse_pairs(self, item, view_start, view_end):
         time_source = item.get("time_ms")
@@ -464,21 +605,17 @@ class VideoSlotViewer(tk.Frame):
             return
         canvas = self.canvas
         legend_items = [self._legend_parts(item) for item in self.overlay_channels]
-        overlay_width = max(1, right - left)
-        name_width = max(90, max(len(name) for name, _value in legend_items) * 7)
-        value_width = max(74, max(len(value) for _name, value in legend_items) * 7)
-        legend_width = min(max(150, name_width + value_width + 28), max(150, overlay_width - 12))
+        legend_left, legend_top, legend_right, legend_bottom = self._legend_box(left, right, top)
+        legend_width = legend_right - legend_left
         line_height = 18
-        legend_height = 10 + line_height * len(legend_items)
-        legend_left = max(left + 6, right - legend_width - 6)
-        legend_top = top + 6
+        legend_height = legend_bottom - legend_top
         value_x = legend_left + legend_width - 9
         if self.pulse_background_enabled:
             self._draw_textured_box(
                 legend_left,
                 legend_top,
-                legend_left + legend_width,
-                legend_top + legend_height,
+                legend_right,
+                legend_bottom,
                 outline=self._background_box_outline(),
                 extra_tags=("pulse_legend_bg",),
             )
