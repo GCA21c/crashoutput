@@ -13,7 +13,7 @@ class VideoSlotViewer(tk.Frame):
         self.zoom_scale = 1.0
         self.pan_x = 0.0
         self.pan_y = 0.0
-        self.pulse_zoom_scale = 1.0
+        self.pulse_zoom_scale = 1.2 ** 4
         self.pulse_zoom_center_ms = None
         self.overlay_channels = []
         self.overlay_start_ms = 0.0
@@ -117,7 +117,7 @@ class VideoSlotViewer(tk.Frame):
         self.zoom_scale = 1.0
         self.pan_x = 0.0
         self.pan_y = 0.0
-        self.pulse_zoom_scale = 1.0
+        self.pulse_zoom_scale = 1.2 ** 4
         self.pulse_zoom_center_ms = None
         self._pulse_sample_cache.clear()
         self._pulse_bg_sized_images.clear()
