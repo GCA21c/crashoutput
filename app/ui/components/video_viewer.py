@@ -1,7 +1,23 @@
+import sys
 import tkinter as tk
 from pathlib import Path
 
 from app.ui.styles import MUTED_FG, PAGE_BG
+
+
+def _app_resource_root():
+    bundle_root = getattr(sys, "_MEIPASS", None)
+    if bundle_root:
+        return Path(bundle_root)
+    return Path(__file__).resolve().parents[3]
+
+
+def _load_pillow_image_modules():
+    try:
+        from PIL import Image, ImageTk
+    except Exception:
+        return None, None
+    return Image, ImageTk
 
 
 class VideoSlotViewer(tk.Frame):
@@ -342,25 +358,51 @@ class VideoSlotViewer(tk.Frame):
         cached = self._pulse_bg_textures.get(theme)
         if cached is not None:
             return cached if cached is not False else None
-        filename = "pulse_overlay_bg_light.png" if theme == "light" else "pulse_overlay_bg.png"
-        texture_path = Path(__file__).resolve().parents[3] / "resources" / "video" / filename
         try:
-            self._pulse_bg_textures[theme] = tk.PhotoImage(file=str(texture_path))
+            self._pulse_bg_textures[theme] = tk.PhotoImage(file=str(self._pulse_bg_texture_path(theme)))
         except Exception:
             self._pulse_bg_textures[theme] = False
         cached = self._pulse_bg_textures.get(theme)
         return cached if cached is not False else None
 
-    def _pulse_bg_image_for_size(self, width, height):
-        source = self._load_pulse_bg_texture()
-        if source is None:
+    def _load_pulse_bg_pillow_source(self, theme):
+        Image, _ImageTk = _load_pillow_image_modules()
+        if Image is None:
             return None
+        key = ("pil_source", theme)
+        cached = self._pulse_bg_textures.get(key)
+        if cached is not None:
+            return cached if cached is not False else None
+        try:
+            self._pulse_bg_textures[key] = Image.open(self._pulse_bg_texture_path(theme)).convert("RGBA")
+        except Exception:
+            self._pulse_bg_textures[key] = False
+        cached = self._pulse_bg_textures.get(key)
+        return cached if cached is not False else None
+
+    def _pulse_bg_texture_path(self, theme):
+        filename = "pulse_overlay_bg_light.png" if theme == "light" else "pulse_overlay_bg.png"
+        return _app_resource_root() / "resources" / "video" / filename
+
+    def _pulse_bg_image_for_size(self, width, height):
         width = max(1, int(width))
         height = max(1, int(height))
         key = (str(self.pulse_background_theme or "dark"), width, height)
         cached = self._pulse_bg_sized_images.get(key)
         if cached is not None:
             return cached
+        theme = str(self.pulse_background_theme or "dark").lower()
+        if theme not in ("dark", "light"):
+            theme = "dark"
+        pillow_image = self._pulse_bg_image_for_size_pillow(theme, width, height)
+        if pillow_image is not None:
+            if len(self._pulse_bg_sized_images) > 8:
+                self._pulse_bg_sized_images.clear()
+            self._pulse_bg_sized_images[key] = pillow_image
+            return pillow_image
+        source = self._load_pulse_bg_texture()
+        if source is None:
+            return None
         try:
             image = tk.PhotoImage(width=width, height=height)
             source_width = max(1, int(source.width()))
@@ -388,6 +430,27 @@ class VideoSlotViewer(tk.Frame):
             self._pulse_bg_sized_images.clear()
         self._pulse_bg_sized_images[key] = image
         return image
+
+    def _pulse_bg_image_for_size_pillow(self, theme, width, height):
+        Image, ImageTk = _load_pillow_image_modules()
+        if Image is None or ImageTk is None:
+            return None
+        source = self._load_pulse_bg_pillow_source(theme)
+        if source is None:
+            return None
+        try:
+            image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+            source_width = max(1, int(source.width))
+            source_height = max(1, int(source.height))
+            for y in range(0, height, source_height):
+                copy_h = min(source_height, height - y)
+                for x in range(0, width, source_width):
+                    copy_w = min(source_width, width - x)
+                    tile = source.crop((0, 0, copy_w, copy_h))
+                    image.paste(tile, (x, y), tile)
+            return ImageTk.PhotoImage(image)
+        except Exception:
+            return None
 
     def _draw_textured_box(self, left, top, right, bottom, outline="#334155", extra_tags=()):
         canvas = self.canvas
