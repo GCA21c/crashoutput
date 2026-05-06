@@ -414,6 +414,11 @@ class CrashAnalysisWorkbench(tk.Frame):
 
     def _apply_injury_mode_nav(self):
         self._refresh_injury_toggle_label()
+        if self._injury_nav_frame is not None:
+            if self.injury_nav_collapsed:
+                self._injury_nav_frame.pack_forget()
+            elif not self._injury_nav_frame.winfo_manager():
+                self._injury_nav_frame.pack(fill=tk.X)
         visible_keys = set(self._available_injury_pages())
         for key in self.injury_page_keys:
             button = self.page_buttons.get(key)
