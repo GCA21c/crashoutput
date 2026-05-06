@@ -10,6 +10,8 @@
 - Kept plotting graph text split by graph type:
   - ILIAC Force uses Fx rows only.
   - ILIAC Moment uses My rows only.
+- Renamed ILIAC graph labels to `ILIAC FO` and `ILIAC MO` for plotting/export headers.
+- Adjusted ILIAC Force plotting text to use multiline `Max(Tension)` and `Min(Compression)` value layout.
 - Removed THOR ASIS reference/source text from ILIAC summary output.
 - Kept ILIAC scope only; no other injury calculation path was changed.
 

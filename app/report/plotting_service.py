@@ -521,8 +521,10 @@ def _iliac_force_summary_lines(context):
         peak_detail = dict(detail.get("abs_peak") or {})
         return [
             title,
-            f"  MAX(Tension): {fmt_value(max_detail.get('value'), 'N', unit_style='suffix')} at {fmt_time_ms(max_detail.get('time_s'))}",
-            f"  MIN(Compression): {fmt_value(min_detail.get('value'), 'N', unit_style='suffix')} at {fmt_time_ms(min_detail.get('time_s'))}",
+            "  Max(Tension)",
+            f"    : {fmt_value(max_detail.get('value'), 'N', unit_style='suffix')} at {fmt_time_ms(max_detail.get('time_s'))}",
+            "  Min(Compression)",
+            f"    : {fmt_value(min_detail.get('value'), 'N', unit_style='suffix')} at {fmt_time_ms(min_detail.get('time_s'))}",
             f"  Abs Peak: {fmt_value(peak_detail.get('value'), 'N', unit_style='suffix')} at {fmt_time_ms(peak_detail.get('time_s'))}",
         ]
 

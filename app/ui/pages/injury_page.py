@@ -3958,7 +3958,7 @@ class InjuryPage(tk.Frame):
         if self.initial_mode == 'knee':
             return [('combined', 'Knee Slider')]
         if self.initial_mode == 'iliac':
-            return [('force', 'Force'), ('moment', 'Moment')]
+            return [('force', 'ILIAC FO'), ('moment', 'ILIAC MO')]
         if self.initial_mode == 'tibia':
             return [('tibia_index', 'Tibia Index'), ('axial_force', 'Axial Force'), ('moment_resultant', 'Moment')]
         return [('left', 'Left'), ('right', 'Right'), ('combined', 'Combined')]
@@ -5758,7 +5758,7 @@ class InjuryPage(tk.Frame):
             valid, t_plot, v_plot = self._time_value_valid_mask_ms(t, arr)
             if np.any(valid):
                 self.ax.plot(t_plot[valid], v_plot[valid], linewidth=width, label=label)
-        self.ax.set_title(f"INJURY - ILIAC FORCE ({self._graph_subject_label(slot)})")
+        self.ax.set_title(f"INJURY - ILIAC FO ({self._graph_subject_label(slot)})")
         self.ax.set_xlabel(self._x_axis_label())
         self.ax.set_ylabel(f"Force ({metrics.get('plot_force_unit') or 'N'})")
         self.ax.grid(True)
@@ -5849,7 +5849,7 @@ class InjuryPage(tk.Frame):
             valid, t_plot, v_plot = self._time_value_valid_mask_ms(t, arr)
             if np.any(valid):
                 self.ax.plot(t_plot[valid], v_plot[valid], linewidth=1.4, label=label)
-        self.ax.set_title(f"INJURY - ILIAC MOMENT ({self._graph_subject_label(slot)})")
+        self.ax.set_title(f"INJURY - ILIAC MO ({self._graph_subject_label(slot)})")
         self.ax.set_xlabel(self._x_axis_label())
         self.ax.set_ylabel(f"Moment ({metrics.get('plot_moment_unit') or 'Nm'})")
         self.ax.grid(True)
