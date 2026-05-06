@@ -276,6 +276,17 @@ class VideoSlotViewer(tk.Frame):
 
     def _draw_pulse_dynamic(self, left, right, top, bottom, colors, x_for_time):
         canvas = self.canvas
+        cursor_x = x_for_time(self.overlay_cursor_ms)
+        if self.pulse_view_mode == 1:
+            canvas.create_line(
+                cursor_x,
+                top - 5,
+                cursor_x,
+                bottom + 5,
+                fill="#00ff00",
+                width=1,
+                tags=("pulse", "pulse_dynamic", "pulse_fg"),
+            )
         time_text = f"Time: {self.overlay_cursor_ms:.0f}ms"
         if self.pulse_background_enabled:
             time_box_right = left + 88
@@ -292,18 +303,6 @@ class VideoSlotViewer(tk.Frame):
             font=("Arial", 8, "bold"),
             tags=("pulse", "pulse_dynamic", "pulse_fg", "pulse_time_text"),
         )
-
-        cursor_x = x_for_time(self.overlay_cursor_ms)
-        if self.pulse_view_mode == 1:
-            canvas.create_line(
-                cursor_x,
-                top - 5,
-                cursor_x,
-                bottom + 5,
-                fill="#00ff00",
-                width=1,
-                tags=("pulse", "pulse_dynamic", "pulse_fg"),
-            )
         self._draw_overlay_legend(left, right, top, colors)
         canvas.tag_raise("pulse_fg")
         canvas.tag_raise("pulse_time_text")
