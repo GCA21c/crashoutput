@@ -172,6 +172,8 @@ class VideoAnalysisPage(tk.Frame):
         tk.Button(toolbar, text="Video Load", command=self.load_video, width=13).pack(side=tk.LEFT)
         tk.Button(toolbar, text="Sync adjust", command=self.adjust_sync, width=13).pack(side=tk.LEFT, padx=(8, 0))
         tk.Button(toolbar, text="Reset", command=self.confirm_reset_session_state, width=10).pack(side=tk.LEFT, padx=(8, 0))
+        self.ui_expand_button = tk.Button(toolbar, text="UI 확장", command=self.toggle_shell_compact, width=10)
+        self.ui_expand_button.pack(side=tk.LEFT, padx=(8, 0))
         tk.Button(toolbar, text="Clear V1", command=lambda: self.clear_video(0), width=10).pack(side=tk.LEFT, padx=(8, 0))
         tk.Button(toolbar, text="Clear V2", command=lambda: self.clear_video(1), width=10).pack(side=tk.LEFT, padx=(8, 0))
         self.channel_combo = ttk.Combobox(toolbar, textvariable=self.channel_select_var, state="readonly", width=34)
@@ -317,8 +319,29 @@ class VideoAnalysisPage(tk.Frame):
             self._key_bindings_ready = True
         self.focus_set()
         self._refresh_channel_options()
+        self._refresh_shell_compact_button()
         self._refresh_video_layout()
         self._refresh_all()
+
+    def toggle_shell_compact(self):
+        getter = getattr(self.workbench, "is_video_analysis_expanded", None)
+        setter = getattr(self.workbench, "set_video_analysis_expanded", None)
+        if not callable(getter) or not callable(setter):
+            return
+        setter(not getter())
+        self._refresh_shell_compact_button()
+        self.after(80, self._refresh_all)
+
+    def on_shell_compact_changed(self, expanded):
+        self._refresh_shell_compact_button()
+        self.after(80, self._refresh_all)
+
+    def _refresh_shell_compact_button(self):
+        button = getattr(self, "ui_expand_button", None)
+        getter = getattr(self.workbench, "is_video_analysis_expanded", None)
+        if button is None or not callable(getter):
+            return
+        button.configure(text="UI 축소" if getter() else "UI 확장")
 
     def load_video(self):
         cv2 = _load_cv2()

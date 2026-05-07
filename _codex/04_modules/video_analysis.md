@@ -15,6 +15,9 @@
 - 동영상은 최대 2개까지 로드한다.
 - video slot은 V1/V2 고정 슬롯으로 관리한다. V1을 clear해도 V2는 V1으로 당겨지지 않는다.
 - Reset 버튼은 Yes/No 확인 후 동영상, pulse channel, sync/keyframe 상태를 초기화한다.
+- `UI 확장` 버튼은 Video Analysis 전용 compact mode를 토글한다.
+- compact mode에서는 좌측 navigation, 상단 file/status bar, 하단 Processing History를 숨기고 Video Analysis 화면 영역을 확장한다.
+- `UI 축소` 또는 다른 page 이동 시 compact mode를 해제하고 shell layout을 복원한다.
 - OpenCV `VideoCapture`로 영상을 읽는다.
 - video load 시 전체 frame을 RAM에 preload한다.
 - preload 성공 slot은 seek/step/play에서 OpenCV seek/read 대신 RAM frame list만 사용한다.

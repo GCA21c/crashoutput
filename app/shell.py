@@ -70,6 +70,7 @@ class CrashAnalysisWorkbench(tk.Frame):
         self.is_resizing = False
         self._resize_after_id = None
         self._page_switch_busy_after_id = None
+        self._video_analysis_expanded = False
         self._top_status_busy_reasons = set()
         self._top_status_shimmer_job = None
         self._top_status_shimmer_offset = -160
@@ -152,12 +153,14 @@ class CrashAnalysisWorkbench(tk.Frame):
     def _build_ui(self):
         main_pane = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashrelief=tk.RAISED, bg=APP_BG, bd=0)
         main_pane.pack(fill=tk.BOTH, expand=True)
+        self.main_pane = main_pane
 
         self.sidebar = tk.Frame(main_pane, width=300, bg=SIDEBAR_BG, bd=1, relief=tk.SOLID)
         self.sidebar.pack_propagate(False)
         main_pane.add(self.sidebar, minsize=260)
 
         right_area = tk.Frame(main_pane, bg=PAGE_BG)
+        self.right_area = right_area
         main_pane.add(right_area, stretch="always", minsize=720)
 
         top_status = tk.Frame(right_area, bg=STATUS_BG, bd=1, relief=tk.SOLID, height=34)
@@ -173,6 +176,7 @@ class CrashAnalysisWorkbench(tk.Frame):
 
         history_frame = tk.LabelFrame(right_area, text="Processing History", bg=PAGE_BG)
         history_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=8, pady=8)
+        self.history_frame = history_frame
         self.history_text = ScrolledText(history_frame, height=6, wrap=tk.WORD, state=tk.DISABLED)
         self.history_text.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
 
@@ -328,6 +332,42 @@ class CrashAnalysisWorkbench(tk.Frame):
             self._top_status_shimmer_job = None
         self._render_top_status_shimmer()
 
+    def is_video_analysis_expanded(self):
+        return bool(self._video_analysis_expanded)
+
+    def set_video_analysis_expanded(self, expanded):
+        expanded = bool(expanded)
+        if self._video_analysis_expanded == expanded:
+            return
+        self._video_analysis_expanded = expanded
+        if expanded:
+            try:
+                self.main_pane.forget(self.sidebar)
+            except Exception:
+                pass
+            self.top_status.pack_forget()
+            self.history_frame.pack_forget()
+        else:
+            panes = set(str(pane) for pane in self.main_pane.panes())
+            if str(self.sidebar) not in panes:
+                try:
+                    self.main_pane.forget(self.right_area)
+                except Exception:
+                    pass
+                self.main_pane.add(self.sidebar, minsize=260)
+                self.main_pane.add(self.right_area, stretch="always", minsize=720)
+            self.top_status.pack_forget()
+            self.content.pack_forget()
+            self.history_frame.pack_forget()
+            self.top_status.pack(side=tk.TOP, fill=tk.X, padx=8, pady=(8, 0))
+            self.content.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+            self.history_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=8, pady=8)
+            self._render_top_status_shimmer()
+        page = self.pages.get("video_analysis")
+        refresh = getattr(page, "on_shell_compact_changed", None)
+        if callable(refresh):
+            refresh(expanded)
+
     def _add_nav_section(self, text):
         tk.Label(self.sidebar, text=text, font=NAV_FONT_BOLD, bg=SIDEBAR_BG, fg=SECTION_FG, anchor="w", padx=14, pady=8).pack(fill=tk.X, pady=(10, 2))
 
@@ -447,6 +487,8 @@ class CrashAnalysisWorkbench(tk.Frame):
         key = PAGE_KEY_ALIASES.get(key, key)
         if key not in self.pages:
             return
+        if key != "video_analysis":
+            self.set_video_analysis_expanded(False)
         if key in self.injury_page_keys and key not in self._available_injury_pages():
             allowed = self._available_injury_pages()
             if not allowed:
