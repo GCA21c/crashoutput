@@ -676,7 +676,7 @@ class KeyframeTimeline(tk.Frame):
         self._dragging = False
         self._cursor_item_ids = []
         self._track_geometry = None
-        self.canvas = tk.Canvas(self, height=42, bg="#f8fafc", highlightthickness=1, highlightbackground="#cbd5e1")
+        self.canvas = tk.Canvas(self, height=32, bg="#f8fafc", highlightthickness=1, highlightbackground="#cbd5e1")
         self.canvas.pack(fill=tk.X, expand=True)
         self.canvas.bind("<Configure>", lambda _event: self._draw())
         self.canvas.bind("<ButtonPress-1>", self._on_press)
@@ -703,18 +703,18 @@ class KeyframeTimeline(tk.Frame):
         canvas.create_rectangle(0, 0, width, height, fill="#0f172a", outline="")
         left = 22
         right = width - 22
-        track_top = 14
-        track_bottom = 26
+        track_top = 13
+        track_bottom = 19
         track_mid = (track_top + track_bottom) / 2
         self._track_geometry = (left, right, track_top, track_bottom, track_mid, height)
         canvas.create_rectangle(left, track_top, right, track_bottom, fill="#1e293b", outline="#334155")
         canvas.create_line(left, track_mid, right, track_mid, fill="#64748b", width=1)
         for index in range(11):
             x = left + (right - left) * (index / 10.0)
-            tick_height = 8 if index in (0, 5, 10) else 5
+            tick_height = 6 if index in (0, 5, 10) else 4
             canvas.create_line(x, track_bottom, x, track_bottom + tick_height, fill="#64748b")
-        canvas.create_text(left, height - 6, text=f"{self.start_ms:.0f}ms", anchor="sw", fill="#cbd5e1", font=("Arial", 8))
-        canvas.create_text(right, height - 6, text=f"{self.end_ms:.0f}ms", anchor="se", fill="#cbd5e1", font=("Arial", 8))
+        canvas.create_text(left, height - 4, text=f"{self.start_ms:.0f}ms", anchor="sw", fill="#cbd5e1", font=("Arial", 8))
+        canvas.create_text(right, height - 4, text=f"{self.end_ms:.0f}ms", anchor="se", fill="#cbd5e1", font=("Arial", 8))
 
         def x_for_time(value_ms):
             if self.duration_ms <= 0.0:
@@ -753,14 +753,14 @@ class KeyframeTimeline(tk.Frame):
         left, right, track_top, track_bottom, track_mid, height = self._track_geometry
         cursor_x = self._x_for_time(self.cursor_ms, left, right)
         self._cursor_item_ids.append(canvas.create_rectangle(left, track_top, cursor_x, track_bottom, fill="#2563eb", outline=""))
-        self._cursor_item_ids.append(canvas.create_line(cursor_x, 6, cursor_x, height - 6, fill="#f8fafc", width=2))
+        self._cursor_item_ids.append(canvas.create_line(cursor_x, 5, cursor_x, height - 5, fill="#f8fafc", width=2))
         self._cursor_item_ids.append(canvas.create_oval(cursor_x - 5, track_mid - 5, cursor_x + 5, track_mid + 5, fill="#f8fafc", outline="#38bdf8", width=2))
         label = f"{int(round(self.cursor_ms))}ms"
         label_width = max(54, len(label) * 7 + 14)
         width = max(1, int(canvas.winfo_width()))
         label_left = max(4, min(cursor_x + 8, width - label_width - 4))
-        self._cursor_item_ids.append(canvas.create_rectangle(label_left, 3, label_left + label_width, 18, fill="#e0f2fe", outline="#38bdf8"))
-        self._cursor_item_ids.append(canvas.create_text(label_left + label_width / 2, 10.5, text=label, fill="#0f172a", font=("Arial", 8, "bold")))
+        self._cursor_item_ids.append(canvas.create_rectangle(label_left, 2, label_left + label_width, 15, fill="#e0f2fe", outline="#38bdf8"))
+        self._cursor_item_ids.append(canvas.create_text(label_left + label_width / 2, 8.5, text=label, fill="#0f172a", font=("Arial", 8, "bold")))
 
     def _x_for_time(self, value_ms, left, right):
         if self.duration_ms <= 0.0:

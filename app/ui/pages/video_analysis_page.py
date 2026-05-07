@@ -172,13 +172,14 @@ class VideoAnalysisPage(tk.Frame):
         tk.Button(toolbar, text="Video Load", command=self.load_video, width=13).pack(side=tk.LEFT)
         tk.Button(toolbar, text="Sync adjust", command=self.adjust_sync, width=13).pack(side=tk.LEFT, padx=(8, 0))
         tk.Button(toolbar, text="Reset", command=self.confirm_reset_session_state, width=10).pack(side=tk.LEFT, padx=(8, 0))
-        self.ui_expand_button = tk.Button(toolbar, text="UI 확장", command=self.toggle_shell_compact, width=10)
-        self.ui_expand_button.pack(side=tk.LEFT, padx=(8, 0))
         tk.Button(toolbar, text="Clear V1", command=lambda: self.clear_video(0), width=10).pack(side=tk.LEFT, padx=(8, 0))
         tk.Button(toolbar, text="Clear V2", command=lambda: self.clear_video(1), width=10).pack(side=tk.LEFT, padx=(8, 0))
         self.channel_combo = ttk.Combobox(toolbar, textvariable=self.channel_select_var, state="readonly", width=34)
         self.channel_combo.pack(side=tk.LEFT, padx=(8, 0))
         tk.Button(toolbar, text="Add channel", command=self.add_channel, width=13).pack(side=tk.LEFT, padx=(8, 0))
+
+        self.ui_expand_button = tk.Button(toolbar, text="UI 확장", command=self.toggle_shell_compact, width=10)
+        self.ui_expand_button.pack(side=tk.LEFT, expand=True, padx=(12, 12))
 
         status = tk.Frame(toolbar, bg=PAGE_BG)
         status.pack(side=tk.RIGHT)
@@ -201,11 +202,15 @@ class VideoAnalysisPage(tk.Frame):
         keyframe_box = tk.LabelFrame(outer, text="Key frame", bg=PAGE_BG)
         keyframe_box.pack(fill=tk.X)
         self.keyframe_timeline = KeyframeTimeline(keyframe_box, on_seek=self._seek_timeline_ms)
-        self.keyframe_timeline.pack(fill=tk.X, padx=8, pady=8)
+        self.keyframe_timeline.pack(fill=tk.X, padx=8, pady=(4, 5))
 
         footer = tk.Frame(outer, bg=PAGE_BG)
         footer.pack(fill=tk.X, pady=(8, 0))
-        speed_box = tk.Frame(footer, bg=PAGE_BG)
+        footer_left = tk.Frame(footer, bg=PAGE_BG)
+        footer_left.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        footer_controls_row = tk.Frame(footer_left, bg=PAGE_BG)
+        footer_controls_row.pack(side=tk.TOP, fill=tk.X)
+        speed_box = tk.Frame(footer_controls_row, bg=PAGE_BG)
         speed_box.pack(side=tk.LEFT)
         tk.Label(speed_box, text="Speed", bg=PAGE_BG, fg=MUTED_FG).pack(side=tk.LEFT, padx=(0, 4))
         for value in ("x0.3", "x1.0", "x2.5"):
@@ -224,7 +229,7 @@ class VideoAnalysisPage(tk.Frame):
                 relief=tk.RIDGE,
             ).pack(side=tk.LEFT, padx=(3, 0))
 
-        controls = tk.Frame(footer, bg=PAGE_BG)
+        controls = tk.Frame(footer_controls_row, bg=PAGE_BG)
         controls.pack(side=tk.LEFT, expand=True)
         tk.Button(controls, text="|◀", command=self.first_frame, width=7).pack(side=tk.LEFT, padx=4)
         tk.Button(controls, text="◀◀", command=self.prev_frame, width=7).pack(side=tk.LEFT, padx=4)
@@ -233,7 +238,7 @@ class VideoAnalysisPage(tk.Frame):
         tk.Button(controls, text="▶▶", command=self.next_frame, width=7).pack(side=tk.LEFT, padx=4)
         tk.Button(controls, text="▶|", command=self.last_frame, width=7).pack(side=tk.LEFT, padx=4)
 
-        peak_box = tk.Frame(footer, bg=PAGE_BG)
+        peak_box = tk.Frame(footer_controls_row, bg=PAGE_BG)
         peak_box.pack(side=tk.LEFT, padx=(8, 12))
         tk.Label(peak_box, text="Peak", bg=PAGE_BG, fg=MUTED_FG).pack(side=tk.LEFT, padx=(0, 4))
         for index, var in enumerate(self.peak_visibility_vars, start=1):
@@ -256,9 +261,9 @@ class VideoAnalysisPage(tk.Frame):
         pulse_view_row = tk.Frame(pulse_view_box, bg=PAGE_BG)
         pulse_view_row.pack(side=tk.TOP, anchor="e")
         pulse_bg_row = tk.Frame(pulse_view_box, bg=PAGE_BG)
-        pulse_bg_row.pack(side=tk.TOP, anchor="e", pady=(3, 0))
+        pulse_bg_row.pack(side=tk.TOP, anchor="e")
         pulse_bg_theme_row = tk.Frame(pulse_view_box, bg=PAGE_BG)
-        pulse_bg_theme_row.pack(side=tk.TOP, anchor="e", pady=(3, 0))
+        pulse_bg_theme_row.pack(side=tk.TOP, anchor="e")
         tk.Label(pulse_view_row, text="Pulse", bg=PAGE_BG, fg=MUTED_FG).pack(side=tk.LEFT, padx=(0, 4))
         for value, text in ((1, "View 1"), (2, "View 2")):
             tk.Radiobutton(
