@@ -21,53 +21,58 @@ def _set_splash_status(splash, status_var, text):
 def _show_startup_splash():
     splash = tk.Tk()
     splash.overrideredirect(True)
-    splash.configure(bg="#ffffff")
+    splash.configure(bg="#242424")
     splash.attributes("-topmost", True)
-    width = 520
-    height = 245
+    width = 748
+    height = 305
     screen_w = splash.winfo_screenwidth()
     screen_h = splash.winfo_screenheight()
     x = max(0, (screen_w - width) // 2)
     y = max(0, (screen_h - height) // 2)
     splash.geometry(f"{width}x{height}+{x}+{y}")
-    panel = tk.Frame(splash, bg="#ffffff", padx=34, pady=28)
+    panel = tk.Frame(splash, bg="#242424")
     panel.pack(fill=tk.BOTH, expand=True)
     tk.Label(
         panel,
-        text="CRASH OUTPUT™",
-        bg="#ffffff",
-        fg="#111827",
-        font=("Segoe UI", 25, "bold"),
-    ).pack(anchor="w")
-    tk.Label(
-        panel,
-        text="Crash Data Analysis System",
-        bg="#ffffff",
-        fg="#1f2937",
-        font=("Segoe UI", 14),
-    ).pack(anchor="w", pady=(8, 0))
-    tk.Label(
-        panel,
         text="Powered by GCA21c with Codex",
-        bg="#ffffff",
-        fg="#4b5563",
-        font=("Segoe UI", 11),
-    ).pack(anchor="w", pady=(18, 0))
+        bg="#242424",
+        fg="#dedede",
+        font=("Segoe UI", 10, "italic"),
+    ).place(relx=1.0, x=-22, y=20, anchor="ne")
+    content = tk.Frame(panel, bg="#242424")
+    content.place(relx=0.5, rely=0.52, anchor="center")
     tk.Label(
-        panel,
+        content,
+        text="CRASH OUTPUT™",
+        bg="#242424",
+        fg="#d6d6d6",
+        font=("Segoe UI", 18, "bold"),
+    ).pack(anchor="center", pady=(0, 0))
+    tk.Label(
+        content,
+        text="Crash Data Analysis System",
+        bg="#242424",
+        fg="#d0d0d0",
+        font=("Segoe UI", 17),
+    ).pack(anchor="center", pady=(0, 0))
+    tk.Label(
+        content,
         text="Ver 1.0 | Build260296",
-        bg="#ffffff",
-        fg="#111827",
-        font=("Segoe UI", 10, "bold"),
-    ).pack(anchor="w", pady=(8, 0))
+        bg="#242424",
+        fg="#cfcfcf",
+        font=("Segoe UI", 10),
+    ).pack(anchor="center", pady=(26, 0))
     status_var = tk.StringVar(value="Initializing...")
     tk.Label(
-        panel,
+        content,
         textvariable=status_var,
-        bg="#ffffff",
-        fg="#6b7280",
+        bg="#242424",
+        fg="#9ca3af",
         font=("Segoe UI", 9),
-    ).pack(anchor="w", pady=(20, 0))
+        width=64,
+        anchor="center",
+        justify="center",
+    ).pack(anchor="center", pady=(14, 0))
     splash.update_idletasks()
     splash.update()
     return splash, status_var
