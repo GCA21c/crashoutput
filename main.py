@@ -23,7 +23,7 @@ def _show_startup_splash():
     splash.overrideredirect(True)
     splash.configure(bg="#242424")
     splash.attributes("-topmost", True)
-    width = 524
+    width = 576
     height = 305
     screen_w = splash.winfo_screenwidth()
     screen_h = splash.winfo_screenheight()
