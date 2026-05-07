@@ -20,6 +20,7 @@ class VideoSlotViewer(tk.Frame):
         self.overlay_end_ms = 1.0
         self.overlay_cursor_ms = 0.0
         self.pulse_view_mode = 1
+        self.peak_visibility = [True, True, True]
         self.pulse_background_enabled = True
         self.pulse_background_theme = "dark"
         self._pulse_bg_textures = {}
@@ -93,6 +94,16 @@ class VideoSlotViewer(tk.Frame):
         if self.pulse_view_mode == next_mode:
             return
         self.pulse_view_mode = next_mode
+        self._redraw()
+
+    def set_peak_visibility(self, visibility):
+        next_visibility = list(bool(v) for v in list(visibility or [])[:3])
+        while len(next_visibility) < 3:
+            next_visibility.append(True)
+        if self.peak_visibility == next_visibility:
+            return
+        self.peak_visibility = next_visibility
+        self._pulse_static_signature = None
         self._redraw()
 
     def set_pulse_background_enabled(self, enabled):
@@ -233,6 +244,8 @@ class VideoSlotViewer(tk.Frame):
             channel_draw_cache.append((pairs, v_min, v_span, colors[channel_index % len(colors)]))
 
         for channel_index, item in enumerate(self.overlay_channels):
+            if channel_index >= len(self.peak_visibility) or not self.peak_visibility[channel_index]:
+                continue
             try:
                 peak_time = float(item.get("peak_time_ms"))
             except (TypeError, ValueError):
@@ -325,6 +338,7 @@ class VideoSlotViewer(tk.Frame):
             int(width),
             int(height),
             int(self.pulse_view_mode),
+            tuple(bool(v) for v in self.peak_visibility),
             round(float(self.overlay_start_ms), 3),
             round(float(self.overlay_end_ms), 3),
             round(float(view_start), 3),
