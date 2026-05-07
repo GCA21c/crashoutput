@@ -43,8 +43,8 @@ class _VideoLoadOverlay:
     def __init__(self, root):
         self.root = root
         self.frame = tk.Frame(root, bg="#20242a", bd=0)
-        self.message_var = tk.StringVar(value="Video preload 준비 중...")
-        self.detail_var = tk.StringVar(value="영상을 RAM에 올리는 중입니다.")
+        self.message_var = tk.StringVar(value="Video Loading...")
+        self.detail_var = tk.StringVar(value="")
         self.progress_var = tk.DoubleVar(value=0.0)
 
         panel = tk.Frame(self.frame, bg="#ffffff", bd=1, relief=tk.SOLID)
@@ -466,7 +466,7 @@ class VideoAnalysisPage(tk.Frame):
                     overlay.update(
                         frame_index + 1,
                         frame_count,
-                        f"영상 프레임을 RAM에 preload 중... {filename}",
+                        f"전체 영상을 메모리에 배치합니다. {filename}",
                         f"VIDEO {int(slot_index) + 1} | {frame_index + 1} / {frame_count} frame",
                     )
             capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
