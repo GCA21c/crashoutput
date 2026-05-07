@@ -2,9 +2,11 @@
 
 ## What changed
 - `app/ui/pages/video_analysis_page.py`에 video load 단계의 RAM preload 경로를 추가했다.
-- 대상 video는 기본적으로 전체 frame을 OpenCV로 순차 decode해 memory list에 보관한다.
-- preload 성공 slot은 frame 표시 시 OpenCV seek/read, background prefetch, playback buffer refill을 건너뛰고 RAM frame만 직접 조회한다.
-- preload 완료 후 OpenCV capture를 release해 원본 video file/network handle을 유지하지 않는다.
+- `Video Load` 클릭 시 `Normal Mode` / `Boost Mode` 선택 dialog를 띄운다.
+- `Normal Mode`는 기존 OpenCV streaming/cache/prefetch 경로를 사용한다.
+- `Boost Mode`는 전체 frame을 OpenCV로 순차 decode해 memory list에 보관한다.
+- `Boost Mode` preload 성공 slot은 frame 표시 시 OpenCV seek/read, background prefetch, playback buffer refill을 건너뛰고 RAM frame만 직접 조회한다.
+- `Boost Mode` preload 완료 후 OpenCV capture를 release해 원본 video file/network handle을 유지하지 않는다.
 - file size가 `1GB` 이상이면 preload 진행 전 사용자 확인 경고를 띄운다.
 - Video Analysis toolbar에 `UI 확장` / `UI 축소` 버튼을 추가했다.
 - 확장 mode에서는 좌측 navigation, 상단 file/status bar, 하단 Processing History를 숨겨 video/pulse 영역을 크게 쓴다.

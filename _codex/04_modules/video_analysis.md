@@ -18,12 +18,13 @@
 - `UI 확장` 버튼은 Video Analysis 전용 compact mode를 토글한다.
 - compact mode에서는 좌측 navigation, 상단 file/status bar, 하단 Processing History를 숨기고 Video Analysis 화면 영역을 확장한다.
 - `UI 축소` 또는 다른 page 이동 시 compact mode를 해제하고 shell layout을 복원한다.
-- OpenCV `VideoCapture`로 영상을 읽는다.
-- video load 시 전체 frame을 RAM에 preload한다.
-- preload 성공 slot은 seek/step/play에서 OpenCV seek/read 대신 RAM frame list만 사용한다.
-- preload 완료 후에는 OpenCV capture를 release해 원본 video file/network handle을 유지하지 않는다.
-- video file이 `1GB` 이상이면 preload 진행 전 사용자 확인 경고를 띄운다.
-- preload 실패 시 해당 video는 로드하지 않는다.
+- `Video Load` 클릭 시 `Normal Mode` / `Boost Mode`를 먼저 선택한다.
+- `Normal Mode`는 기존 OpenCV streaming/cache/prefetch 경로를 사용한다.
+- `Boost Mode`는 전체 frame을 RAM에 preload한다.
+- `Boost Mode` preload 성공 slot은 seek/step/play에서 OpenCV seek/read 대신 RAM frame list만 사용한다.
+- `Boost Mode` preload 완료 후에는 OpenCV capture를 release해 원본 video file/network handle을 유지하지 않는다.
+- `Boost Mode`에서 video file이 `1GB` 이상이면 preload 진행 전 사용자 확인 경고를 띄운다.
+- `Boost Mode` preload 실패 시 해당 video는 로드하지 않는다.
 - 두 영상은 첫 번째 영상 fps를 master metadata로 사용한다.
 - fps가 다르면 사용자 경고를 띄운다.
 - sync/pulse matching 기준은 fps 환산이 아니라 `1 video frame = 1 ms`이다.

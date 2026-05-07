@@ -348,6 +348,52 @@ class VideoAnalysisPage(tk.Frame):
             return
         button.configure(text="UI 축소" if getter() else "UI 확장")
 
+    def _ask_video_load_mode(self):
+        dialog = tk.Toplevel(self)
+        dialog.title("Video Load Mode")
+        dialog.transient(self.winfo_toplevel())
+        dialog.resizable(False, False)
+        result = {"mode": None}
+        panel = tk.Frame(dialog, bg="#ffffff", padx=22, pady=18)
+        panel.pack(fill=tk.BOTH, expand=True)
+        tk.Label(
+            panel,
+            text="Video Load Mode",
+            bg="#ffffff",
+            fg="#111827",
+            font=("맑은 고딕", 13, "bold"),
+        ).pack(anchor="w")
+        tk.Label(
+            panel,
+            text="Normal Mode는 Streaming cache 방식입니다.\nBoost Mode는 전체 영상을 메모리에 배치합니다.(RAM 32GB 이상 권장)",
+            bg="#ffffff",
+            fg="#4b5563",
+            justify="left",
+            anchor="w",
+        ).pack(anchor="w", pady=(8, 16))
+        button_row = tk.Frame(panel, bg="#ffffff")
+        button_row.pack(fill=tk.X)
+
+        def choose(mode):
+            result["mode"] = mode
+            dialog.destroy()
+
+        tk.Button(button_row, text="Normal Mode", command=lambda: choose("normal"), width=14).pack(side=tk.LEFT)
+        tk.Button(button_row, text="Boost Mode", command=lambda: choose("boost"), width=14).pack(side=tk.LEFT, padx=(8, 0))
+        tk.Button(button_row, text="Cancel", command=lambda: choose(None), width=10).pack(side=tk.RIGHT)
+        dialog.protocol("WM_DELETE_WINDOW", lambda: choose(None))
+        dialog.update_idletasks()
+        root = self.winfo_toplevel()
+        x = root.winfo_rootx() + max(0, (root.winfo_width() - dialog.winfo_width()) // 2)
+        y = root.winfo_rooty() + max(0, (root.winfo_height() - dialog.winfo_height()) // 2)
+        dialog.geometry(f"+{x}+{y}")
+        try:
+            dialog.grab_set()
+        except Exception:
+            pass
+        self.wait_window(dialog)
+        return result["mode"]
+
     def load_video(self):
         cv2 = _load_cv2()
         if cv2 is None:
@@ -356,6 +402,9 @@ class VideoAnalysisPage(tk.Frame):
         free_slots = [index for index, capture in enumerate(self.captures) if capture is None]
         if not free_slots:
             messagebox.showinfo("VIDEO ANALYSIS", "동영상은 최대 2개까지 로드할 수 있습니다.")
+            return
+        load_mode = self._ask_video_load_mode()
+        if load_mode not in ("normal", "boost"):
             return
         paths = filedialog.askopenfilenames(
             parent=self,
@@ -376,15 +425,16 @@ class VideoAnalysisPage(tk.Frame):
         try:
             for path in selected:
                 path_obj = Path(str(path))
-                try:
-                    file_size = path_obj.stat().st_size
-                except OSError:
-                    file_size = 0
-                if file_size >= LARGE_VIDEO_FILE_BYTES and not messagebox.askyesno(
-                    "VIDEO ANALYSIS",
-                    f"영상 파일 크기가 1GB 이상입니다.\n{path_obj.name}\n\n그래도 RAM preload를 진행할까요?",
-                ):
-                    continue
+                if load_mode == "boost":
+                    try:
+                        file_size = path_obj.stat().st_size
+                    except OSError:
+                        file_size = 0
+                    if file_size >= LARGE_VIDEO_FILE_BYTES and not messagebox.askyesno(
+                        "VIDEO ANALYSIS",
+                        f"영상 파일 크기가 1GB 이상입니다.\n{path_obj.name}\n\n그래도 Boost Mode를 진행할까요?",
+                    ):
+                        continue
                 capture = cv2.VideoCapture(str(path))
                 if not capture.isOpened():
                     messagebox.showwarning("VIDEO ANALYSIS", f"동영상을 열 수 없습니다.\n{path}")
@@ -398,24 +448,31 @@ class VideoAnalysisPage(tk.Frame):
                     continue
                 duration_ms = float(max(0, frame_count - 1))
                 slot_index = free_slots[assigned]
-                preloaded, overlay = self._preload_video_frames(capture, slot_index, str(path), frame_count, overlay)
-                try:
-                    capture.release()
-                except Exception:
-                    pass
-                if preloaded is None:
-                    messagebox.showwarning("VIDEO ANALYSIS", f"영상 preload에 실패했습니다.\n{path}")
-                    continue
-                self.captures[slot_index] = _LoadedVideoHandle()
+                preloaded = None
+                if load_mode == "boost":
+                    preloaded, overlay = self._preload_video_frames(capture, slot_index, str(path), frame_count, overlay)
+                    try:
+                        capture.release()
+                    except Exception:
+                        pass
+                    if preloaded is None:
+                        messagebox.showwarning("VIDEO ANALYSIS", f"영상 preload에 실패했습니다.\n{path}")
+                        continue
+                    self.captures[slot_index] = _LoadedVideoHandle()
+                else:
+                    self.captures[slot_index] = capture
                 self.video_infos[slot_index] = {
                     "path": str(path),
                     "fps": fps,
                     "frame_count": frame_count,
                     "duration_ms": duration_ms,
-                    "preloaded": True,
+                    "preloaded": preloaded is not None,
+                    "load_mode": load_mode,
                 }
                 self.preloaded_frames[slot_index] = preloaded
                 self._capture_next_frames[slot_index] = None
+                if load_mode == "normal":
+                    self._frame_prefetcher.start_slot(slot_index, str(path))
                 assigned += 1
         finally:
             if overlay is not None:
@@ -435,7 +492,7 @@ class VideoAnalysisPage(tk.Frame):
         if mismatched:
             messagebox.showwarning(
                 "VIDEO ANALYSIS",
-                "동영상 FPS가 서로 다릅니다. 초기 구현에서는 첫 번째 영상 FPS를 master로 사용합니다.",
+                "2개의 동영상 FPS가 서로 다릅니다. 초기 구현에서는 첫 번째 영상 FPS를 master로 사용합니다.",
             )
         frame_count = min(int(info["frame_count"]) for info in active_infos)
         self.state.set_video_master([info["path"] for info in active_infos], master_fps, frame_count)
@@ -466,7 +523,7 @@ class VideoAnalysisPage(tk.Frame):
                     overlay.update(
                         frame_index + 1,
                         frame_count,
-                        f"전체 영상을 메모리에 배치합니다. {filename}",
+                        f"Boost Mode를 사용하여 전체 영상을 메모리에 배치합니다. {filename}",
                         f"VIDEO {int(slot_index) + 1} | {frame_index + 1} / {frame_count} frame",
                     )
             capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
@@ -562,7 +619,7 @@ class VideoAnalysisPage(tk.Frame):
     def adjust_sync(self):
         value = simpledialog.askinteger(
             "Sync adjust",
-            "동영상 시작 frame offset을 입력하세요. 예: -50\n-50이면 raw frame 50을 test T0(0ms)으로 맞춥니다.",
+            "동영상 시작 Frame offset을 입력하세요. 예: -50\n-50이면 Raw frame 50을 Test T0(0ms)으로 맞춥니다.",
             parent=self,
             initialvalue=int(self.state.sync_frame_offset),
         )
@@ -1199,7 +1256,7 @@ class VideoAnalysisPage(tk.Frame):
     def confirm_reset_session_state(self):
         if not messagebox.askyesno(
             "VIDEO ANALYSIS",
-            "현재 Video Analysis 상태를 초기화할까?\n로드된 동영상과 pulse 채널이 모두 해제된다.",
+            "현재 Video Analysis 상태를 초기화할까요?\n로드된 동영상과 Data 채널이 모두 해제됩니다.",
             parent=self,
         ):
             return
