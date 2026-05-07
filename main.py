@@ -38,9 +38,9 @@ def _show_startup_splash():
         bg="#242424",
         fg="#dedede",
         font=("Segoe UI", 10, "italic"),
-    ).place(relx=1.0, rely=1.0, x=-38, y=-18, anchor="se")
+    ).place(relx=1.0, rely=1.0, x=-14, y=-10, anchor="se")
     content = tk.Frame(panel, bg="#242424")
-    content.place(x=22, y=26, anchor="nw")
+    content.place(x=12, y=14, anchor="nw")
     tk.Label(
         content,
         text="CRASH OUTPUT™",
