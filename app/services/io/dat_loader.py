@@ -31,6 +31,8 @@ _DTYPE_MAP = {
     "DOUBLE": np.dtype('<f8'),
 }
 
+_RAW_PAYLOAD_EXTENSIONS = {".dig"}
+
 
 def _read_text(file_path: Path) -> str:
     raw = file_path.read_bytes()
@@ -144,26 +146,49 @@ def _build_implicit_channel(block, count):
     return values.astype(float, copy=False)
 
 
-def _read_chn_channel(chn_path: Path, block, count):
-    if not chn_path.exists():
-        raise DatLoadError(f"필수 CHN 파일을 찾지 못했습니다: {chn_path.name}")
+def _channel_file_kind(channel_path: Path) -> str:
+    suffix = str(channel_path.suffix or "").lower()
+    if suffix in _RAW_PAYLOAD_EXTENSIONS:
+        return "RAW_PAYLOAD"
+    if suffix == ".chn":
+        return "CHN"
+    return suffix.lstrip(".").upper() or "UNKNOWN"
 
-    raw = chn_path.read_bytes()
-    if len(raw) < 32:
-        raise DatLoadError(f"CHN 파일 크기가 너무 작습니다: {chn_path.name}")
 
+def _resolve_data_offset(channel_path: Path, raw: bytes, block, dtype, count):
+    kind = _channel_file_kind(channel_path)
+    exact_payload_size = int(count) * int(dtype.itemsize)
+    if kind == "RAW_PAYLOAD":
+        return 0, kind
+    if kind != "CHN" and exact_payload_size > 0 and len(raw) == exact_payload_size:
+        return 0, "RAW_PAYLOAD"
+
+    data_offset = struct.unpack_from("<I", raw, 8)[0] if len(raw) >= 12 else 0
+    if data_offset <= 0 or data_offset >= len(raw):
+        if exact_payload_size > 0 and len(raw) == exact_payload_size:
+            return 0, "RAW_PAYLOAD"
+        data_offset = max(0, _safe_int(block.get("221", 0), 0))
+    return int(data_offset), kind
+
+
+def _read_dat_channel_file(channel_path: Path, block, count):
+    if not channel_path.exists():
+        raise DatLoadError(f"필수 DAT 채널 파일을 찾지 못했습니다: {channel_path.name}")
+
+    raw = channel_path.read_bytes()
     dtype_name = str(block.get("214", "INT16")).strip().upper()
     dtype = _DTYPE_MAP.get(dtype_name)
     if dtype is None:
-        raise DatLoadError(f"지원하지 않는 CHN 데이터 형식입니다: {dtype_name}")
+        raise DatLoadError(f"지원하지 않는 DAT 채널 데이터 형식입니다: {dtype_name}")
 
-    data_offset = struct.unpack_from("<I", raw, 8)[0]
-    if data_offset <= 0 or data_offset >= len(raw):
-        data_offset = max(0, _safe_int(block.get("221", 0), 0))
+    if _channel_file_kind(channel_path) == "CHN" and len(raw) < 32:
+        raise DatLoadError(f"DAT CHN 파일 크기가 너무 작습니다: {channel_path.name}")
+
+    data_offset, channel_file_kind = _resolve_data_offset(channel_path, raw, block, dtype, count)
 
     available_count = (len(raw) - data_offset) // dtype.itemsize
     if available_count <= 0:
-        raise DatLoadError(f"CHN 데이터 영역을 해석할 수 없습니다: {chn_path.name}")
+        raise DatLoadError(f"DAT 채널 데이터 영역을 해석할 수 없습니다: {channel_path.name}")
 
     read_count = min(int(count), int(available_count))
     values = np.frombuffer(raw, dtype=dtype, count=read_count, offset=data_offset).astype(np.float64, copy=True)
@@ -178,7 +203,12 @@ def _read_chn_channel(chn_path: Path, block, count):
     scale = _safe_float(block.get("241", 1.0), 1.0)
     offset = _safe_float(block.get("240", 0.0), 0.0)
     values = offset + values * scale
-    return values, actual_count
+    read_info = {
+        "file_kind": channel_file_kind,
+        "data_offset": int(data_offset),
+        "dtype": dtype_name,
+    }
+    return values, actual_count, read_info
 
 
 def load_dat_file(dat_path):
@@ -201,6 +231,7 @@ def load_dat_file(dat_path):
     dat_channel_files = []
     dat_channel_file_indices = []
     dat_channel_novalue_headers = []
+    dat_channel_read_infos = []
     time_col_name = None
 
     for block_index, block in enumerate(blocks, start=1):
@@ -216,6 +247,11 @@ def load_dat_file(dat_path):
         if channel_type == "IMPLICIT":
             values = _build_implicit_channel(block, count)
             actual_count = int(count)
+            read_info = {
+                "file_kind": "IMPLICIT",
+                "data_offset": None,
+                "dtype": "IMPLICIT",
+            }
             column_name = "Time" if time_col_name is None else channel_name
             chn_name = ""
             if time_col_name is None:
@@ -225,7 +261,7 @@ def load_dat_file(dat_path):
             if not chn_name:
                 continue
             chn_path = dat_path.parent / chn_name
-            values, actual_count = _read_chn_channel(chn_path, block, count)
+            values, actual_count, read_info = _read_dat_channel_file(chn_path, block, count)
             column_name = channel_name
 
         raw_names.append(column_name)
@@ -234,6 +270,7 @@ def load_dat_file(dat_path):
         dat_channel_files.append(chn_name)
         dat_channel_file_indices.append(_parse_chn_file_index(chn_name))
         dat_channel_novalue_headers.append(block.get("215", "").strip())
+        dat_channel_read_infos.append(read_info)
         descriptions[column_name] = description or column_name
         units[column_name] = unit
         lengths[column_name] = int(count)
@@ -253,13 +290,17 @@ def load_dat_file(dat_path):
     unique_dat_channel_file_map = {}
     unique_dat_channel_file_index_map = {}
     unique_dat_channel_novalue_map = {}
-    for raw_name, unique_name, dat_index, chn_name, chn_index, novalue_header in zip(
+    unique_dat_channel_file_type_map = {}
+    unique_dat_channel_data_offset_map = {}
+    unique_dat_channel_dtype_map = {}
+    for raw_name, unique_name, dat_index, chn_name, chn_index, novalue_header, read_info in zip(
         raw_names,
         unique_names,
         dat_channel_indices,
         dat_channel_files,
         dat_channel_file_indices,
         dat_channel_novalue_headers,
+        dat_channel_read_infos,
     ):
         unique_descriptions[unique_name] = descriptions.get(raw_name, raw_name)
         unique_units[unique_name] = units.get(raw_name, "")
@@ -272,6 +313,15 @@ def load_dat_file(dat_path):
             unique_dat_channel_file_index_map[unique_name] = dict(chn_index)
         if novalue_header != "":
             unique_dat_channel_novalue_map[unique_name] = novalue_header
+        read_info = dict(read_info or {})
+        file_kind = str(read_info.get("file_kind") or "").strip()
+        if file_kind:
+            unique_dat_channel_file_type_map[unique_name] = file_kind
+        if read_info.get("data_offset") is not None:
+            unique_dat_channel_data_offset_map[unique_name] = int(read_info.get("data_offset"))
+        dtype_name = str(read_info.get("dtype") or "").strip()
+        if dtype_name:
+            unique_dat_channel_dtype_map[unique_name] = dtype_name
 
     if time_col_name:
         for raw_name, unique_name in zip(raw_names, unique_names):
@@ -301,5 +351,8 @@ def load_dat_file(dat_path):
         "dat_channel_file_map": unique_dat_channel_file_map,
         "dat_channel_file_index_map": unique_dat_channel_file_index_map,
         "dat_channel_novalue_map": unique_dat_channel_novalue_map,
+        "dat_channel_file_type_map": unique_dat_channel_file_type_map,
+        "dat_channel_data_offset_map": unique_dat_channel_data_offset_map,
+        "dat_channel_dtype_map": unique_dat_channel_dtype_map,
     }
     return df, metadata
