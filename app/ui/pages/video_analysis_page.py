@@ -20,6 +20,8 @@ SEGMENT_FORWARD_MS = 200
 SEGMENT_CACHE_MAX_ITEMS = 560
 PLAYBACK_BUFFER_AHEAD = 12
 PLAYBACK_BUFFER_REFILL_BATCH = 3
+PRELOAD_MAX_FRAMES = 3000
+PRELOAD_MAX_BYTES_PER_VIDEO = 6 * 1024 * 1024 * 1024
 
 
 def _load_cv2():
@@ -38,6 +40,73 @@ def _load_pillow():
     return Image, ImageTk
 
 
+class _VideoLoadOverlay:
+    def __init__(self, root):
+        self.root = root
+        self.frame = tk.Frame(root, bg="#20242a", bd=0)
+        self.message_var = tk.StringVar(value="Video preload 준비 중...")
+        self.detail_var = tk.StringVar(value="영상을 RAM에 올리는 중입니다.")
+        self.progress_var = tk.DoubleVar(value=0.0)
+
+        panel = tk.Frame(self.frame, bg="#ffffff", bd=1, relief=tk.SOLID)
+        panel.place(relx=0.5, rely=0.5, anchor="center", width=560, height=170)
+        tk.Label(
+            panel,
+            text="VIDEO LOAD",
+            bg="#ffffff",
+            fg="#111827",
+            font=("맑은 고딕", 16, "bold"),
+        ).pack(anchor="w", padx=24, pady=(22, 6))
+        tk.Label(
+            panel,
+            textvariable=self.message_var,
+            bg="#ffffff",
+            fg="#111827",
+            font=("맑은 고딕", 11),
+            anchor="w",
+        ).pack(fill=tk.X, padx=24)
+        tk.Label(
+            panel,
+            textvariable=self.detail_var,
+            bg="#ffffff",
+            fg="#6b7280",
+            font=("맑은 고딕", 9),
+            anchor="w",
+        ).pack(fill=tk.X, padx=24, pady=(3, 12))
+        self.progress = ttk.Progressbar(panel, variable=self.progress_var, maximum=100.0, mode="determinate")
+        self.progress.pack(fill=tk.X, padx=24)
+
+    def show(self):
+        self.frame.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self.frame.lift()
+        try:
+            self.frame.grab_set()
+        except Exception:
+            pass
+        self.root.update_idletasks()
+        self.root.update()
+
+    def update(self, current, total, message, detail=None):
+        total = max(1, int(total or 1))
+        current = max(0, min(int(current or 0), total))
+        self.progress_var.set((current / total) * 100.0)
+        self.message_var.set(str(message or "Video preload 진행 중..."))
+        self.detail_var.set(str(detail or f"{current} / {total} frame 처리 중"))
+        self.frame.lift()
+        self.root.update_idletasks()
+        self.root.update()
+
+    def close(self):
+        try:
+            self.frame.grab_release()
+        except Exception:
+            pass
+        try:
+            self.frame.destroy()
+        except Exception:
+            pass
+
+
 class VideoAnalysisPage(tk.Frame):
     def __init__(self, parent, workbench):
         super().__init__(parent, bg=PAGE_BG)
@@ -45,6 +114,7 @@ class VideoAnalysisPage(tk.Frame):
         self.state = VideoAnalysisState()
         self.captures = [None] * MAX_VIDEOS
         self.video_infos = [None] * MAX_VIDEOS
+        self.preloaded_frames = [None] * MAX_VIDEOS
         self.channel_data = []
         self.channel_select_var = tk.StringVar()
         self.pulse_view_mode_var = tk.IntVar(value=1)
@@ -270,25 +340,39 @@ class VideoAnalysisPage(tk.Frame):
             messagebox.showinfo("VIDEO ANALYSIS", "동영상은 최대 2개까지만 추가합니다.")
 
         assigned = 0
-        for path in selected:
-            capture = cv2.VideoCapture(str(path))
-            if not capture.isOpened():
-                messagebox.showwarning("VIDEO ANALYSIS", f"동영상을 열 수 없습니다.\n{path}")
-                capture.release()
-                continue
-            fps = float(capture.get(cv2.CAP_PROP_FPS) or 0.0) or 1000.0
-            frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
-            if frame_count <= 0:
-                messagebox.showwarning("VIDEO ANALYSIS", f"프레임 정보를 읽을 수 없습니다.\n{path}")
-                capture.release()
-                continue
-            duration_ms = float(max(0, frame_count - 1))
-            slot_index = free_slots[assigned]
-            self.captures[slot_index] = capture
-            self.video_infos[slot_index] = {"path": str(path), "fps": fps, "frame_count": frame_count, "duration_ms": duration_ms}
-            self._capture_next_frames[slot_index] = None
-            self._frame_prefetcher.start_slot(slot_index, str(path))
-            assigned += 1
+        overlay = None
+        try:
+            for path in selected:
+                capture = cv2.VideoCapture(str(path))
+                if not capture.isOpened():
+                    messagebox.showwarning("VIDEO ANALYSIS", f"동영상을 열 수 없습니다.\n{path}")
+                    capture.release()
+                    continue
+                fps = float(capture.get(cv2.CAP_PROP_FPS) or 0.0) or 1000.0
+                frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+                if frame_count <= 0:
+                    messagebox.showwarning("VIDEO ANALYSIS", f"프레임 정보를 읽을 수 없습니다.\n{path}")
+                    capture.release()
+                    continue
+                duration_ms = float(max(0, frame_count - 1))
+                slot_index = free_slots[assigned]
+                preloaded, overlay = self._preload_video_frames(capture, slot_index, str(path), frame_count, overlay)
+                self.captures[slot_index] = capture
+                self.video_infos[slot_index] = {
+                    "path": str(path),
+                    "fps": fps,
+                    "frame_count": frame_count,
+                    "duration_ms": duration_ms,
+                    "preloaded": preloaded is not None,
+                }
+                self.preloaded_frames[slot_index] = preloaded
+                self._capture_next_frames[slot_index] = None
+                if preloaded is None:
+                    self._frame_prefetcher.start_slot(slot_index, str(path))
+                assigned += 1
+        finally:
+            if overlay is not None:
+                overlay.close()
 
         if assigned <= 0:
             return
@@ -311,6 +395,52 @@ class VideoAnalysisPage(tk.Frame):
         self._refresh_video_layout()
         self._refresh_all()
 
+    def _preload_video_frames(self, capture, slot_index, path, frame_count, overlay):
+        cv2 = _load_cv2()
+        if cv2 is None:
+            return None, overlay
+        frame_count = int(frame_count or 0)
+        if frame_count <= 0 or frame_count > PRELOAD_MAX_FRAMES:
+            return None, overlay
+        width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+        height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+        estimated_bytes = max(0, width) * max(0, height) * 3 * frame_count
+        if estimated_bytes > PRELOAD_MAX_BYTES_PER_VIDEO:
+            return None, overlay
+        if overlay is None:
+            overlay = _VideoLoadOverlay(self.winfo_toplevel())
+            overlay.show()
+        frames = []
+        filename = Path(str(path)).name
+        try:
+            capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            self._capture_next_frames[int(slot_index)] = None
+            for frame_index in range(frame_count):
+                ok, frame = capture.read()
+                if not ok:
+                    break
+                frames.append(frame)
+                if frame_index == 0 or (frame_index + 1) % 25 == 0 or frame_index + 1 == frame_count:
+                    overlay.update(
+                        frame_index + 1,
+                        frame_count,
+                        f"영상 프레임을 RAM에 preload 중... {filename}",
+                        f"VIDEO {int(slot_index) + 1} | {frame_index + 1} / {frame_count} frame",
+                    )
+            capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            self._capture_next_frames[int(slot_index)] = None
+        except Exception:
+            frames = []
+            try:
+                capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            except Exception:
+                pass
+            self._capture_next_frames[int(slot_index)] = None
+            return None, overlay
+        if len(frames) != frame_count:
+            return None, overlay
+        return frames, overlay
+
     def clear_video(self, index):
         if index < 0 or index >= MAX_VIDEOS or self.captures[index] is None:
             return
@@ -321,6 +451,7 @@ class VideoAnalysisPage(tk.Frame):
             pass
         self.captures[index] = None
         self.video_infos[index] = None
+        self.preloaded_frames[index] = None
         self._frame_prefetcher.stop_slot(index)
         self._frame_cache.clear_slot(index)
         self._clear_photo_cache_slot(index)
@@ -865,6 +996,8 @@ class VideoAnalysisPage(tk.Frame):
             return
         center = int(self.state.current_raw_frame)
         for index in active_slots:
+            if self.preloaded_frames[int(index)] is not None:
+                continue
             self._frame_prefetcher.request(index, center, self.state.frame_count, active_slots)
 
     def _request_segment_frame_prefetch(self):
@@ -873,6 +1006,8 @@ class VideoAnalysisPage(tk.Frame):
             return
         center = int(self.state.current_raw_frame)
         for index in active_slots:
+            if self.preloaded_frames[int(index)] is not None:
+                continue
             self._frame_prefetcher.request(
                 index,
                 center,
@@ -884,6 +1019,8 @@ class VideoAnalysisPage(tk.Frame):
 
     def _schedule_playback_buffer_refill(self):
         if not self.state.is_playing or self._playback_buffer_after_id is not None:
+            return
+        if all(self.preloaded_frames[int(slot)] is not None for slot in self._active_video_indices()):
             return
         self._playback_buffer_after_id = self.after_idle(self._refill_playback_buffers)
 
@@ -897,6 +1034,8 @@ class VideoAnalysisPage(tk.Frame):
         center = int(self.state.current_raw_frame)
         end = min(int(self.state.frame_count) - 1, center + PLAYBACK_BUFFER_AHEAD)
         for slot_index in active_slots:
+            if self.preloaded_frames[int(slot_index)] is not None:
+                continue
             filled = 0
             buffer = self._playback_buffers[slot_index]
             self._trim_playback_buffer(slot_index, center)
@@ -920,7 +1059,8 @@ class VideoAnalysisPage(tk.Frame):
                 if filled >= PLAYBACK_BUFFER_REFILL_BATCH:
                     break
         if self.state.is_playing and any(
-            any(frame_index not in self._playback_buffers[slot] and not self._frame_cache.contains(slot, frame_index)
+            self.preloaded_frames[int(slot)] is None
+            and any(frame_index not in self._playback_buffers[slot] and not self._frame_cache.contains(slot, frame_index)
                 for frame_index in range(center + 1, end + 1))
             for slot in active_slots
         ):
@@ -952,6 +1092,12 @@ class VideoAnalysisPage(tk.Frame):
             self._playback_buffer_after_id = None
 
     def _read_frame_cached(self, index, frame_index):
+        preloaded = self.preloaded_frames[int(index)] if 0 <= int(index) < MAX_VIDEOS else None
+        if preloaded is not None:
+            frame_index = int(frame_index)
+            if 0 <= frame_index < len(preloaded):
+                return preloaded[frame_index]
+            return None
         if self.state.is_playing:
             buffered = self._playback_buffers[int(index)].pop(int(frame_index), None)
             if buffered is not None:
@@ -1029,6 +1175,7 @@ class VideoAnalysisPage(tk.Frame):
                 pass
         self.captures = [None] * MAX_VIDEOS
         self.video_infos = [None] * MAX_VIDEOS
+        self.preloaded_frames = [None] * MAX_VIDEOS
         self.channel_data = []
         self._rebuild_pulse_base_snapshot()
         self._frame_prefetcher.stop_all()

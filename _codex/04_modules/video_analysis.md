@@ -15,7 +15,10 @@
 - 동영상은 최대 2개까지 로드한다.
 - video slot은 V1/V2 고정 슬롯으로 관리한다. V1을 clear해도 V2는 V1으로 당겨지지 않는다.
 - Reset 버튼은 Yes/No 확인 후 동영상, pulse channel, sync/keyframe 상태를 초기화한다.
-- OpenCV `VideoCapture`로 현재 frame만 seek/read 한다.
+- OpenCV `VideoCapture`로 영상을 읽는다.
+- video load 시 frame 수와 추정 decode 메모리가 제한 안에 있으면 전체 frame을 RAM에 preload한다.
+- preload 성공 slot은 seek/step/play에서 OpenCV seek/read 대신 RAM frame list를 먼저 사용한다.
+- preload 대상은 기본 `3000 frame` 이하, 추정 decode 메모리 `6GB` 이하 video다. 초과하거나 preload 실패 시 기존 OpenCV streaming/cache/prefetch 경로로 fallback한다.
 - 두 영상은 첫 번째 영상 fps를 master metadata로 사용한다.
 - fps가 다르면 사용자 경고를 띄운다.
 - sync/pulse matching 기준은 fps 환산이 아니라 `1 video frame = 1 ms`이다.
@@ -29,6 +32,7 @@
 - key frame timeline은 전체 확인을 위해 video range와 data range를 모두 포함한다. overlay와 visual scale은 다를 수 있지만, cursor/time 값은 동일한 `synced_time_ms`를 사용한다.
 - 데이터 time 값 자체는 sync/overlay 표시를 위해 변경하지 않는다.
 - frame 이동 성능을 위해 현재 주변 frame만 메모리 cache에 유지한다.
+- preload된 video는 clear/reset 시 RAM frame list를 해제한다.
 - frame cache는 `app/core/video/frame_cache.py`의 `FrameCache`로 분리했다.
 - 공통 RAM segment buffer는 현재 frame 기준 뒤쪽 50ms, 앞쪽 200ms를 유지한다.
 - 수동 frame step, keyframe seek, first/last 이동 후에는 같은 segment buffer를 background prefetch로 준비한다.
