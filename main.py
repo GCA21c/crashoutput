@@ -23,7 +23,7 @@ def _show_startup_splash():
     splash.overrideredirect(True)
     splash.configure(bg="#242424")
     splash.attributes("-topmost", True)
-    width = 748
+    width = 524
     height = 305
     screen_w = splash.winfo_screenwidth()
     screen_h = splash.winfo_screenheight()
@@ -71,7 +71,7 @@ def _show_startup_splash():
         bg="#242424",
         fg="#9ca3af",
         font=("Segoe UI", 9),
-        width=64,
+        width=46,
         anchor="center",
         justify="center",
     ).pack(anchor="center", pady=(18, 0))
