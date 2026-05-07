@@ -16,9 +16,11 @@
 - video slot은 V1/V2 고정 슬롯으로 관리한다. V1을 clear해도 V2는 V1으로 당겨지지 않는다.
 - Reset 버튼은 Yes/No 확인 후 동영상, pulse channel, sync/keyframe 상태를 초기화한다.
 - OpenCV `VideoCapture`로 영상을 읽는다.
-- video load 시 frame 수와 추정 decode 메모리가 제한 안에 있으면 전체 frame을 RAM에 preload한다.
-- preload 성공 slot은 seek/step/play에서 OpenCV seek/read 대신 RAM frame list를 먼저 사용한다.
-- preload 대상은 기본 `3000 frame` 이하, 추정 decode 메모리 `6GB` 이하 video다. 초과하거나 preload 실패 시 기존 OpenCV streaming/cache/prefetch 경로로 fallback한다.
+- video load 시 전체 frame을 RAM에 preload한다.
+- preload 성공 slot은 seek/step/play에서 OpenCV seek/read 대신 RAM frame list만 사용한다.
+- preload 완료 후에는 OpenCV capture를 release해 원본 video file/network handle을 유지하지 않는다.
+- video file이 `1GB` 이상이면 preload 진행 전 사용자 확인 경고를 띄운다.
+- preload 실패 시 해당 video는 로드하지 않는다.
 - 두 영상은 첫 번째 영상 fps를 master metadata로 사용한다.
 - fps가 다르면 사용자 경고를 띄운다.
 - sync/pulse matching 기준은 fps 환산이 아니라 `1 video frame = 1 ms`이다.

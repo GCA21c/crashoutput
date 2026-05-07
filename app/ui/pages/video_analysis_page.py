@@ -20,8 +20,7 @@ SEGMENT_FORWARD_MS = 200
 SEGMENT_CACHE_MAX_ITEMS = 560
 PLAYBACK_BUFFER_AHEAD = 12
 PLAYBACK_BUFFER_REFILL_BATCH = 3
-PRELOAD_MAX_FRAMES = 3000
-PRELOAD_MAX_BYTES_PER_VIDEO = 6 * 1024 * 1024 * 1024
+LARGE_VIDEO_FILE_BYTES = 1 * 1024 * 1024 * 1024
 
 
 def _load_cv2():
@@ -105,6 +104,11 @@ class _VideoLoadOverlay:
             self.frame.destroy()
         except Exception:
             pass
+
+
+class _LoadedVideoHandle:
+    def release(self):
+        return None
 
 
 class VideoAnalysisPage(tk.Frame):
@@ -343,6 +347,16 @@ class VideoAnalysisPage(tk.Frame):
         overlay = None
         try:
             for path in selected:
+                path_obj = Path(str(path))
+                try:
+                    file_size = path_obj.stat().st_size
+                except OSError:
+                    file_size = 0
+                if file_size >= LARGE_VIDEO_FILE_BYTES and not messagebox.askyesno(
+                    "VIDEO ANALYSIS",
+                    f"영상 파일 크기가 1GB 이상입니다.\n{path_obj.name}\n\n그래도 RAM preload를 진행할까요?",
+                ):
+                    continue
                 capture = cv2.VideoCapture(str(path))
                 if not capture.isOpened():
                     messagebox.showwarning("VIDEO ANALYSIS", f"동영상을 열 수 없습니다.\n{path}")
@@ -357,18 +371,23 @@ class VideoAnalysisPage(tk.Frame):
                 duration_ms = float(max(0, frame_count - 1))
                 slot_index = free_slots[assigned]
                 preloaded, overlay = self._preload_video_frames(capture, slot_index, str(path), frame_count, overlay)
-                self.captures[slot_index] = capture
+                try:
+                    capture.release()
+                except Exception:
+                    pass
+                if preloaded is None:
+                    messagebox.showwarning("VIDEO ANALYSIS", f"영상 preload에 실패했습니다.\n{path}")
+                    continue
+                self.captures[slot_index] = _LoadedVideoHandle()
                 self.video_infos[slot_index] = {
                     "path": str(path),
                     "fps": fps,
                     "frame_count": frame_count,
                     "duration_ms": duration_ms,
-                    "preloaded": preloaded is not None,
+                    "preloaded": True,
                 }
                 self.preloaded_frames[slot_index] = preloaded
                 self._capture_next_frames[slot_index] = None
-                if preloaded is None:
-                    self._frame_prefetcher.start_slot(slot_index, str(path))
                 assigned += 1
         finally:
             if overlay is not None:
@@ -400,12 +419,7 @@ class VideoAnalysisPage(tk.Frame):
         if cv2 is None:
             return None, overlay
         frame_count = int(frame_count or 0)
-        if frame_count <= 0 or frame_count > PRELOAD_MAX_FRAMES:
-            return None, overlay
-        width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
-        height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
-        estimated_bytes = max(0, width) * max(0, height) * 3 * frame_count
-        if estimated_bytes > PRELOAD_MAX_BYTES_PER_VIDEO:
+        if frame_count <= 0:
             return None, overlay
         if overlay is None:
             overlay = _VideoLoadOverlay(self.winfo_toplevel())
