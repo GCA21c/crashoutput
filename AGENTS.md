@@ -9,6 +9,11 @@
 4. 요청에 맞는 `_codex/03_workflows/` 및 `_codex/04_modules/` 문서를 읽는다.
 5. 필요한 코드 파일만 최소 범위로 확인한다.
 
+## 토큰 절약 기준
+- `_codex/08_change_logs/`는 역사 보관소다. 사용자가 이력 추적을 요구하거나 특정 변경 근거가 필요할 때만 읽는다.
+- refactor 과거 계획 문서는 현재 작업과 직접 관련될 때만 읽는다.
+- 새 세션은 `current_handoff.md`와 `current_program_state.md`의 최신 요약을 우선한다.
+
 ## 절대 규칙
 - 코드 수정은 사용자 요청 범위 안에서만 한다.
 - 문서 정본은 `_codex/02_rules/dev_rules.md`이다.

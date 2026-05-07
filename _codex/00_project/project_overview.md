@@ -1,25 +1,30 @@
-# Project overview
+# Project Overview
 
-## Project type
-Desktop Python crash-analysis tool with a UI-driven workflow.
+Crashoutput™ is a desktop Python crash data analysis system.
 
-## Production layout
-- `main.py` : app launcher
-- `app/core/` : core data/domain utilities
-- `app/services/` : IO, preprocessing, injury logic
-- `app/ui/` : pages, viewer orchestration, UI components
+## Product Goal
+- Load crash test data.
+- Preserve raw data provenance.
+- Apply preprocessing and injury calculations.
+- Organize results by test mode, dummy, slot, injury section, graph, and metric.
+- Generate report summaries and template-based exports.
+- Support video/pulse review for post-processing.
 
-## Main goal
-DAT/CSV 기반 crash-analysis workflow를 유지·확장한다.
-중점 영역은 다음과 같다.
-- filtering / preprocessing
-- multi-dummy handling
-- ISO-code based grouping
-- injury computations
-- traceable UI-driven analysis
+## Current Development Phase
+- The main workflow is already built.
+- Future work focuses on adding and validating injury criteria by test mode and dummy.
+- The application must support different evaluation purposes:
+  - regulation/legal test
+  - product performance test
+  - NCAP/IIHS or other mode-specific evaluations
 
-## Repository assumptions
-- 편집은 macOS 원격 개발 환경에서 수행될 수 있다.
-- 최종 수동 검증은 Windows에서 이뤄질 수 있다.
-- UI, path, font, icon, encoding, generated artifact의 cross-platform 차이를 항상 고려한다.
-- 민감한 환경 정보는 문서에 기록하지 않는다.
+## Repository Layout
+- `main.py`: app entry and startup splash
+- `app/`: production code
+- `resources/`: templates and runtime assets
+- `_codex/`: Codex rules, state summaries, module notes, change logs
+
+## Documentation Policy
+- Default reading should stay short: AGENTS, dev rules, current state, and relevant module docs.
+- `_codex/08_change_logs/` is historical detail storage; do not read all logs by default.
+- Update current summaries when architecture direction changes.

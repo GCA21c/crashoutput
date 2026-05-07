@@ -1,54 +1,46 @@
-# System map
+# System Map
 
-## Runtime structure
-- `main.py` : process entry point
-- `app/shell.py` : top-level shell / composition
-- `app/ui/` : user-facing workflow and pages
-- `app/services/` : loading, preprocessing, injury calculations
-- `app/core/` : reusable domain logic, dummy profiles, ISO parsing, dataset storage, utilities
-- `app/report/` : report snapshot, plotting, formatter, export
+## Runtime Structure
+- `main.py`: startup splash, Tk root, app launch
+- `app/shell.py`: top-level shell, navigation, shared state
+- `app/ui/pages/`: workflow pages
+- `app/ui/components/`: reusable UI widgets
+- `app/services/io/`: DAT/CSV loading
+- `app/services/preprocessing/`: offset/filtering/trimming support
+- `app/services/injury/`: injury calculation engines
+- `app/services/state/`: injury payload/registry helpers
+- `app/core/`: ISO parsing, dummy profiles, dataset store, common domain utilities
+- `app/report/`: summary, plotting, formatter, Excel/PPT export
 
-## High-level data flow
-1. `app/services/io/`에서 데이터 로드
-2. `app/core/io/dataset_store.py`에서 dataset/state 관리
-3. `app/core/isocode/`와 `app/core/dummy/`에서 ISO grouping 및 dummy context 해석
-4. `app/services/preprocessing/service.py`에서 preprocessing 수행
-5. `app/services/injury/`에서 injury 계산
-6. `metadata["injury_saved_results"]`에 canonical payload store 반영
-7. `app/report/`와 `app/ui/pages/`에서 결과 표시, snapshot, plotting, export 수행
+## Data Flow
+1. Loader reads DAT/CSV into dataframe + metadata.
+2. ISO/dummy metadata routes B1~B6 slots.
+3. Preprocessing produces working data while preserving raw reference policy.
+4. Injury modules calculate metrics/graphs.
+5. Results enter payload/registry store.
+6. Report Summary, Plotting, Excel/PPT export read payload through common accessors/formatters.
 
-## Architectural hotspots
-### A. Multi-dummy hotspot
-- ISO prefix B1~B6가 channel routing의 기준이다.
-- TEST SETUP UI/state와 injury/filtering routing이 어긋나면 결과가 틀어진다.
+## Key Contracts
+- ISO prefix B1~B6 is the first routing key.
+- TEST SETUP dummy config must match filtering/injury/report routing.
+- `metadata["injury_saved_results"]` is the canonical result owner.
+- graph title/text/layout belongs to formatter/policy layer, not calculation layer.
+- Video Analysis is independent from injury/report calculation state except for loaded dataset channels.
 
-### B. Filtering hotspot
-- preprocessing service는 전체 결과에 영향을 주는 핵심 경계다.
-- raw-source traceability가 편의성보다 우선이다.
-- raw reference 기준은 별도 정본 문서로 관리한다.
-
-### C. Injury hotspot
-- `injury_page.py`는 UI orchestration 중심이다.
-- 실제 계산은 `app/services/injury/*.py`에 분산되어 있다.
-- 공통 계산 보조는 `common_engines.py`가 담당한다.
-- 현재 결과 정본은 `injury_saved_results` canonical payload store 쪽으로 이동 중이다.
-- `canonical_metrics`, `canonical_graphs`, `calculation_context`가 다음 formatter/report 경계의 기준이다.
-
-### D. Report / plotting hotspot
-- `app/report/engine.py`는 SUMMARY REPORT snapshot 추출 경계다.
-- `app/report/plotting_service.py`는 graph list, graph text, PPT export 입력 조립 경계다.
-- `app/report/formatters/`는 canonical payload accessor와 formatter 공통 규칙을 수용하는 계층이다.
-- `report_values`, `metric_extrema`, `summary_text`는 아직 compatibility/cache 역할로 남아 있다.
-
-## Broad-review required
-다음 파일을 건드리면 인접 모듈까지 넓게 본다.
+## Broad Review Files
+Touch these carefully; inspect adjacent callers before edits.
 - `app/services/preprocessing/service.py`
 - `app/services/injury/common_engines.py`
 - `app/ui/pages/injury_page.py`
-- `app/report/engine.py`
-- `app/report/plotting_service.py`
 - `app/services/state/injury_result_store.py`
 - `app/services/state/injury_metric_canonical.py`
-- `app/ui/pages/test_setup_page.py`
+- `app/report/engine.py`
+- `app/report/plotting_service.py`
+- `app/report/formatters/`
 - `app/core/dummy/engine.py`
 - `app/core/isocode/engine.py`
+
+## Future Extension Path
+- Add test-mode/dummy-specific criteria in `app/core/dummy/` and `app/services/injury/`.
+- Store new calculation outputs in payload/registry first.
+- Then expose them through Report Summary, Plotting formatter, and export templates.
