@@ -16,6 +16,12 @@
 - 시험모드와 평가 목적에 따라 report valuation 및 template export를 확장한다.
   - 예: 법규 시험, 상품성 시험, NCAP/IIHS 등 목적별 평가/출력 구분
 
+## v101 SIDE/FMVSS214 Caution
+- `v101`의 SIDE/FMVSS214 방향은 폐기 대상으로 기록됐다.
+- 실패 기록: `_codex/08_change_logs/2026-05-08_v101_fmvss214_side_failed_direction.md`
+- 다음 재시작 시 기존 INJURY UI/모듈 패턴을 반드시 유지하고, 새 SIDE 모듈 구조는 사용자 확인 후 구현한다.
+- 독립 통합형 `SIDE IMPACT` 페이지 방식은 재사용하지 않는다.
+
 ## Immediate Reading Order
 1. `AGENTS.md`
 2. `_codex/02_rules/dev_rules.md`
