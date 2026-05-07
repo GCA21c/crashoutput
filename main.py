@@ -18,8 +18,8 @@ def _set_splash_status(splash, status_var, text):
         pass
 
 
-def _show_startup_splash():
-    splash = tk.Tk()
+def _show_startup_splash(root):
+    splash = tk.Toplevel(root)
     splash.overrideredirect(True)
     splash.configure(bg="#242424")
     splash.attributes("-topmost", True)
@@ -64,7 +64,7 @@ def _show_startup_splash():
         fg="#cfcfcf",
         font=("Segoe UI", 10),
     ).pack(anchor="center")
-    status_var = tk.StringVar(value="Initializing...")
+    status_var = tk.StringVar(master=splash, value="Initializing...")
     tk.Label(
         meta,
         textvariable=status_var,
@@ -97,15 +97,15 @@ def _configure_matplotlib_font():
 
 
 if __name__ == "__main__":
-    splash, splash_status = _show_startup_splash()
+    root = tk.Tk()
+    root.withdraw()
+    splash, splash_status = _show_startup_splash(root)
     _set_splash_status(splash, splash_status, "Loading matplotlib font manager...")
     _configure_matplotlib_font()
     _set_splash_status(splash, splash_status, "Loading application shell...")
     from app.shell import CrashAnalysisWorkbench
 
     _set_splash_status(splash, splash_status, "Creating main window...")
-    root = tk.Tk()
-    root.withdraw()
     root.title("Crashoutput™ Ver 1.0")
     root.geometry("1800x980")
     try:
