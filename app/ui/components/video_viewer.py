@@ -538,7 +538,7 @@ class VideoSlotViewer(tk.Frame):
         if pulse_hit:
             self._zoom_pulse(direction, event.x)
         else:
-            self._zoom_video(direction)
+            self._zoom_video(direction, event.x, event.y)
         return "break"
 
     def _is_inside_pulse_box(self, x, y):
@@ -547,24 +547,58 @@ class VideoSlotViewer(tk.Frame):
         left, top, right, bottom = self._pulse_box
         return left <= x <= right and top <= y <= bottom
 
-    def _zoom_video(self, direction):
+    def _zoom_video(self, direction, cursor_x=None, cursor_y=None):
+        if self._photo is None:
+            return
+        canvas_width = max(1, int(self.canvas.winfo_width()))
+        canvas_height = max(1, int(self.canvas.winfo_height()))
+        old_scale = max(1.0, float(self.zoom_scale or 1.0))
+        old_image_width = max(1.0, float(self._photo.width()))
+        old_image_height = max(1.0, float(self._photo.height()))
+        cursor_x = canvas_width / 2.0 if cursor_x is None else float(cursor_x)
+        cursor_y = canvas_height / 2.0 if cursor_y is None else float(cursor_y)
+        old_image_x = canvas_width / 2.0 + float(self.pan_x)
+        old_image_y = canvas_height / 2.0 + float(self.pan_y)
+        rel_x = (cursor_x - old_image_x) / old_image_width
+        rel_y = (cursor_y - old_image_y) / old_image_height
         factor = 1.12 if direction > 0 else 1.0 / 1.12
-        self.zoom_scale = max(1.0, min(6.0, self.zoom_scale * factor))
+        self.zoom_scale = max(1.0, min(6.0, old_scale * factor))
         if self.zoom_scale <= 1.0:
             self.pan_x = 0.0
             self.pan_y = 0.0
+        else:
+            base_width = old_image_width / old_scale
+            base_height = old_image_height / old_scale
+            next_width = base_width * self.zoom_scale
+            next_height = base_height * self.zoom_scale
+            self.pan_x = cursor_x - canvas_width / 2.0 - rel_x * next_width
+            self.pan_y = cursor_y - canvas_height / 2.0 - rel_y * next_height
+            self._clamp_pan(canvas_width, canvas_height)
         if callable(self._zoom_callback):
             self._zoom_callback(self.pulse_zoom_scale, self.pulse_zoom_center_ms)
         self._redraw()
 
     def _zoom_pulse(self, direction, x):
         factor = 1.2 if direction > 0 else 1.0 / 1.2
-        self.pulse_zoom_scale = max(1.0, min(50.0, self.pulse_zoom_scale * factor))
         if self._pulse_box is not None:
             left, _top, right, _bottom = self._pulse_box
             ratio = max(0.0, min((float(x) - left) / max(1.0, right - left), 1.0))
             view_start, view_end = self._pulse_view_range()
-            self.pulse_zoom_center_ms = view_start + ratio * (view_end - view_start)
+            anchor_ms = view_start + ratio * (view_end - view_start)
+            self.pulse_zoom_scale = max(1.0, min(50.0, self.pulse_zoom_scale * factor))
+            total_start = self.overlay_start_ms
+            total_end = self.overlay_end_ms
+            total_span = max(1.0, total_end - total_start)
+            next_span = max(1.0, total_span / max(1.0, float(self.pulse_zoom_scale or 1.0)))
+            center = anchor_ms + (0.5 - ratio) * next_span
+            half_span = next_span / 2.0
+            if next_span >= total_span:
+                center = (total_start + total_end) / 2.0
+            else:
+                center = max(total_start + half_span, min(center, total_end - half_span))
+            self.pulse_zoom_center_ms = center
+        else:
+            self.pulse_zoom_scale = max(1.0, min(50.0, self.pulse_zoom_scale * factor))
         if callable(self._zoom_callback):
             self._zoom_callback(self.pulse_zoom_scale, self.pulse_zoom_center_ms)
         self._redraw()

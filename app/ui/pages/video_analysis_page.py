@@ -157,20 +157,12 @@ class VideoAnalysisPage(tk.Frame):
         tk.Button(controls, text="▶▶", command=self.next_frame, width=7).pack(side=tk.LEFT, padx=4)
         tk.Button(controls, text="▶|", command=self.last_frame, width=7).pack(side=tk.LEFT, padx=4)
 
-        pulse_view_box = tk.Frame(footer, bg=PAGE_BG)
-        pulse_view_box.pack(side=tk.RIGHT)
-        peak_row = tk.Frame(pulse_view_box, bg=PAGE_BG)
-        peak_row.pack(side=tk.TOP, anchor="e")
-        pulse_view_row = tk.Frame(pulse_view_box, bg=PAGE_BG)
-        pulse_view_row.pack(side=tk.TOP, anchor="e", pady=(3, 0))
-        pulse_bg_row = tk.Frame(pulse_view_box, bg=PAGE_BG)
-        pulse_bg_row.pack(side=tk.TOP, anchor="e", pady=(3, 0))
-        pulse_bg_theme_row = tk.Frame(pulse_view_box, bg=PAGE_BG)
-        pulse_bg_theme_row.pack(side=tk.TOP, anchor="e", pady=(3, 0))
-        tk.Label(peak_row, text="Peak", bg=PAGE_BG, fg=MUTED_FG).pack(side=tk.LEFT, padx=(0, 4))
+        peak_box = tk.Frame(footer, bg=PAGE_BG)
+        peak_box.pack(side=tk.LEFT, padx=(8, 12))
+        tk.Label(peak_box, text="Peak", bg=PAGE_BG, fg=MUTED_FG).pack(side=tk.LEFT, padx=(0, 4))
         for index, var in enumerate(self.peak_visibility_vars, start=1):
             tk.Checkbutton(
-                peak_row,
+                peak_box,
                 text=f"CH{index}",
                 variable=var,
                 command=self._apply_peak_visibility,
@@ -182,6 +174,15 @@ class VideoAnalysisPage(tk.Frame):
                 bd=1,
                 relief=tk.RIDGE,
             ).pack(side=tk.LEFT, padx=(3, 0))
+
+        pulse_view_box = tk.Frame(footer, bg=PAGE_BG)
+        pulse_view_box.pack(side=tk.RIGHT)
+        pulse_view_row = tk.Frame(pulse_view_box, bg=PAGE_BG)
+        pulse_view_row.pack(side=tk.TOP, anchor="e")
+        pulse_bg_row = tk.Frame(pulse_view_box, bg=PAGE_BG)
+        pulse_bg_row.pack(side=tk.TOP, anchor="e", pady=(3, 0))
+        pulse_bg_theme_row = tk.Frame(pulse_view_box, bg=PAGE_BG)
+        pulse_bg_theme_row.pack(side=tk.TOP, anchor="e", pady=(3, 0))
         tk.Label(pulse_view_row, text="Pulse", bg=PAGE_BG, fg=MUTED_FG).pack(side=tk.LEFT, padx=(0, 4))
         for value, text in ((1, "View 1"), (2, "View 2")):
             tk.Radiobutton(
