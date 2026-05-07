@@ -38,33 +38,35 @@ def _show_startup_splash():
         bg="#242424",
         fg="#dedede",
         font=("Segoe UI", 10, "italic"),
-    ).place(relx=1.0, x=-22, y=20, anchor="ne")
+    ).place(relx=1.0, rely=1.0, x=-38, y=-18, anchor="se")
     content = tk.Frame(panel, bg="#242424")
-    content.place(relx=0.5, rely=0.52, anchor="center")
+    content.place(x=22, y=26, anchor="nw")
     tk.Label(
         content,
         text="CRASH OUTPUT™",
         bg="#242424",
         fg="#d6d6d6",
-        font=("Segoe UI", 18, "bold"),
-    ).pack(anchor="center", pady=(0, 0))
+        font=("Segoe UI", 21, "bold"),
+    ).pack(anchor="w", pady=(0, 0))
     tk.Label(
         content,
         text="Crash Data Analysis System",
         bg="#242424",
         fg="#d0d0d0",
         font=("Segoe UI", 17),
-    ).pack(anchor="center", pady=(0, 0))
+    ).pack(anchor="w", pady=(0, 0))
+    meta = tk.Frame(panel, bg="#242424")
+    meta.place(relx=0.5, rely=0.58, anchor="center")
     tk.Label(
-        content,
+        meta,
         text="Ver 1.0 | Build260296",
         bg="#242424",
         fg="#cfcfcf",
         font=("Segoe UI", 10),
-    ).pack(anchor="center", pady=(26, 0))
+    ).pack(anchor="center")
     status_var = tk.StringVar(value="Initializing...")
     tk.Label(
-        content,
+        meta,
         textvariable=status_var,
         bg="#242424",
         fg="#9ca3af",
@@ -72,7 +74,7 @@ def _show_startup_splash():
         width=64,
         anchor="center",
         justify="center",
-    ).pack(anchor="center", pady=(14, 0))
+    ).pack(anchor="center", pady=(18, 0))
     splash.update_idletasks()
     splash.update()
     return splash, status_var
