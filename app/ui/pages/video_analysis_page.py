@@ -160,7 +160,7 @@ class VideoAnalysisPage(tk.Frame):
         tk.Label(header, text=PAGE_TITLE, font=HEADER_FONT, bg=PAGE_BG).pack(side=tk.LEFT)
         tk.Label(
             header,
-            text="Space: Play/Pause | Left/Right: 1 frame 이동 | Sync offset은 frame 단위이며 음수 frame/time 표시를 허용한다.",
+            text="Tip : Spacebar: Play/Pause | Left/Right: 1 Frame 이동",
             bg=PAGE_BG,
             fg=MUTED_FG,
             anchor="w",
@@ -365,7 +365,7 @@ class VideoAnalysisPage(tk.Frame):
         ).pack(anchor="w")
         tk.Label(
             panel,
-            text="Normal Mode는 Streaming cache 방식입니다.\nBoost Mode는 전체 영상을 메모리에 배치합니다.(RAM 32GB 이상 권장)",
+            text="1. Normal Mode는 Streaming cache 방식입니다.\n2. Boost Mode는 전체 영상을 메모리에 배치합니다.(RAM 32GB 이상 권장)",
             bg="#ffffff",
             fg="#4b5563",
             justify="left",
